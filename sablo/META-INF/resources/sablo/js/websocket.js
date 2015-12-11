@@ -514,7 +514,7 @@ webSocketModule.factory('$webSocket',
 				// current model
 				var serviceScope = serviceScopes[servicename];
 				if (!serviceScope) {
-					serviceScope = serviceScopes[servicename] = serviceScopes.$new(true);
+					serviceScope = serviceScopes[serviceName] = serviceScopes.$new(true);
 					// so no previous service state; set it now
 					if (conversionInfo && conversionInfo[servicename]) {
 						// convert all properties, remember type for when a client-server conversion will be needed
