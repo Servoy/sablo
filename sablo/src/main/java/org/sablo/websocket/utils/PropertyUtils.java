@@ -16,8 +16,8 @@
 
 package org.sablo.websocket.utils;
 
-import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.property.CustomJSONArrayType;
+import org.sablo.specification.property.CustomJSONObjectType;
 import org.sablo.specification.property.ICustomType;
 import org.sablo.specification.property.IPropertyType;
 
@@ -52,7 +52,7 @@ public class PropertyUtils
 	 */
 	public static boolean isCustomJSONObjectProperty(IPropertyType< ? > propertyType)
 	{
-		return isCustomJSONProperty(propertyType) && !isCustomJSONArrayPropertyType(propertyType);
+		return propertyType instanceof CustomJSONObjectType< ? , ? >;
 	}
 
 	/**
@@ -63,7 +63,7 @@ public class PropertyUtils
 	 */
 	public static boolean isCustomJSONArrayPropertyType(IPropertyType< ? > propertyType)
 	{
-		return (propertyType != null && propertyType instanceof CustomJSONArrayType< ? , ? >);
+		return propertyType instanceof CustomJSONArrayType< ? , ? >;
 	}
 
 	/**
@@ -85,24 +85,6 @@ public class PropertyUtils
 	{
 		int firstIndexOfDot = typeName.indexOf(".");
 		return firstIndexOfDot >= 0 ? typeName.substring(firstIndexOfDot + 1) : typeName;
-	}
-
-	/**
-	 * Returns true if the give property description makes use of custom JSON object types defined in spec in it's child properties.
-	 * @param pd the property description to look in.
-	 * @return see description.
-	 */
-	public static boolean usesCustomJSONObjectTypes(PropertyDescription pd)
-	{
-		if (pd == null) return false;
-
-		for (PropertyDescription x : pd.getCustomJSONProperties().values())
-		{
-			if (PropertyUtils.isCustomJSONObjectProperty(x.getType()) ||
-				(PropertyUtils.isCustomJSONArrayPropertyType(x.getType()) && usesCustomJSONObjectTypes(((ICustomType< ? >)x.getType()).getCustomJSONTypeDefinition()))) return true;
-		}
-
-		return false;
 	}
 
 }

@@ -670,14 +670,14 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 			var isEnabled = true;
 
 			function recalculateChildRuntimeIndexesStartingAt(posInDesignArray /*inclusive*/, triggeredByParent) {
-				if (designTabSeq == -2) return;
+				if (designTabSeq === -2) return;
 
-				if(!isEnabled || runtimeIndex.startIndex == -1) {
+				if(!isEnabled || runtimeIndex.startIndex === -1) {
 
 					runtimeIndex.nextAvailableIndex = runtimeIndex.startIndex;
 					runtimeIndex.startIndex = -1;					
 				}
-				else if (designTabSeq == 0) {
+				else if (designTabSeq === 0) {
 					// this element doesn't set any tabIndex attribute (default behavior)
 					runtimeIndex.nextAvailableIndex = runtimeIndex.startIndex;
 					runtimeIndex.startIndex = 0;
@@ -703,11 +703,14 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 					var childRuntimeIndex = runtimeChildIndexes[designChildTabSeq[i]];
 					if (childRuntimeIndex.push) {
 						// multiple equal design time indexes as siblings
+					    	var max = recalculateStartIndex;
 						for (var k in childRuntimeIndex) {
 							childRuntimeIndex[k].startIndex = recalculateStartIndex;
 							childRuntimeIndex[k].recalculateChildRuntimeIndexesStartingAt(0, true); // call recalculate on whole child; normally it only makes sense for same index siblings if they are not themselfes containers, just apply the given value
+							if (max < childRuntimeIndex[k].nextAvailableIndex)
+							    max = childRuntimeIndex[k].nextAvailableIndex;
 						}
-						recalculateStartIndex = childRuntimeIndex[childRuntimeIndex.length - 1].nextAvailableIndex;
+						recalculateStartIndex = max;
 					} else {
 						childRuntimeIndex.startIndex = recalculateStartIndex;
 						childRuntimeIndex.recalculateChildRuntimeIndexesStartingAt(0, true); // call recalculate on whole child
@@ -728,7 +731,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 					parentRecalculateNeeded = false;
 				}
 
-				// if this container now needs more tab indexes then it was reserved; a recalculate on parent needs to be triggered in this case
+				// if this container now needs more tab indexes than it was reserved; a recalculate on parent needs to be triggered in this case
 				if (parentRecalculateNeeded && !triggeredByParent) $element.parent().trigger("recalculatePSTS", [designTabSeq]);
 			}
 
