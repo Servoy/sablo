@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
+import javax.websocket.CloseReason.CloseCodes;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -139,7 +140,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		closeSession(new CloseReason(CloseReason.CloseCodes.CANNOT_ACCEPT, reason));
 	}
 
-	private void closeSession(CloseReason closeReason)
+	public void closeSession(CloseReason closeReason)
 	{
 		if (session != null)
 		{
@@ -155,7 +156,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		window = null;
 	}
 
-	public void onClose()
+	public void onClose(CloseReason closeReason)
 	{
 		if (window != null)
 		{
@@ -175,7 +176,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		}
 		session = null;
 
-		WebsocketSessionManager.closeInactiveSessions();
+		if (closeReason.getCloseCode() != CloseCodes.SERVICE_RESTART) WebsocketSessionManager.closeInactiveSessions();
 	}
 
 	public void onError(Throwable t)

@@ -16,13 +16,11 @@
 
 package org.sablo.specification;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.jar.Manifest;
 
 import javax.servlet.ServletContext;
@@ -36,7 +34,7 @@ import org.slf4j.LoggerFactory;
  * Class responsible for loading a set of web component packages and specs.
  * @author acostescu
  */
-public class WebComponentSpecProvider
+public class WebComponentSpecProvider extends BaseSpecProvider
 {
 	private static final Logger log = LoggerFactory.getLogger(WebComponentSpecProvider.class.getCanonicalName());
 
@@ -120,11 +118,9 @@ public class WebComponentSpecProvider
 		}
 	}
 
-	private final WebSpecReader reader;
-
 	private WebComponentSpecProvider(WebSpecReader reader)
 	{
-		this.reader = reader;
+		super(reader);
 	}
 
 	/**
@@ -168,21 +164,6 @@ public class WebComponentSpecProvider
 		return reader.getLayoutSpecifications();
 	}
 
-	/**
-	 * Get a list of all packages that contain web component specification
-	 */
-	public Set<String> getPackageNames()
-	{
-		return reader.getWebComponentSpecifications().keySet();
-	}
-
-	/**
-	 * Get the map of component package names to package URLs.
-	 */
-	public Map<String, URL> getPackagesToURLs()
-	{
-		return reader.getPackagesToURLs();
-	}
 
 	/**
 	 * Get a list of all components contained by provided package name
@@ -203,12 +184,4 @@ public class WebComponentSpecProvider
 		return pkg == null ? Collections.<String> emptyList() : pkg.getSpecifications().keySet();
 	}
 
-	/**
-	 * @param packageName
-	 * @return
-	 */
-	public String getPackageDisplayName(String packageName)
-	{
-		return reader.getPackagesToDisplayNames().get(packageName);
-	}
 }

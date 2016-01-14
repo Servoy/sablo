@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 
+import javax.websocket.CloseReason;
+
 import org.sablo.eventthread.IEventDispatcher;
 
 /**
@@ -53,6 +55,11 @@ public interface IWebsocketEndpoint
 	 * Close the browser session.
 	 */
 	void closeSession();
+
+	/**
+	 * Close the browser session with given reason.
+	 */
+	void closeSession(CloseReason closeReason);
 
 	/**
 	 * Close the browser session with a cancel reason.

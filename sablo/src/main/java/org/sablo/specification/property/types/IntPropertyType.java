@@ -62,6 +62,7 @@ public class IntPropertyType extends DefaultPropertyType<Integer> implements IPr
 	public Number fromJSON(Object newJSONValue, Number previousSabloValue, PropertyDescription pd, IBrowserConverterContext dataConverterContext,
 		ValueReference<Boolean> returnValueAdjustedIncommingValue)
 	{
+		//TODO isn't this the same as Column.getAsRightType ?
 		if (newJSONValue == null || newJSONValue instanceof Integer) return (Integer)newJSONValue;
 		if (newJSONValue instanceof Number)
 		{

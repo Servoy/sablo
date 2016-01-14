@@ -16,11 +16,9 @@
 
 package org.sablo.specification;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.jar.Manifest;
 
 import javax.servlet.ServletContext;
@@ -35,7 +33,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author jcompagner
  */
-public class WebServiceSpecProvider
+public class WebServiceSpecProvider extends BaseSpecProvider
 {
 	private static final Logger log = LoggerFactory.getLogger(WebServiceSpecProvider.class.getCanonicalName());
 
@@ -120,11 +118,9 @@ public class WebServiceSpecProvider
 		}
 	}
 
-	private final WebSpecReader reader;
-
 	private WebServiceSpecProvider(WebSpecReader reader)
 	{
-		this.reader = reader;
+		super(reader);
 	}
 
 	/**
@@ -164,32 +160,5 @@ public class WebServiceSpecProvider
 	public WebComponentPackageSpecification<WebComponentSpecification> getServicesInPackage(String packageName)
 	{
 		return reader.getWebComponentSpecifications().get(packageName);
-	}
-
-	/**
-	 * Get the set of all services package names.
-	 * @return
-	 */
-	public Set<String> getPackageNames()
-	{
-		return reader.getWebComponentSpecifications().keySet();
-	}
-
-	/**
-	 * Get the map of service names to package URLs.
-	 * @return
-	 */
-	public Map<String, URL> getPackagesToURLs()
-	{
-		return reader.getPackagesToURLs();
-	}
-
-	/**
-	 * @param packageName
-	 * @return
-	 */
-	public String getPackageDisplayName(String packageName)
-	{
-		return reader.getPackagesToDisplayNames().get(packageName);
 	}
 }
