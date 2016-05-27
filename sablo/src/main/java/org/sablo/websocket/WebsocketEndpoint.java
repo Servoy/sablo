@@ -430,6 +430,11 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		}
 	}
 
+	public void sendText(int messageNumber, String text) throws IOException
+	{
+		sendText(messageNumber + "#" + text);
+	}
+
 	public synchronized void sendText(String txt) throws IOException
 	{
 		if (session == null)

@@ -69,9 +69,16 @@ public interface IWebsocketEndpoint
 	void sendText(String txt) throws IOException;
 
 	/**
+	 * @param nextMessageNumber
+	 * @param text
+	 */
+	void sendText(int messageNumber, String text) throws IOException;
+
+	/**
 	 * @throws TimeoutException see {@link IEventDispatcher#suspend(Object, int, long)} for more details.
 	 * @throws CancellationException see {@link IEventDispatcher#suspend(Object, int, long)} for more details.
 	 */
 	Object waitResponse(Integer messageId, String text, boolean blockEventProcessing) throws IOException, CancellationException, TimeoutException;
+
 
 }

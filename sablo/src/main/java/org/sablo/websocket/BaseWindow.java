@@ -431,7 +431,7 @@ public class BaseWindow implements IWindow
 				public String toString()
 				{
 					return writer.toString();
-				};
+				}
 			};
 			w.object();
 			DataConversion clientDataConversions = new DataConversion();
@@ -501,7 +501,7 @@ public class BaseWindow implements IWindow
 				w.endObject();
 
 				text = w.toString();
-				endpoint.sendText(text);
+				sendMessageText(text);
 				serviceCalls.clear();
 			}
 
@@ -511,6 +511,17 @@ public class BaseWindow implements IWindow
 		{
 			throw new IOException(e);
 		}
+	}
+
+	/**
+	 * Send the message text prepended with the message number.
+	 *
+	 * @param text
+	 * @throws IOException
+	 */
+	private void sendMessageText(String text) throws IOException
+	{
+		endpoint.sendText(getSession().getNextMessageNumber(), text);
 	}
 
 	public void sendChanges() throws IOException

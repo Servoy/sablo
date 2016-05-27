@@ -84,6 +84,8 @@ webSocketModule.factory('$webSocket',
 		function($rootScope, $injector, $window, $log, $q, $services, $sabloConverters, $sabloUtils, $swingModifiers, $interval, wsCloseCodes,$sabloLoadingIndicator, $timeout, $sabloTestability) {
 
 	var websocket = null;
+	
+	var lastServerMessageNumber = null;
 
 	var nextMessageId = 1;
 
@@ -104,7 +106,17 @@ webSocketModule.factory('$webSocket',
 		var obj
 		var responseValue
 		try {
-			obj = JSON.parse(message.data);
+			
+			var message_data = message.data;
+			var separator = message_data.indexOf('#');
+			if (separator >= 0 && separator < 5) {
+				// the json is prefixed with a message number: 123#{bla: "hello"}
+				lastServerMessageNumber = message_data.substring(0, separator);
+				message_data = message_data.substr(separator+1);
+			}
+			// else this is a response to a client request
+			
+			obj = JSON.parse(message_data);
 
 			// if the indicator is showing and this object wants a return message then hide the indicator until we send the response
 			var hideIndicator = obj && obj.smsgid && $sabloLoadingIndicator.isShowing();
@@ -201,7 +213,7 @@ webSocketModule.factory('$webSocket',
 				}, function(reason) {
 					if (isPromiseLike(responseValue)) $sabloTestability.decreaseEventLoop();
 					// error
-					$log.error("Error (follows below) in parsing/processing this message (async): " + message.data);
+					$log.error("Error (follows below) in parsing/processing this message (async): " + message_data);
 					$log.error(reason);
 					// server wants a response; send failure so that browser side script doesn't hang
 					var response = {
@@ -215,7 +227,7 @@ webSocketModule.factory('$webSocket',
 				});
 			}
 		} catch (e) {
-			$log.error("Error (follows below) in parsing/processing this message: " + message.data);
+			$log.error("Error (follows below) in parsing/processing this message: " + message_data);
 			$log.error(e);
 			if (obj && obj.smsgid) {
 				// server wants a response; send failure so that browser side script doesn't hang
@@ -406,9 +418,7 @@ webSocketModule.factory('$webSocket',
 
 		connect : function(context, args, queryArgs, websocketUri) {
 
-			var new_uri = generateURL(context, args, queryArgs, websocketUri);
-
-			websocket = typeof(ReconnectingWebSocket) == 'undefined' ? new WebSocket(new_uri) : new ReconnectingWebSocket(new_uri);
+			websocket = new ReconnectingWebSocket(function() { return generateURL(context, args, queryArgs, websocketUri); });
 
 			websocket.onopen = function(evt) {
 				$rootScope.$apply(function() {

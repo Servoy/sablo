@@ -213,9 +213,9 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 		return async ? promise :  waitForServiceCallbacks(promise, [100, 200, 500, 1000, 3000, 5000])
 	}
 	
-	function updateConnectArguments() {
+	function updateConnectArguments(sablo_reconnect) {
 		wsSessionArgs.queryArgs = wsSessionArgs.queryArgs || {};
-		wsSessionArgs.queryArgs.sablo_reconnect = true;
+		wsSessionArgs.queryArgs.sablo_reconnect = sablo_reconnect;
 		$webSocket.updateConnectArguments(wsSessionArgs.context, [getSessionId(), getWindowName(), getWindowId()], wsSessionArgs.queryArgs, wsSessionArgs.websocketUri);
 	}
 

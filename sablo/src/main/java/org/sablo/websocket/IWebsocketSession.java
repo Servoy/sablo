@@ -129,5 +129,10 @@ public interface IWebsocketSession
 	 * gets the last ping time of all active windows.
 	 * @return
 	 */
-	public long getLastPingTime();
+	long getLastPingTime();
+
+	/**
+	 * @return
+	 */
+	int getNextMessageNumber();
 }
