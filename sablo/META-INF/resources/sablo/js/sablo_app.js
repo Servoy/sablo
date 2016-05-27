@@ -212,6 +212,12 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 		var promise = getSession().callService(serviceName, methodName, argsObject, async)
 		return async ? promise :  waitForServiceCallbacks(promise, [100, 200, 500, 1000, 3000, 5000])
 	}
+	
+	function updateConnectArguments() {
+		wsSessionArgs.queryArgs = wsSessionArgs.queryArgs || {};
+		wsSessionArgs.queryArgs.sablo_reconnect = true;
+		$webSocket.updateConnectArguments(wsSessionArgs.context, [getSessionId(), getWindowName(), getWindowId()], wsSessionArgs.queryArgs, wsSessionArgs.websocketUri);
+	}
 
 	var getSessionId = function() {
 		var sessionId = webStorage.session.get('sessionid')
@@ -234,15 +240,22 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 	}
 
 	var formResolver = null;
-	var apiCallDeferredQueue = []
+	var apiCallDeferredQueue = [];
+	
+	var wsSessionArgs = {};
 
 	function hasResolvedFormState(name) {
 		return typeof(formStates[name]) !== 'undefined' && formStates[name].resolved;
 	}
 
 	return {
-		connect : function(context, args, queryArgs, websocketUri) {
-			wsSession = $webSocket.connect(context, args, queryArgs,websocketUri);
+		connect : function(context, queryArgs, websocketUri) {
+			wsSessionArgs = {
+				context: context,
+				queryArgs: queryArgs,
+				websocketUri: websocketUri
+			};
+			wsSession = $webSocket.connect(wsSessionArgs.context, [getSessionId(), getWindowName(), getWindowId()], wsSessionArgs.queryArgs, wsSessionArgs.websocketUri);
 
 			wsSession.onopen(function(evt) {
 				if (evt.isReconnect) {
@@ -251,8 +264,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 				}
 				else {
 					// set the websocket in reconnection mode..
-					queryArgs.sablo_reconnect = true;
-					$webSocket.updateConnectArguments(context, args, queryArgs, websocketUri);
+					updateConnectArguments();
 				}
 			});
 
@@ -271,6 +283,18 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 				}
 
 				if (conversionInfo && conversionInfo.call) msg.call = $sabloConverters.convertFromServerToClient(msg.call, conversionInfo.call, undefined, undefined, undefined);
+				
+				if (msg.sessionid) {
+					webStorage.session.add("sessionid", msg.sessionid);
+				}
+				if (msg.windowid) {
+					webStorage.session.add("windowid", msg.windowid);
+				}
+				if (msg.sessionid || msg.windowid) {
+					// update the arguments on the reconnection websocket..
+					updateConnectArguments();
+				}
+				
 				if (msg.call) {
 					// {"call":{"form":"product","element":"datatextfield1","api":"requestFocus","args":[arg1, arg2]}, // optionally "viewIndex":1 
 					// "{ conversions: {product: {datatextfield1: {0: "Date"}}} }
@@ -403,11 +427,6 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 			return wsSession
 		},
 		
-		updateConnectArguments: function(context, args, queryArgs, websocketUri) {
-			queryArgs.sablo_reconnect = true;
-			$webSocket.updateConnectArguments(context, args, queryArgs, websocketUri);
-		},
-
 		disconnect : function() {
 			$webSocket.disconnect();
 		},

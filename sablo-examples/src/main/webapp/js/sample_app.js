@@ -6,7 +6,7 @@ angular.module('sampleApp', ['sabloApp', '$sabloService', 'propsToWatch', 'webSt
 	}
 	
 	// $window.alert('Connecting...');
-	$sabloApplication.connect('', [$sabloApplication.getSessionId(), $sabloApplication.getWindowName(), $sabloApplication.getWindowId()])
+	$sabloApplication.connect()
 	.onMessageObject(function (msg, conversionInfo) {
 		   if (msg.sessionid) {
 			   webStorage.session.add("sessionid", msg.sessionid);
