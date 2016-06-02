@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
 import org.sablo.specification.Package;
@@ -52,6 +53,19 @@ public class InMemPackageReader implements IPackageReader
 	public String getPackageName()
 	{
 		return "inmem";
+	}
+
+	@Override
+	public String getVersion()
+	{
+		try
+		{
+			return getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
+		}
+		catch (IOException e)
+		{
+		}
+		return null;
 	}
 
 	@Override

@@ -15,6 +15,7 @@
  */
 package org.sablo.specification;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -349,6 +350,20 @@ class WebSpecReader
 		{
 			IPackageReader reader = packageReaders.get(i);
 			result.put(reader.getPackageName(), reader.getPackageURL());
+		}
+		return result;
+	}
+
+	/**
+	 * Get the map of available packages names to package resources.
+	 */
+	public Map<String, File> getPackagesToResources()
+	{
+		Map<String, File> result = new HashMap<String, File>();
+		for (int i = 0; i < packageReaders.size(); i++)
+		{
+			IPackageReader reader = packageReaders.get(i);
+			result.put(reader.getPackageName(), reader.getResource());
 		}
 		return result;
 	}

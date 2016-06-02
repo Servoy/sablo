@@ -83,6 +83,8 @@ public class Package
 
 		String getPackageDisplayname();
 
+		String getVersion();
+
 		Manifest getManifest() throws IOException;
 
 		String readTextFile(String path, Charset charset) throws IOException;
@@ -258,7 +260,7 @@ public class Package
 						String definition = parsed.getDefinition();
 						if (definition != null)
 						{
-							if (definition.startsWith(packageName))
+							if (definition.startsWith(packageName + '/'))
 							{
 								definition = definition.substring(packageName.length() + 1);
 							}
@@ -285,7 +287,7 @@ public class Package
 						String definition = parsed.getDefinition();
 						if (definition != null)
 						{
-							if (definition.startsWith(packageName))
+							if (definition.startsWith(packageName + '/'))
 							{
 								definition = definition.substring(packageName.length() + 1);
 							}
@@ -354,6 +356,19 @@ public class Package
 				log.error("Error getting package name." + getName(), e);
 			}
 			return FilenameUtils.getBaseName(resourcePath);
+		}
+
+		@Override
+		public String getVersion()
+		{
+			try
+			{
+				return getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
+			}
+			catch (IOException e)
+			{
+			}
+			return null;
 		}
 
 		@Override
@@ -506,6 +521,19 @@ public class Package
 		}
 
 		@Override
+		public String getVersion()
+		{
+			try
+			{
+				return getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
+			}
+			catch (IOException e)
+			{
+			}
+			return null;
+		}
+
+		@Override
 		public Manifest getManifest() throws IOException
 		{
 			if (manifest == null)
@@ -602,6 +630,12 @@ public class Package
 			return file;
 		}
 
+		@Override
+		public String toString()
+		{
+			return "ZipPackage: " + file;
+		}
+
 	}
 
 	public static class DirPackageReader implements IPackageReader
@@ -652,6 +686,19 @@ public class Package
 
 			// fall back to symbolic name
 			return getPackageName();
+		}
+
+		@Override
+		public String getVersion()
+		{
+			try
+			{
+				return getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
+			}
+			catch (IOException e)
+			{
+			}
+			return null;
 		}
 
 		@Override
@@ -817,6 +864,19 @@ public class Package
 
 			// fall back to symbolic name
 			return getPackageName();
+		}
+
+		@Override
+		public String getVersion()
+		{
+			try
+			{
+				return getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
+			}
+			catch (IOException e)
+			{
+			}
+			return null;
 		}
 
 		@Override

@@ -47,10 +47,12 @@ public class ClientService extends BaseWebObject implements IClientService
 {
 
 	private static final Logger log = LoggerFactory.getLogger(ClientService.class.getCanonicalName());
+	private String jsName = null;
 
 	public ClientService(String serviceName, WebObjectSpecification spec)
 	{
 		super(serviceName, spec);
+		jsName = convertToJSName(serviceName);
 	}
 
 
@@ -64,7 +66,7 @@ public class ClientService extends BaseWebObject implements IClientService
 			apiFunction = spec.getApiFunction(functionName);
 		}
 
-		Object retValue = CurrentWindow.get().executeServiceCall(name, functionName, arguments, apiFunction, new IToJSONWriter<IBrowserConverterContext>()
+		Object retValue = CurrentWindow.get().executeServiceCall(jsName, functionName, arguments, apiFunction, new IToJSONWriter<IBrowserConverterContext>()
 		{
 
 			@Override
@@ -115,7 +117,7 @@ public class ClientService extends BaseWebObject implements IClientService
 
 	public void executeAsyncServiceCall(String functionName, Object[] arguments)
 	{
-		CurrentWindow.get().executeAsyncServiceCall(name, functionName, arguments, getParameterTypes(functionName));
+		CurrentWindow.get().executeAsyncServiceCall(jsName, functionName, arguments, getParameterTypes(functionName));
 	}
 
 	protected PropertyDescription getParameterTypes(String functionName)
@@ -129,6 +131,17 @@ public class ClientService extends BaseWebObject implements IClientService
 			parameterTypes = BaseWebObject.getParameterTypes(apiFunc);
 		}
 		return parameterTypes;
+	}
+
+	public static String convertToJSName(String name)
+	{
+		int index = name.indexOf('-');
+		while (index != -1 && name.length() > index + 2)
+		{
+			name = name.substring(0, index) + Character.toUpperCase(name.charAt(index + 1)) + name.substring(index + 2);
+			index = name.indexOf('-');
+		}
+		return name;
 	}
 
 }
