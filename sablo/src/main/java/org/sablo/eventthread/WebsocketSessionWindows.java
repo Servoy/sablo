@@ -17,6 +17,7 @@
 package org.sablo.eventthread;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.json.JSONException;
 import org.json.JSONWriter;
@@ -86,6 +87,13 @@ public class WebsocketSessionWindows implements IWindow
 	}
 
 	@Override
+	public int getNextMessageNumber()
+	{
+		// should not be called for WebsocketSessionWindows, this window just maps calls to all windows for the session
+		throw new IllegalStateException("getNextMessageNumber in WebsocketSessionWindows");
+	}
+
+	@Override
 	public String getCurrentFormUrl()
 	{
 		return null;
@@ -116,7 +124,7 @@ public class WebsocketSessionWindows implements IWindow
 	}
 
 	@Override
-	public void onOpen()
+	public void onOpen(java.util.Map<String, List<String>> requestParams)
 	{
 		// ignore
 	}

@@ -85,6 +85,8 @@ webSocketModule.factory('$webSocket',
 
 	var websocket = null;
 	
+	var connectionArguments = {};
+	
 	var lastServerMessageNumber = null;
 
 	var nextMessageId = 1;
@@ -114,7 +116,7 @@ webSocketModule.factory('$webSocket',
 				lastServerMessageNumber = message_data.substring(0, separator);
 				message_data = message_data.substr(separator+1);
 			}
-			// else this is a response to a client request
+			// else message has no seq-no
 			
 			obj = JSON.parse(message_data);
 
@@ -400,6 +402,10 @@ webSocketModule.factory('$webSocket',
 				new_uri += a+"="+queryArgs[a]+"&";
 			}
 		}
+		
+		if (lastServerMessageNumber != null) {
+			new_uri += "lastServerMessageNumber="+lastServerMessageNumber+"&";
+		}
 
 		if (loc.search)
 		{
@@ -418,7 +424,18 @@ webSocketModule.factory('$webSocket',
 
 		connect : function(context, args, queryArgs, websocketUri) {
 
-			websocket = new ReconnectingWebSocket(function() { return generateURL(context, args, queryArgs, websocketUri); });
+			connectionArguments = {
+					context: context,
+					args: args,
+					queryArgs: queryArgs,
+					websocketUri: websocketUri
+			}
+			
+			// When ReconnectingWebSocket gets a function it will call the function to generate the url for each (re)connect.
+			websocket = new ReconnectingWebSocket(function() {
+					return generateURL(connectionArguments.context, connectionArguments.args,
+								connectionArguments.queryArgs, connectionArguments.websocketUri);
+				});
 
 			websocket.onopen = function(evt) {
 				$rootScope.$apply(function() {
@@ -447,8 +464,16 @@ webSocketModule.factory('$webSocket',
 			websocket.onconnecting = function(evt) {
 				// this event indicates we are trying to reconnect, the event has the close code and reason from the disconnect.
 				if (evt.code && evt.code != wsCloseCodes.CLOSED_ABNORMALLY && evt.code != wsCloseCodes.SERVICE_RESTART) {
-					// server disconnected, do not try to reconnect
+					
 					websocket.close();
+					
+					if (evt.reason == 'CLIENT-OUT-OF-SYNC') {
+						// Server detected that we are out-of-sync, reload completely
+						$window.location.reload();
+						return;
+					}
+					
+					// server disconnected, do not try to reconnect
 					$rootScope.$apply(function() {
 						connected = 'CLOSED';
 					});
@@ -465,8 +490,18 @@ webSocketModule.factory('$webSocket',
 			return wsSession
 		},
 
-		updateConnectArguments: function(context, args, queryArgs, websocketUri) {
-			websocket.url = generateURL(context, args, queryArgs, websocketUri);
+		// update query arguments for next reconnect-call
+		setConnectionQueryArgument: function(arg, value) {
+			if (angular.isDefined(value)) {
+				if (!connectionArguments.queryArgs) connectionArguments.queryArgs = {};
+				connectionArguments.queryArgs[arg] = value;
+			} else if (connectionArguments.queryArgs){
+				connectionArguments.queryArgs.delete(arg);
+			}
+		},
+		
+		setConnectionPathArguments: function(args) {
+			connectionArguments.args = args;
 		},
 		
 		getSession: function() {

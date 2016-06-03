@@ -61,7 +61,6 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	private volatile IEventDispatcher executor;
 
 	private final AtomicInteger handlingEvent = new AtomicInteger(0);
-	private final AtomicInteger lastSentMessage = new AtomicInteger(0);
 
 	private boolean proccessChanges;
 	private final WebsocketSessionWindows allWindowsProxy = new WebsocketSessionWindows(this);
@@ -119,15 +118,6 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 			}
 		}
 		return lastPingTime;
-	}
-
-	public int getNextMessageNumber()
-	{
-		if (lastSentMessage.get() >= 1000)
-		{
-			lastSentMessage.set(0);
-		}
-		return lastSentMessage.incrementAndGet();
 	}
 
 	@Override

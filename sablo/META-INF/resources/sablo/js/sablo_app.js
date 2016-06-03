@@ -13,6 +13,13 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 }).value("$sabloConstants",  {
 	modelChangeNotifier: "$modelChangeNotifier"
 }).factory('$sabloApplication', function ($rootScope, $window, $timeout, $q, $log, $webSocket, $sabloConverters, $sabloUtils, $sabloConstants, webStorage) {
+
+	// close the connection to the server when application is unloaded
+	$window.addEventListener('unload', function(event) {
+		$webSocket.disconnect();
+	});
+
+	
 	// formName:[beanname:{property1:1,property2:"test"}] needs to be synced to and from server
 	// this holds the form model with all the data, per form is this the "synced" view of the the IFormUI on the server 
 	// (3 way binding)
@@ -213,12 +220,6 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 		return async ? promise :  waitForServiceCallbacks(promise, [100, 200, 500, 1000, 3000, 5000])
 	}
 	
-	function updateConnectArguments(sablo_reconnect) {
-		wsSessionArgs.queryArgs = wsSessionArgs.queryArgs || {};
-		wsSessionArgs.queryArgs.sablo_reconnect = sablo_reconnect;
-		$webSocket.updateConnectArguments(wsSessionArgs.context, [getSessionId(), getWindowName(), getWindowId()], wsSessionArgs.queryArgs, wsSessionArgs.websocketUri);
-	}
-
 	var getSessionId = function() {
 		var sessionId = webStorage.session.get('sessionid')
 		if (sessionId) {
@@ -260,7 +261,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 			wsSession.onopen(function(evt) {
 				if (evt.isReconnect) {
 					// reload site
-					$window.location.reload();
+//					$window.location.reload(); site is reloaded when server closes with reason CLIENT-OUT-OF-SYNC
 				}
 				else {
 					// set the websocket in reconnection mode..
@@ -291,8 +292,8 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 					webStorage.session.add("windowid", msg.windowid);
 				}
 				if (msg.sessionid || msg.windowid) {
-					// update the arguments on the reconnection websocket..
-					updateConnectArguments();
+					// update the arguments on the reconnection websocket.
+					$webSocket.setConnectionPathArguments([getSessionId(), getWindowName(), getWindowId()]);
 				}
 				
 				if (msg.call) {
@@ -427,10 +428,6 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 			return wsSession
 		},
 		
-		disconnect : function() {
-			$webSocket.disconnect();
-		},
-
 		contributeFormResolver: function(contributedFormResolver) {
 			formResolver = contributedFormResolver;
 		},

@@ -16,6 +16,8 @@
 package org.sablo.websocket;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import org.json.JSONException;
 import org.json.JSONWriter;
@@ -162,6 +164,10 @@ public interface IWindow
 	/**
 	 *
 	 */
-	void onOpen();
+	void onOpen(Map<String, List<String>> requestParams);
 
+	/**
+	 * @return
+	 */
+	int getNextMessageNumber();
 }

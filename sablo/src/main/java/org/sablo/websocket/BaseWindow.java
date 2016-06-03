@@ -71,6 +71,7 @@ public class BaseWindow implements IWindow
 	private final String name;
 
 	private final AtomicInteger nextMessageId = new AtomicInteger(0);
+	private final AtomicInteger lastSentMessage = new AtomicInteger(0);
 
 	private final List<Map<String, ? >> serviceCalls = new ArrayList<>();
 	private final List<Map<String, Object>> delayedApiCalls = new ArrayList<>();
@@ -155,9 +156,35 @@ public class BaseWindow implements IWindow
 		return 0;
 	}
 
-	@Override
-	public void onOpen()
+	public int getNextMessageNumber()
 	{
+		if (lastSentMessage.get() >= 1000)
+		{
+			lastSentMessage.set(0);
+		}
+		return lastSentMessage.incrementAndGet();
+	}
+
+	@Override
+	public void onOpen(Map<String, List<String>> requestParams)
+	{
+		if (requestParams != null)
+		{
+			List<String> lastServerMessageNumberParameter = requestParams.get("lastServerMessageNumber");
+			if (lastServerMessageNumberParameter != null && lastServerMessageNumberParameter.size() == 1)
+			{
+				String clientLastMessageReceived = lastServerMessageNumberParameter.get(0);
+				if (!String.valueOf(lastSentMessage.get()).equals(clientLastMessageReceived))
+				{
+					// client is out-of-sync
+					cancelSession("CLIENT-OUT-OF-SYNC");
+				}
+
+				// Client sent a lastServerMessageNumber, so this is a reconnect, no need to send the services etc.
+				return;
+			}
+		}
+
 		// window was connected to new endpoint
 		try
 		{
@@ -521,7 +548,7 @@ public class BaseWindow implements IWindow
 	 */
 	private void sendMessageText(String text) throws IOException
 	{
-		endpoint.sendText(getSession().getNextMessageNumber(), text);
+		endpoint.sendText(getNextMessageNumber(), text);
 	}
 
 	public void sendChanges() throws IOException

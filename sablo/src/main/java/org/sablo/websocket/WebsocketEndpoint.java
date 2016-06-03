@@ -128,8 +128,11 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 				{
 					if (CurrentWindow.safeGet() == win && session != null) // window or session my already be closed
 					{
-						win.onOpen();
-						wsSession.onOpen(session.getRequestParameterMap());
+						win.onOpen(session.getRequestParameterMap());
+						if (session.isOpen())
+						{
+							wsSession.onOpen(session.getRequestParameterMap());
+						}
 					}
 				}
 			});
@@ -421,7 +424,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 
 		try
 		{
-			sendText(JSONUtils.writeDataWithConversions(FullValueToJSONConverter.INSTANCE, data, dataTypes,
+			sendText(window.getNextMessageNumber(), JSONUtils.writeDataWithConversions(FullValueToJSONConverter.INSTANCE, data, dataTypes,
 				BrowserConverterContext.NULL_WEB_OBJECT_WITH_NO_PUSH_TO_SERVER));
 		}
 		catch (JSONException e)
