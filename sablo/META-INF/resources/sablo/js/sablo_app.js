@@ -258,17 +258,6 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 			};
 			wsSession = $webSocket.connect(wsSessionArgs.context, [getSessionId(), getWindowName(), getWindowId()], wsSessionArgs.queryArgs, wsSessionArgs.websocketUri);
 
-			wsSession.onopen(function(evt) {
-				if (evt.isReconnect) {
-					// reload site
-//					$window.location.reload(); site is reloaded when server closes with reason CLIENT-OUT-OF-SYNC
-				}
-				else {
-					// set the websocket in reconnection mode..
-					updateConnectArguments();
-				}
-			});
-
 			wsSession.onMessageObject(function (msg, conversionInfo) {
 				// data got back from the server
 				for(var formname in msg.forms) {

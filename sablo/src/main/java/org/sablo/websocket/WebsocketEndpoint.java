@@ -99,12 +99,6 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 	{
 		this.session = newSession;
 
-		if (session.getRequestParameterMap().containsKey("sablo_reconnect"))
-		{
-			// this is in reconnecting mode. there will be a full reload coming in, just directly kill this socket.
-			session.close();
-			return;
-		}
 		String uuid = "null".equalsIgnoreCase(sessionid) ? null : sessionid;
 		String windowId = "null".equalsIgnoreCase(winid) ? null : winid;
 		String windowName = "null".equalsIgnoreCase(winname) ? null : winname;
