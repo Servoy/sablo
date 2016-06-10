@@ -15,7 +15,6 @@
  */
 package org.sablo.specification;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -30,7 +29,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.jar.Attributes;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -355,20 +353,6 @@ class WebSpecReader
 	}
 
 	/**
-	 * Get the map of available packages names to package resources.
-	 */
-	public Map<String, File> getPackagesToResources()
-	{
-		Map<String, File> result = new HashMap<String, File>();
-		for (int i = 0; i < packageReaders.size(); i++)
-		{
-			IPackageReader reader = packageReaders.get(i);
-			result.put(reader.getPackageName(), reader.getResource());
-		}
-		return result;
-	}
-
-	/**
 	 * Get the map of packages and package display names.
 	 */
 	public Map<String, String> getPackagesToDisplayNames()
@@ -390,22 +374,6 @@ class WebSpecReader
 			if (reader.getPackageName().equals(packageName)) return reader;
 		}
 		return null;
-	}
-
-	/**
-	 * Get the map of packages and package versions.
-	 * @throws IOException
-	 */
-	public Map<String, String> getPackagesToVersions() throws IOException
-	{
-		Map<String, String> result = new HashMap<String, String>();
-		for (int i = 0; i < packageReaders.size(); i++)
-		{
-			IPackageReader reader = packageReaders.get(i);
-			if (reader.getManifest().getMainAttributes().containsKey(Attributes.Name.IMPLEMENTATION_VERSION))
-				result.put(reader.getPackageName(), reader.getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION));
-		}
-		return result;
 	}
 
 	/**

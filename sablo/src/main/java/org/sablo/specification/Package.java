@@ -250,10 +250,10 @@ public class Package
 			packageDisplayname = reader.getPackageDisplayname();
 			for (String specpath : getWebEntrySpecNames(mf, IPackageReader.WEB_LAYOUT))
 			{
-				String specfileContent = reader.readTextFile(specpath, Charset.forName("UTF8")); // TODO: check encoding
-				if (specfileContent != null)
+				try
 				{
-					try
+					String specfileContent = reader.readTextFile(specpath, Charset.forName("UTF8")); // TODO: check encoding
+					if (specfileContent != null)
 					{
 						WebLayoutSpecification parsed = WebLayoutSpecification.parseLayoutSpec(specfileContent, packageName, reader);
 						parsed.setSpecURL(reader.getUrlForPath(specpath));
@@ -268,19 +268,19 @@ public class Package
 						}
 						descriptions.put(parsed.getName(), parsed);
 					}
-					catch (Exception e)
-					{
-						reader.reportError(specpath, e);
-					}
+				}
+				catch (Exception e)
+				{
+					reader.reportError(specpath, e);
 				}
 			}
 			// TODO deprecate and only use Web-Layout
 			for (String specpath : getWebEntrySpecNames(mf, "Web-Composite"))
 			{
-				String specfileContent = reader.readTextFile(specpath, Charset.forName("UTF8")); // TODO: check encoding
-				if (specfileContent != null)
+				try
 				{
-					try
+					String specfileContent = reader.readTextFile(specpath, Charset.forName("UTF8")); // TODO: check encoding
+					if (specfileContent != null)
 					{
 						WebLayoutSpecification parsed = WebLayoutSpecification.parseLayoutSpec(specfileContent, packageName, reader);
 						parsed.setSpecURL(reader.getUrlForPath(specpath));
@@ -295,10 +295,10 @@ public class Package
 						}
 						descriptions.put(parsed.getName(), parsed);
 					}
-					catch (Exception e)
-					{
-						reader.reportError(specpath, e);
-					}
+				}
+				catch (Exception e)
+				{
+					reader.reportError(specpath, e);
 				}
 			}
 		}
@@ -363,7 +363,7 @@ public class Package
 		{
 			try
 			{
-				return getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
+				return getManifest().getMainAttributes().getValue("Bundle-Version");
 			}
 			catch (IOException e)
 			{
@@ -525,7 +525,7 @@ public class Package
 		{
 			try
 			{
-				return getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
+				return getManifest().getMainAttributes().getValue("Bundle-Version");
 			}
 			catch (IOException e)
 			{
@@ -693,7 +693,7 @@ public class Package
 		{
 			try
 			{
-				return getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
+				return getManifest().getMainAttributes().getValue("Bundle-Version");
 			}
 			catch (IOException e)
 			{
@@ -871,7 +871,7 @@ public class Package
 		{
 			try
 			{
-				return getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
+				return getManifest().getMainAttributes().getValue("Bundle-Version");
 			}
 			catch (IOException e)
 			{
@@ -1000,6 +1000,10 @@ public class Package
 				else if ("true".equalsIgnoreCase((String)entry.getValue().get(new Attributes.Name(IPackageReader.WEB_COMPONENT))))
 				{
 					return IPackageReader.WEB_COMPONENT;
+				}
+				else if ("true".equalsIgnoreCase((String)entry.getValue().get(new Attributes.Name(IPackageReader.WEB_LAYOUT))))
+				{
+					return IPackageReader.WEB_LAYOUT;
 				}
 			}
 		}

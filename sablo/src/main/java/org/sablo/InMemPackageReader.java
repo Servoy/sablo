@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Map;
-import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
 import org.sablo.specification.Package;
@@ -60,7 +59,7 @@ public class InMemPackageReader implements IPackageReader
 	{
 		try
 		{
-			return getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
+			return getManifest().getMainAttributes().getValue("Bundle-Version");
 		}
 		catch (IOException e)
 		{
