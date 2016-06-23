@@ -113,6 +113,20 @@ public class PropertyDescription
 		}
 	}
 
+	public PropertyDescription(PropertyDescription pd, String name, IPropertyType< ? > type)
+	{
+		this.config = pd.config;
+		this.defaultValue = pd.defaultValue;
+		this.hasDefault = pd.hasDefault;
+		this.name = name == null ? pd.name : name;
+		this.optional = pd.optional;
+		this.properties = pd.properties == null ? null : new HashMap<>(pd.properties);
+		this.pushToServer = PushToServerEnum.allow;
+		this.tags = pd.tags;
+		this.type = type == null ? pd.type : type;
+		this.values = pd.values == null ? null : new ArrayList<>(pd.values);
+	}
+
 	public Collection<PropertyDescription> getProperties(IPropertyType< ? > pt)
 	{
 		if (properties == null)
@@ -288,7 +302,11 @@ public class PropertyDescription
 					propertyName = propertyName.substring(0, propertyName.indexOf('['));
 				}
 				propertyDescription = properties.get(customType);
-				if (propertyDescription != null)
+				if (propertyDescription instanceof WebObjectSpecification)
+				{
+					return propertyDescription.getProperty(propertyName);
+				}
+				else if (propertyDescription != null)
 				{
 					PropertyDescription typeSpec = ((ICustomType< ? >)propertyDescription.getType()).getCustomJSONTypeDefinition();
 					return typeSpec.getProperty(propertyName);

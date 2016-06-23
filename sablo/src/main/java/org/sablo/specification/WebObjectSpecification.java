@@ -32,6 +32,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.sablo.specification.Package.IPackageReader;
 import org.sablo.specification.property.CustomJSONArrayType;
+import org.sablo.specification.property.CustomJSONObjectType;
 import org.sablo.specification.property.CustomPropertyTypeResolver;
 import org.sablo.specification.property.CustomVariableArgsType;
 import org.sablo.specification.property.ICustomType;
@@ -112,7 +113,9 @@ public class WebObjectSpecification extends PropertyDescription
 	public WebObjectSpecification(String name, String packageName, String displayName, String categoryName, String icon, String preview, String definition,
 		JSONArray libs)
 	{
-		super(name, null);
+		super(name, TypesRegistry.createNewType(CustomJSONObjectType.TYPE_NAME, name));
+		((CustomJSONObjectType< ? , ? >)getType()).setCustomJSONDefinition(this);
+		((CustomJSONObjectType< ? , ? >)getType()).setMergeMode(true);
 		this.packageName = packageName;
 		this.displayName = displayName;
 		this.categoryName = categoryName;
@@ -126,7 +129,9 @@ public class WebObjectSpecification extends PropertyDescription
 	public WebObjectSpecification(String name, String packageName, String displayName, String categoryName, String icon, String preview, String definition,
 		JSONArray libs, Object configObject)
 	{
-		super(name, null, configObject);
+		super(name, TypesRegistry.createNewType(CustomJSONObjectType.TYPE_NAME, name), configObject);
+		((CustomJSONObjectType< ? , ? >)getType()).setCustomJSONDefinition(this);
+		((CustomJSONObjectType< ? , ? >)getType()).setMergeMode(true);
 		this.packageName = packageName;
 		this.displayName = displayName;
 		this.categoryName = categoryName;
@@ -135,6 +140,26 @@ public class WebObjectSpecification extends PropertyDescription
 		this.definition = definition;
 		this.libraries = libs != null ? libs : new JSONArray();
 		this.foundTypes = new HashMap<>();
+	}
+
+	public WebObjectSpecification(WebObjectSpecification spec, String name)
+	{
+		super(spec, name, TypesRegistry.createNewType(CustomJSONObjectType.TYPE_NAME, spec.getName()));
+		((CustomJSONObjectType< ? , ? >)getType()).setCustomJSONDefinition(this);
+		((CustomJSONObjectType< ? , ? >)getType()).setMergeMode(true);
+		this.packageName = spec.getPackageName();
+		this.displayName = spec.getDisplayName();
+		this.categoryName = spec.getCategoryName();
+		this.icon = spec.getIcon();
+		this.preview = spec.getPreview();
+		this.definition = spec.getDefinition();
+		this.libraries = spec.getLibraries();
+		this.foundTypes = new HashMap<>(spec.foundTypes);
+		this.serverScript = spec.serverScript;
+		this.specURL = spec.specURL;
+		this.apis.putAll(this.apis);
+		this.definitionURL = spec.definitionURL;
+		this.handlers.putAll(spec.handlers);
 	}
 
 

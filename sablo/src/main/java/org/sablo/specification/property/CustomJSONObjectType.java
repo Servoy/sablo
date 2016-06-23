@@ -44,7 +44,7 @@ import org.sablo.websocket.utils.JSONUtils.IToJSONConverter;
  */
 @SuppressWarnings("nls")
 // TODO these ET and WT are improper - as for object type they can represent multiple types (a different set for each child key), but they help to avoid some bugs at compile-time
-public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<String, ET>>implements IAdjustablePropertyType<Map<String, ET>>,
+public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<String, ET>> implements IAdjustablePropertyType<Map<String, ET>>,
 	IWrapperType<Map<String, ET>, ChangeAwareMap<ET, WT>>, ISupportsGranularUpdates<ChangeAwareMap<ET, WT>>, IPushToServerSpecialType
 {
 
@@ -65,6 +65,7 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 	}
 
 	protected Map<String, IWrapperType<ET, WT>> wrapperChildProps;
+	protected boolean merge = false;
 
 
 	/**
@@ -75,6 +76,17 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 	public CustomJSONObjectType(String customTypeName, PropertyDescription definition)
 	{
 		super(customTypeName, definition);
+	}
+
+	/**
+	 * Will only merge the client side, so initial data push will also enhance what is already there on the client.
+	 * Support for delete (remove of the property) is not supported in this mode.
+	 *
+	 * @param merge
+	 */
+	public void setMergeMode(boolean merge)
+	{
+		this.merge = merge;
 	}
 
 	@Override
@@ -376,11 +388,10 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 		if (changeAwareMap != null)
 		{
 			if (conversionMarkers != null) conversionMarkers.convert(CustomJSONObjectType.TYPE_NAME); // so that the client knows it must use the custom client side JS for what JSON it gets
-
 			Set<String> changes = changeAwareMap.getChangedKeys();
 			Map<String, WT> wrappedBaseMap = changeAwareMap.getWrappedBaseMapForReadOnly();
 			writer.object();
-			if (changeAwareMap.mustSendAll() || fullValue)
+			if (!merge && (changeAwareMap.mustSendAll() || fullValue))
 			{
 				// send all (currently we don't support granular updates for remove but we could in the future)
 				DataConversion objConversionMarkers = new DataConversion();
@@ -408,8 +419,18 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 					writer.endObject();
 				}
 			}
-			else if (changes.size() > 0)
+			else if (changes.size() > 0 || merge)
 			{
+				if (changes.size() == 0)
+				{
+					// its in merge mode all the keys must be pushed.
+					changes = wrappedBaseMap.keySet();
+					PushToServerEnum pushToServer = BrowserConverterContext.getPushToServerValue(dataConverterContext);
+					if (pushToServer == PushToServerEnum.shallow || pushToServer == PushToServerEnum.deep)
+					{
+						writer.key(PUSH_TO_SERVER).value(pushToServer == PushToServerEnum.shallow ? false : true);
+					}
+				}
 				// else write changed indexes / granular update:
 				writer.key(CONTENT_VERSION).value(changeAwareMap.getListContentVersion());
 				if (changeAwareMap.mustSendTypeToClient())

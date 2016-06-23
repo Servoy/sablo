@@ -15,7 +15,6 @@
  */
 package org.sablo.specification.property.types;
 
-
 /**
  * @author jcompagner
  *

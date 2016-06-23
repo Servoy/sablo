@@ -569,6 +569,25 @@ public abstract class BaseWebObject
 					{
 						oldValue = ((List)oldValue).get(arrayIndex);
 					}
+					if (oldValue == null)
+					{
+						PropertyDescription propertyDesc = specification.getProperty(propertyName);
+						if (propertyDesc != null)
+						{
+							if (getDefaultFromSpecAsWellIfNeeded)
+							{
+								oldValue = propertyDesc.getDefaultValue();
+								if (!propertyDesc.hasDefault() && propertyDesc.getType() != null)
+								{
+									oldValue = propertyDesc.getType().defaultValue(propertyDesc);
+								}
+							}
+							else if (oldValue == null && propertyDesc.getType() != null)
+							{
+								oldValue = propertyDesc.getType().defaultValue(propertyDesc);
+							}
+						}
+					}
 				}
 			}
 			// this value comes from internal maps, should be wrapped again (current value should always return a wrapped value)
@@ -781,12 +800,30 @@ public abstract class BaseWebObject
 
 	public void addEventHandler(String handlerName, IEventHandler handler)
 	{
-		if (specification.getHandler(handlerName) == null)
+		if (!testEventHandler(specification, handlerName))
 		{
 			throw new IllegalArgumentException("Handler for component '" + getName() + "' not found in component specification '" + specification.getName() +
 				"' : handler '" + handlerName + "'");
 		}
 		eventHandlers.put(handlerName, handler);
+	}
+
+	private boolean testEventHandler(WebObjectSpecification spec, String handlerName)
+	{
+		if (spec.getHandler(handlerName) == null)
+		{
+			int dotIndex = handlerName.indexOf('.');
+			if (dotIndex != -1)
+			{
+				PropertyDescription property = specification.getProperty(handlerName.substring(0, dotIndex));
+				if (property instanceof WebObjectSpecification)
+				{
+					return testEventHandler((WebObjectSpecification)property, handlerName.substring(dotIndex + 1));
+				}
+			}
+			return false;
+		}
+		return true;
 	}
 
 	public IEventHandler getEventHandler(String event)
