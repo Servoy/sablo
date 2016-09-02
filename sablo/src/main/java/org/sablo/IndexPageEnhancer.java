@@ -301,7 +301,7 @@ public class IndexPageEnhancer
 				StringTokenizer st = new StringTokenizer(sLib, ";");
 				while (st.hasMoreTokens())
 				{
-					String t = st.nextToken();
+					String t = st.nextToken().trim();
 					if (t.startsWith("name="))
 					{
 						jsonLib.put("name", t.substring(5));

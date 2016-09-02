@@ -502,7 +502,7 @@ public class Package
 			}
 
 			// fall back to symbolic name
-			return getName();
+			return FilenameUtils.getBaseName(getName());
 		}
 
 		@Override
@@ -580,7 +580,7 @@ public class Package
 				ZipEntry entry = zip.getEntry(pathWithoutSlashPrefix);
 				if (entry != null)
 				{
-					return new URL("jar:file:" + zip.getName() + "!" + pathWithSlashPrefix); //$NON-NLS-1$ //$NON-NLS-2$
+					return new URL("jar:" + file.toURI().toString() + "!" + pathWithSlashPrefix); //$NON-NLS-1$ //$NON-NLS-2$
 				}
 			}
 			catch (IOException e)
