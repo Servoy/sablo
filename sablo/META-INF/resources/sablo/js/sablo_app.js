@@ -666,7 +666,14 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 			if (push != false) callService('formService', 'setCurrentFormUrl', {url:url}, true);
 		}
 	}
-})
+}).filter('trustAsHtml', ['$sce', function($sce) {
+	return function(input, trustAsHtml) {
+		if (input && (!angular.isDefined(trustAsHtml) || trustAsHtml)) {
+			return $sce.trustAsHtml(''+input);
+		}
+		return input;
+	};
+}])
 
 //IMPORTANT: always add a sablo-tabseq directive with sablo-tabseq-config="{root: true}" to $rootScope element
 //- when sablo-tabseq-config="{container: true}" is used (same for 'root: true'), no real tabindex property will be set on the DOM element, it's only for grouping child sablo-tabseq
