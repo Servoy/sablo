@@ -24,6 +24,7 @@ import org.json.JSONObject;
 
 /**
  * Parsed web component / web service api function definition.
+ *
  * @author rgansevles
  */
 public class WebObjectFunctionDefinition
@@ -36,9 +37,9 @@ public class WebObjectFunctionDefinition
 	private String documentation;
 
 	private boolean blockEventProcessing = true;
-	private boolean delayUntilFormLoad = false;
+	private boolean delayUntilFormLoads = false;
 	private boolean async = false;
-	private boolean globalExclusive = false;
+	private boolean discardPreviouslyQueuedSimilarCalls = false;
 	private PropertyDescription asPropertyDescription;
 
 	public WebObjectFunctionDefinition(String name)
@@ -120,14 +121,14 @@ public class WebObjectFunctionDefinition
 		return blockEventProcessing;
 	}
 
-	public boolean isDelayUntilFormLoad()
+	public boolean shouldDelayUntilFormLoads()
 	{
-		return delayUntilFormLoad;
+		return delayUntilFormLoads;
 	}
 
-	public void setDelayUntilFormLoad(boolean delayUntilFormLoad)
+	public void setDelayUntilFormLoads(boolean delayUntilFormLoads)
 	{
-		this.delayUntilFormLoad = delayUntilFormLoad;
+		this.delayUntilFormLoads = delayUntilFormLoads;
 	}
 
 	/**
@@ -147,17 +148,26 @@ public class WebObjectFunctionDefinition
 	}
 
 	/**
-	 * I think this is meant so that when multiple delayed calls are called on the same API,
-	 * only one of them really gets called. (the requestFocus() type of call...)
+	 * False by default.<br/><br/>
+	 *
+	 * When true (only makes sense for 'async' or 'delayUntilFormLoads' type of calls), only the last call (inside an event handler on the event thread - when multiple async/delayed API calls get queued
+	 * before being sent to the client) to this method (identified by method name) on any component on the current window will be executed. The previous calls are discarded.<br/><br/>
+	 *
+	 * For example when the user clicks a button, an event handler on the server that executes lots of code might end up calling .requestFocus() on many components for many different forms on this window.
+	 * But to keep things fast, only the last requestFocus() is really relevant and only that really needs to get executed on the client - there is no use in executing any of the others.
+	 * So by marking requestFocus() with this flag in the .spec you can achieve that.
 	 */
-	public boolean isGlobalExclusive()
+	public boolean shouldDiscardPreviouslyQueuedSimilarCalls()
 	{
-		return globalExclusive;
+		return discardPreviouslyQueuedSimilarCalls;
 	}
 
-	public void setGlobalExclusive(boolean globalExclusive)
+	/**
+	 * @see #shouldDiscardPreviouslyQueuedSimilarCalls()
+	 */
+	public void setDiscardPreviouslyQueuedSimilarCalls(boolean discardPreviouslyQueuedSimilarCalls)
 	{
-		this.globalExclusive = globalExclusive;
+		this.discardPreviouslyQueuedSimilarCalls = discardPreviouslyQueuedSimilarCalls;
 	}
 
 	public PropertyDescription getAsPropertyDescription()

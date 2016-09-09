@@ -194,13 +194,19 @@ webSocketModule.factory('$webSocket',
 			}	
 			if (obj && obj.smsgid) {
 				if (isPromiseLike(responseValue)) {
+					if ($log.debugEnabled) $log.debug("sbl * Call from server with smsgid '" + obj.smsgid + "' returned a promise; will wait for it to get resolved.");
+					
 					// the server wants a response, this could be a promise so a dialog could be shown
 					// then just let protractor go through.
 					$sabloTestability.increaseEventLoop();
 				}
 				// server wants a response; responseValue may be a promise
 				$q.when(responseValue).then(function(ret) {
-					if (isPromiseLike(responseValue)) $sabloTestability.decreaseEventLoop();
+					if (isPromiseLike(responseValue)) {
+						$sabloTestability.decreaseEventLoop();
+						if ($log.debugEnabled) $log.debug("sbl * Promise returned by call from server with smsgid '" + obj.smsgid + "' is now resolved with value: -" + ret + "-. Sending value back to server...");
+					} else if ($log.debugEnabled) $log.debug("sbl * Call from server with smsgid '" + obj.smsgid + "' returned: -" + ret + "-. Sending value back to server...");
+					
 					// success
 					var response = {
 							smsgid : obj.smsgid
@@ -215,7 +221,7 @@ webSocketModule.factory('$webSocket',
 				}, function(reason) {
 					if (isPromiseLike(responseValue)) $sabloTestability.decreaseEventLoop();
 					// error
-					$log.error("Error (follows below) in parsing/processing this message (async): " + message_data);
+					$log.error("Error (follows below) in parsing/processing this message with smsgid '" + obj.smsgid + "' (async): " + message_data);
 					$log.error(reason);
 					// server wants a response; send failure so that browser side script doesn't hang
 					var response = {

@@ -45,7 +45,8 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 	 * Some code is interested in form state immediately after it's loaded/initialized (needsInitialData = false) in which case only some template values might be
 	 * available and some code is interested in using form state only after it got the initialData (via "requestData"'s response) from server (needsInitialData = true)
 	 */
-	var getFormStateImpl = function(name, needsInitialData) { 
+	var getFormStateImpl = function(name, needsInitialData) {
+		// TODO should we also keep track here of time passed? (a timeout that is cleared if it does get resolved) (if it's not loaded/initialized in X min just reject the deferredState)
 		var deferredStates = needsInitialData ? deferredFormStatesWithData : deferredFormStates;
 		var defered;
 		if (deferredStates[name]) {
@@ -290,6 +291,8 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 					// "{ conversions: {product: {datatextfield1: {0: "Date"}}} }
 					var call = msg.call;
 
+					if ($log.debugEnabled) $log.debug("sbl * Received API call from server: '" + call.api + "' to form " + call.form + ", component " + (call.propertyPath ? call.propertyPath : call.bean));
+
 					function getAPICallFunctions(formState) {
 						var funcThis;
 						if (call.viewIndex != undefined) {
@@ -315,10 +318,11 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 						var func = apiCallFunctions ? apiCallFunctions[call.api] : null;
 						var returnValue;
 						if (!func) {
-							console.warn("bean " + call.bean + " did not provide the api: " + call.api)
+							$log.warn("sbl * Bean " + (call.propertyPath ? call.propertyPath : call.bean) + " on form " + call.form + " did not provide the called api: " + call.api)
 							returnValue = null;
 						}
 						else {
+							if ($log.debugEnabled) $log.debug("sbl * Api call '" + call.api + "' to form " + call.form + ", component " + (call.propertyPath ? call.propertyPath : call.bean) + " will be called now.");
 							returnValue = func.apply(apiCallFunctions, call.args);
 						}
 						return returnValue;
@@ -327,42 +331,50 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 					function executeAPICallInTimeout(formState, count, timeout) {
 						return $timeout(function() {
 							var apiFunctions = getAPICallFunctions(formState);
-							if((apiFunctions && apiFunctions[call.api]) || count < 1) {
+							if ((apiFunctions && apiFunctions[call.api]) || count < 1) {
 								return executeAPICall(apiFunctions);
-							}
-							else {
+							} else {
 								return executeAPICallInTimeout(formState, count - 1, timeout)
 							} 
-						}, timeout).then(function(result){
+						}, timeout).then(function(result) {
 							return result;
-						},function(err){
+						}, function(err) {
 							return $q.reject(err);
 						});
 					}
 
 					var previousApiCallPromise = null;
-					if(apiCallDeferredQueue.length > 0) {
-						previousApiCallPromise = apiCallDeferredQueue[apiCallDeferredQueue.length - 1].promise; 
-					}
-					apiCallDeferredQueue.push($q.defer());
+					if (!call.delayUntilFormLoads) {
+						// make sure normal and async API calls are called in the same sequence that they were called in server side JS
+						if (apiCallDeferredQueue.length > 0) {
+							previousApiCallPromise = apiCallDeferredQueue[apiCallDeferredQueue.length - 1].promise; 
+						}
+						apiCallDeferredQueue.push($q.defer());
+					} // else it's a delayed call which means it shouldn't force load (in hidden div) the form if not resolved nor should it block other APIs from execution; it just waits for form to resolve
 					
-					function resolveFormAndExecuteAPICall() {
-						if (formResolver != null && !hasResolvedFormState(call.form)) {
+					function resolveFormIfNeededAndExecuteAPICall() {
+						if (!call.delayUntilFormLoads && formResolver != null && !hasResolvedFormState(call.form)) {
 							// this means that the form was shown and is now hidden/destroyed; but we still must handle API call to it!
 							// see if the form needs to be loaded;
-							if ($log.debugEnabled) $log.debug("sbl * Api call '" + call.api + "' to unresolved form " + call.form + "; will call prepareUnresolvedFormForUse.");
+							if ($log.debugEnabled) $log.debug("sbl * Api call '" + call.api + "' to unresolved form " + call.form + ", component " + (call.propertyPath ? call.propertyPath : call.bean) + "  will call prepareUnresolvedFormForUse.");
 							formResolver.prepareUnresolvedFormForUse(call.form);
 						}
 						
 						return getFormState(call.form).then(
-								function() {
-									return executeAPICallInTimeout(formStates[call.form], 10, 20);
+								function(formState) {
+									var apiFunctions = getAPICallFunctions(formState);
+									if (apiFunctions && apiFunctions[call.api]) {
+										return executeAPICall(apiFunctions);
+									} else {
+										if ($log.debugEnabled) $log.debug("sbl * Waiting for API to be contributed before execution: '" + call.api + "' of form " + call.form + ", component " + (call.propertyPath ? call.propertyPath : call.bean));
+										return executeAPICallInTimeout(formState, 10, 20);
+									}
 								},
 								function(err) {
-									$log.error("Error getting form state: " + err);		
+									$log.error("sbl * Error getting form state: " + err);		
 									return $q.reject("Error getting form state: " + err);
 								}).finally(function() {
-									if(apiCallDeferredQueue.length > 0) {
+									if (!call.delayUntilFormLoads && apiCallDeferredQueue.length > 0) {
 										apiCallDeferredQueue.shift().resolve();	
 									}
 								});
@@ -372,15 +384,15 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 					if(previousApiCallPromise) {
 						return previousApiCallPromise.then(
 								function() {
-									return resolveFormAndExecuteAPICall();
+									return resolveFormIfNeededAndExecuteAPICall();
 								},
 								function(err) {
-									$log.error("Error waiting for api call execute " + err);
+									$log.error("sbl * Error waiting for api call execute " + err);
 									return $q.reject(err);
 								});
 					}
 					else {
-						return resolveFormAndExecuteAPICall();
+						return resolveFormIfNeededAndExecuteAPICall();
 					}	
 				}
 			});

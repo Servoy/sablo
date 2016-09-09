@@ -265,7 +265,12 @@ public class WebObjectSpecification extends PropertyDescription
 		catch (RuntimeException e)
 		{
 			t = ObjectPropertyType.INSTANCE;
-			log.warn("Unknown type name '" + property + "' encountered while parsing spec " + this.getName());
+			if (!"${dataproviderType}".equals(property))
+			{
+				String message = "Unknown type name '" + property + "' encountered while parsing spec " + this.getName();
+				log.warn(message);
+				System.err.println(message);
+			}
 		}
 		return new ParsedProperty(t, isArray, isVarArgs);
 	}
@@ -400,17 +405,17 @@ public class WebObjectSpecification extends PropertyDescription
 				{
 					def.setBlockEventProcessing(jsonDef.getBoolean("blockEventProcessing"));
 				}
-				else if ("delayUntilFormLoad".equals(key))
+				else if ("delayUntilFormLoad".equals(key) || "delayUntilFormLoads".equals(key)) // first one is deprecated but still usable
 				{
-					def.setDelayUntilFormLoad(jsonDef.getBoolean("delayUntilFormLoad"));
+					def.setDelayUntilFormLoads(jsonDef.getBoolean(key));
 				}
 				else if ("async".equals(key))
 				{
 					def.setAsync(jsonDef.getBoolean("async"));
 				}
-				else if ("globalExclusive".equals(key))
+				else if ("globalExclusive".equals(key) || "discardPreviouslyQueuedSimilarCalls".equals(key)) // first one is deprecated but still usable
 				{
-					def.setGlobalExclusive(jsonDef.getBoolean("globalExclusive"));
+					def.setDiscardPreviouslyQueuedSimilarCalls(jsonDef.getBoolean(key));
 				}
 //				else if ("waitsForUserAction".equals(key))
 //				{

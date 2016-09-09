@@ -58,9 +58,6 @@ public class FormServiceHandler implements IEventDispatchAwareServerService
 	 */
 	public static final int EVENT_LEVEL_INITIAL_FORM_DATA_REQUEST = 1000;
 
-	/**
-	 * @param baseWebsocketSession
-	 */
 	protected FormServiceHandler()
 	{
 	}
