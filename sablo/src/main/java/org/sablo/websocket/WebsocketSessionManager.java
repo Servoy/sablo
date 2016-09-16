@@ -130,11 +130,17 @@ public class WebsocketSessionManager
 		return wsSession;
 	}
 
-	/**
-	 * @param endpointType
-	 * @param uuid
-	 */
 	public static void closeInactiveSessions()
+	{
+		closeSessions(true);
+	}
+
+	public static void closeAllSessions()
+	{
+		closeSessions(false);
+	}
+
+	private static void closeSessions(boolean checkForWindowActivity)
 	{
 		List<IWebsocketSession> expiredSessions = new ArrayList<>(3);
 		synchronized (wsSessions)
@@ -143,7 +149,7 @@ public class WebsocketSessionManager
 			while (sessions.hasNext())
 			{
 				IWebsocketSession session = sessions.next();
-				if (session.checkForWindowActivity())
+				if (!checkForWindowActivity || session.checkForWindowActivity())
 				{
 					sessions.remove();
 					expiredSessions.add(session);

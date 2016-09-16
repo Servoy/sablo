@@ -372,7 +372,7 @@ webSocketModule.factory('$webSocket',
 	function isReconnecting() {
 		return connected == 'RECONNECTING';
 	}
-	
+
 	function generateURL(context, args, queryArgs, websocketUri) {
 		var loc = window.location, new_uri;
 		if (loc.protocol === "https:") {
@@ -517,7 +517,7 @@ webSocketModule.factory('$webSocket',
 		isConnected: isConnected,
 
 		isReconnecting: isReconnecting,
-
+		
 		disconnect: function() {
 			if(websocket) {
 				websocket.close();
@@ -984,13 +984,13 @@ webSocketModule.factory('$webSocket',
 }).directive('sabloReconnectingFeedback', function ($webSocket) {
 
   function reconnecting() { 
-		return $webSocket.isReconnecting(); 
-	}
-  
+	  return $webSocket.isReconnecting(); 
+  }
+ 
   // TODO: should we not introduce a scope and just watch '$webSocket.isReconnecting()'?
   return {
     restrict: 'EA',
-    template: '<div ng-show="reconnecting()" ng-transclude></div>',
+    template: '<div ng-show="reconnecting()" style="z-index:2147483647;background:lightgray;opacity:.75;width:100%;height:100%;position:absolute;" ng-transclude></div>',
     transclude: true,
     scope: true,
     controller: function($scope, $element, $attrs) {
