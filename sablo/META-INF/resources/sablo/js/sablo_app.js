@@ -270,7 +270,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 					// we just checked before that formStates exists so getFormState(formname) deferr below will actually be instant right
 					// it's called like this to reuse getFormState() similar to the rest of the code
 					getFormState(formname).then(getFormMessageHandler(formname, msg, conversionInfo), 
-							function(err) { $log.error("Error getting form state: " + err); });
+							function(err) { $log.error("Error getting form state when trying to handle msg. from server: " + err); });
 				}
 
 				if (conversionInfo && conversionInfo.call) msg.call = $sabloConverters.convertFromServerToClient(msg.call, conversionInfo.call, undefined, undefined, undefined);
@@ -781,8 +781,8 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).config(funct
 
 			function updateCurrentDomElTabIndex() {
 				if (hasOwnTabIndex()) {
-					if (runtimeIndex.startIndex !== 0) $element.attr('tabIndex', runtimeIndex.startIndex);
-					else $element.removeAttr('tabIndex');
+					if (runtimeIndex.startIndex !== 0) $attrs.$set('tabindex', runtimeIndex.startIndex);
+					else $attrs.$set('tabindex', undefined);
 				}
 			}
 

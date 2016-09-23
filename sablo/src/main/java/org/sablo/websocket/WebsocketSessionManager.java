@@ -23,6 +23,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,14 +41,14 @@ public class WebsocketSessionManager
 	private final static Map<String, IWebsocketSessionFactory> websocketSessionFactories = new HashMap<>();
 
 	//maps form uuid to session
-	private final static Map<String, IWebsocketSession> wsSessions = new HashMap<>();
+	private final static ConcurrentMap<String, IWebsocketSession> wsSessions = new ConcurrentHashMap<>();
+
+	private final static ReentrantLock closingLock = new ReentrantLock();
+	private final static ReentrantLock creatingLock = new ReentrantLock();
 
 	public static void addSession(IWebsocketSession wsSession)
 	{
-		synchronized (wsSessions)
-		{
-			wsSessions.put(wsSession.getUuid(), wsSession);
-		}
+		wsSessions.put(wsSession.getUuid(), wsSession);
 	}
 
 	public static void removeSession(String uuid)
@@ -66,11 +69,7 @@ public class WebsocketSessionManager
 				log.error("Error sending changes when session is removed", e);
 			}
 		}
-		IWebsocketSession websocketSession;
-		synchronized (wsSessions)
-		{
-			websocketSession = wsSessions.remove(uuid);
-		}
+		IWebsocketSession websocketSession = wsSessions.remove(uuid);
 		if (websocketSession != null)
 		{
 			websocketSession.dispose();
@@ -103,7 +102,8 @@ public class WebsocketSessionManager
 	{
 		String uuid = prevUuid;
 		IWebsocketSession wsSession = null;
-		synchronized (wsSessions)
+		if (create) creatingLock.lock();
+		try
 		{
 			if (uuid != null && uuid.length() > 0)
 			{
@@ -115,17 +115,20 @@ public class WebsocketSessionManager
 			}
 			if (wsSession == null || !wsSession.isValid())
 			{
-				wsSessions.remove(uuid);
 				wsSession = null;
 				if (create && websocketSessionFactories.containsKey(endpointType))
 				{
 					wsSession = websocketSessionFactories.get(endpointType).createSession(uuid);
-				}
-				if (wsSession != null)
-				{
-					wsSessions.put(uuid, wsSession);
+					if (wsSession != null)
+					{
+						wsSessions.put(uuid, wsSession);
+					}
 				}
 			}
+		}
+		finally
+		{
+			if (create) creatingLock.unlock();
 		}
 		return wsSession;
 	}
@@ -142,39 +145,56 @@ public class WebsocketSessionManager
 
 	private static void closeSessions(boolean checkForWindowActivity)
 	{
-		List<IWebsocketSession> expiredSessions = new ArrayList<>(3);
-		synchronized (wsSessions)
+		boolean hasLock = false;
+		if (!checkForWindowActivity)
 		{
-			Iterator<IWebsocketSession> sessions = wsSessions.values().iterator();
-			while (sessions.hasNext())
+			closingLock.lock();
+			hasLock = true;
+		}
+		else
+		{
+			hasLock = closingLock.tryLock();
+		}
+		if (hasLock)
+		{
+			List<IWebsocketSession> expiredSessions = new ArrayList<>(3);
+			try
 			{
-				IWebsocketSession session = sessions.next();
-				if (!checkForWindowActivity || session.checkForWindowActivity())
+				Iterator<IWebsocketSession> sessions = wsSessions.values().iterator();
+				while (sessions.hasNext())
 				{
-					sessions.remove();
-					expiredSessions.add(session);
+					IWebsocketSession session = sessions.next();
+					if (!checkForWindowActivity || session.checkForWindowActivity())
+					{
+						sessions.remove();
+						expiredSessions.add(session);
+					}
 				}
 			}
-		}
-
-		for (IWebsocketSession session : expiredSessions)
-		{
-			try
+			finally
 			{
-				session.sessionExpired();
-			}
-			catch (Exception e)
-			{
-				log.error("Error expiring session " + session.getUuid(), e);
+				closingLock.unlock();
 			}
 
-			try
+			for (IWebsocketSession session : expiredSessions)
 			{
-				session.dispose();
-			}
-			catch (Exception e)
-			{
-				log.error("Error disposing expired session " + session.getUuid(), e);
+				try
+				{
+					session.sessionExpired();
+				}
+				catch (Exception e)
+				{
+					log.error("Error expiring session " + session.getUuid(), e);
+				}
+
+				try
+				{
+					session.dispose();
+				}
+				catch (Exception e)
+				{
+					log.error("Error disposing expired session " + session.getUuid(), e);
+				}
 			}
 		}
 
