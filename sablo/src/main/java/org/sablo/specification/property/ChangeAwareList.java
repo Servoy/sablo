@@ -276,6 +276,12 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 			markElementChanged(attachedToIdx);
 		}
 
+		@Override
+		public String toString()
+		{
+			return "IndexChangeListener:" + attachedToIdx;
+		}
+
 	}
 
 	@Override
@@ -299,7 +305,11 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 	{
 		if (el instanceof ISmartPropertyValue)
 		{
-			((ISmartPropertyValue)el).detach();
+			// if the wrapper list still has this el then don't call detach on it.
+			if (!getWrappedBaseList().contains(el))
+			{
+				((ISmartPropertyValue)el).detach();
+			}
 			Iterator<IndexChangeListener> it = changeHandlers.iterator();
 			while (it.hasNext())
 			{
@@ -406,7 +416,6 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 			WT oldWrappedValue = getWrappedBaseList().get(idx);
 			baseList.remove(idx);
 			detachIfNeeded(idx, oldWrappedValue, true);
-
 			markAllChanged();
 			return true;
 		}
