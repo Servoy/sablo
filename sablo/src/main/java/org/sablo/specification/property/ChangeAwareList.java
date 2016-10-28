@@ -43,6 +43,7 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 	// and a granular update ends up doing incorrect modifications (as it's being applied in wrong place); for now we just drop
 	// the browser changes when this happens through the 'version' mechanism
 	private int version;
+	private int lastResetDueToOutOfSyncVersion = 0;
 
 	protected List<ET> baseList;
 
@@ -625,6 +626,25 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 			int i = it.nextIndex();
 			it.add(e);
 			attachToBaseObjectIfNeeded(i, getWrappedBaseList().get(i), true);
+			markAllChanged();
+		}
+	}
+
+	/**
+	 * If client sends updates for a version that was already changed on server, we might need to give the client the server's value again - to keep
+	 * things in sync. Client value and update will be discarded as the server is leading.
+	 */
+	public void resetDueToOutOfSyncIfNeeded(int clientUpdateVersion)
+	{
+		// dropped browser update because server object changed meanwhile;
+		// will send a full update if needed to have the correct value browser-side as well again (currently server side is leading / has more prio because not all server side values might support being recreated from client values)
+
+		// if the list was already re-sent to client with a version higher to correct differences before for that client version, we shouldn't re-send it again as the client will already get the already sent full value correction;
+		// otherwise we can get into a race-loop where client sends updates for an out-of-date value multiple times (let's say twice), server sends back full value twice and then client sees new full
+		// value 1 and wants to send updates for it but server is already 2 versions ahead and triggers another full value send to client and the cycle never ends
+		if (clientUpdateVersion >= lastResetDueToOutOfSyncVersion)
+		{
+			lastResetDueToOutOfSyncVersion = version + 1; // remember that we already corrected these differences for any previous version; so don't try to correct it again for previous versions in the future if updates still come for those
 			markAllChanged();
 		}
 	}

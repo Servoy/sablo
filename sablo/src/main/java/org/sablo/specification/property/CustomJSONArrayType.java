@@ -230,8 +230,8 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object>i
 						")  - so server changed meanwhile; ignoring browser update. Update JSON: " + newJSONValue);
 
 					// dropped browser update because server object changed meanwhile;
-					// will send a full update to have the correct value browser-side as well again (currently server side is leading / has more prio because not all server side values might support being recreated from client values)
-					previousChangeAwareList.markAllChanged();
+					// will send a full update if needed to have the correct value browser-side as well again (currently server side is leading / has more prio because not all server side values might support being recreated from client values)
+					previousChangeAwareList.resetDueToOutOfSyncIfNeeded(clientReceivedJSON.getInt(CONTENT_VERSION));
 
 					return previousChangeAwareList;
 				}
