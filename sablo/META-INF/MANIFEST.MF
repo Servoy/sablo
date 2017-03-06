@@ -19,7 +19,7 @@ Export-Package: org.sablo,
  org.sablo.util
 Require-Bundle: org.junit,
  org.apache.commons.io,
- org.slf4j.api
+ slf4j.api
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ClassPath: .
 Bundle-Vendor: Servoy
