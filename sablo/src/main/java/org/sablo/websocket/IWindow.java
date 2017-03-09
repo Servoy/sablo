@@ -51,6 +51,12 @@ public interface IWindow
 	void setEndpoint(IWebsocketEndpoint endpoint);
 
 	/**
+	 * Get the websocket endpoint for this window.
+	 * @return
+	 */
+	IWebsocketEndpoint getEndpoint();
+
+	/**
 	 * @param formName
 	 * @return
 	 */

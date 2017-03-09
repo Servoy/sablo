@@ -36,7 +36,7 @@ import org.sablo.websocket.utils.JSONUtils.IToJSONConverter;
  */
 public abstract class Container extends WebComponent
 {
-	protected final Map<String, WebComponent> components = new HashMap<>();
+	private Map<String, WebComponent> components = new HashMap<>();
 	protected boolean changed;
 
 	public Container(String name, WebObjectSpecification spec)
@@ -84,6 +84,11 @@ public abstract class Container extends WebComponent
 		return Collections.unmodifiableCollection(components.values());
 	}
 
+	public void clearComponents()
+	{
+		components = new HashMap<>();
+	}
+
 	@Override
 	public void dispose()
 	{
@@ -92,7 +97,7 @@ public abstract class Container extends WebComponent
 		{
 			component.dispose();
 		}
-		components.clear();
+		clearComponents();
 	}
 
 	public boolean writeAllComponentsChanges(JSONWriter w, String keyInParent, IToJSONConverter<IBrowserConverterContext> converter,

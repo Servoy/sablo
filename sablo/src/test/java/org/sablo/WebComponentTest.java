@@ -121,7 +121,7 @@ public class WebComponentTest
 		data.put("msg", properties);
 
 		String msg = JSONUtils.writeDataWithConversions(data, null, null);
-		assertEquals("{\"msg\":{\"name\":\"test\",\"size\":{\"width\":10,\"height\":10}}}", msg);
+		assertEquals(new JSONObject("{\"msg\":{\"name\":\"test\",\"size\":{\"width\":10,\"height\":10}}}").toString(), new JSONObject(msg).toString());
 
 		component.putBrowserProperty("size", new JSONObject("{\"width\":20,\"height\":20}"));
 		properties = component.getRawPropertiesWithoutDefaults();
@@ -186,8 +186,9 @@ public class WebComponentTest
 
 		String msg = JSONUtils.writeDataWithConversions(data, null, null);
 		assertEquals(
-			"{\"msg\":{\"font\":{\"fontWeight\":\"bold\",\"fontStyle\":\"normal\",\"fontSize\":\"12px\",\"fontFamily\":\"SansSerif, Verdana, Arial\"},\"name\":\"test\"}}",
-			msg);
+			new JSONObject(
+				"{\"msg\":{\"font\":{\"fontWeight\":\"bold\",\"fontStyle\":\"normal\",\"fontSize\":\"12px\",\"fontFamily\":\"SansSerif, Verdana, Arial\"},\"name\":\"test\"}}").toString(),
+			new JSONObject(msg).toString());
 
 		component.putBrowserProperty("font", new JSONObject("{\"fontStyle\":\"italic\",\"fontSize\":\"10px\",\"fontFamily\":\"SansSerif, Verdana, Arial\"}"));
 		properties = component.getRawPropertiesWithoutDefaults();
@@ -222,7 +223,7 @@ public class WebComponentTest
 		data.put("msg", properties);
 
 		String msg = JSONUtils.writeDataWithConversions(data, null, null);
-		assertEquals("{\"msg\":{\"location\":{\"x\":10,\"y\":10},\"name\":\"test\"}}", msg);
+		assertEquals(new JSONObject("{\"msg\":{\"location\":{\"x\":10,\"y\":10},\"name\":\"test\"}}").toString(), new JSONObject(msg).toString());
 
 		component.putBrowserProperty("location", new JSONObject("{\"x\":20,\"y\":20}"));
 		properties = component.getRawPropertiesWithoutDefaults();
@@ -328,13 +329,15 @@ public class WebComponentTest
 
 		String msg = JSONUtils.writeDataWithConversions(data, messageTypes, allowDataConverterContext);
 		assertEquals(
-			"{\"msg\":{\"name\":\"test\",\"types\":{\"vEr\":2,\"v\":[{\"vEr\":2,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},{\"vEr\":2,\"v\":{\"name\":\"myname2\",\"active\":false,\"foreground\":\"#ffffff\"}}],\"svy_types\":{\"1\":\"JSON_obj\",\"0\":\"JSON_obj\"}}},\"svy_types\":{\"msg\":{\"types\":\"JSON_arr\"}}}",
-			msg);
+			new JSONObject(
+				"{\"msg\":{\"name\":\"test\",\"types\":{\"vEr\":2,\"v\":[{\"vEr\":2,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},{\"vEr\":2,\"v\":{\"name\":\"myname2\",\"active\":false,\"foreground\":\"#ffffff\"}}],\"svy_types\":{\"1\":\"JSON_obj\",\"0\":\"JSON_obj\"}}},\"svy_types\":{\"msg\":{\"types\":\"JSON_arr\"}}}").toString(),
+			new JSONObject(msg).toString());
 
 		msg = JSONUtils.writeDataWithConversions(data, messageTypes, shallowDataConverterContext);
 		assertEquals(
-			"{\"msg\":{\"name\":\"test\",\"types\":{\"vEr\":3,\"w\":false,\"v\":[{\"vEr\":3,\"w\":false,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},{\"vEr\":3,\"w\":false,\"v\":{\"name\":\"myname2\",\"active\":false,\"foreground\":\"#ffffff\"}}],\"svy_types\":{\"1\":\"JSON_obj\",\"0\":\"JSON_obj\"}}},\"svy_types\":{\"msg\":{\"types\":\"JSON_arr\"}}}",
-			msg);
+			new JSONObject(
+				"{\"msg\":{\"name\":\"test\",\"types\":{\"vEr\":3,\"w\":false,\"v\":[{\"vEr\":3,\"w\":false,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},{\"vEr\":3,\"w\":false,\"v\":{\"name\":\"myname2\",\"active\":false,\"foreground\":\"#ffffff\"}}],\"svy_types\":{\"1\":\"JSON_obj\",\"0\":\"JSON_obj\"}}},\"svy_types\":{\"msg\":{\"types\":\"JSON_arr\"}}}").toString(),
+			new JSONObject(msg).toString());
 
 		component.putBrowserProperty("types",
 			new JSONObject("{\"vEr\":3,\"v\":[{\"vEr\":3,\"v\":{\"name\":\"myname\",\"active\":false,\"foreground\":\"#ff0000\"}}," +

@@ -92,6 +92,7 @@ public class WebObjectSpecification extends PropertyDescription
 
 	private final Map<String, WebObjectFunctionDefinition> handlers = new HashMap<>(); // second String is always a "function" for now, but in the future it will probably contain more (to specify sent args/types...)
 	private final Map<String, WebObjectFunctionDefinition> apis = new HashMap<>();
+	private final Map<String, WebObjectFunctionDefinition> serverApis = new HashMap<>();
 	private final String definition;
 	private final JSONArray libraries;
 	private final String displayName;
@@ -162,6 +163,11 @@ public class WebObjectSpecification extends PropertyDescription
 		apis.put(apiFunction.getName(), apiFunction);
 	}
 
+	protected final void addServerApiFunction(WebObjectFunctionDefinition apiFunction)
+	{
+		serverApis.put(apiFunction.getName(), apiFunction);
+	}
+
 	protected final void addHandler(WebObjectFunctionDefinition propertyDescription)
 	{
 		handlers.put(propertyDescription.getName(), propertyDescription);
@@ -191,6 +197,11 @@ public class WebObjectSpecification extends PropertyDescription
 	public WebObjectFunctionDefinition getApiFunction(String apiFunctionName)
 	{
 		return apis.get(apiFunctionName);
+	}
+
+	public WebObjectFunctionDefinition getServerApiFunction(String apiFunctionName)
+	{
+		return serverApis.get(apiFunctionName);
 	}
 
 	public Map<String, WebObjectFunctionDefinition> getApiFunctions()
@@ -337,6 +348,17 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				WebObjectFunctionDefinition def = parseFunctionDefinition(spec, api, itk.next());
 				spec.addApiFunction(def);
+			}
+		}
+		//internal api
+		if (json.has("serverApi"))
+		{
+			JSONObject api = json.getJSONObject("serverApi");
+			Iterator<String> itk = api.keys();
+			while (itk.hasNext())
+			{
+				WebObjectFunctionDefinition def = parseFunctionDefinition(spec, api, itk.next());
+				spec.addServerApiFunction(def);
 			}
 		}
 		spec.setSupportGrouping(json.has("group") ? json.optBoolean("group", true) : true);

@@ -21,6 +21,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 
 import javax.websocket.CloseReason;
+import javax.websocket.Session;
 
 import org.sablo.eventthread.IEventDispatcher;
 
@@ -45,6 +46,13 @@ public interface IWebsocketEndpoint
 	 * It there an active session to the browser?
 	 */
 	boolean hasSession();
+
+	/**
+	 * return the websocket session.
+	 *
+	 * @return
+	 */
+	Session getSession();
 
 	/**
 	 * returns the last ping time that was received from the client

@@ -28,8 +28,8 @@ import org.json.JSONWriter;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.Package.IPackageReader;
+import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.WebComponentSpecProvider;
 import org.sablo.specification.property.IBrowserConverterContext;
 import org.sablo.specification.property.IWrapperType;
@@ -180,7 +180,8 @@ public class WrapperTypeTest
 		data.put("msg", properties.content);
 
 		String msg = JSONUtils.writeDataWithConversions(data, AggregatedPropertyType.newAggregatedProperty().putProperty("msg", properties.contentType), null);
-		assertEquals("{\"msg\":{\"somepropp\":{\"string\":\"test\",\"counter\":1},\"name\":\"test\"}}", msg);
+		assertEquals(new JSONObject("{\"msg\":{\"somepropp\":{\"string\":\"test\",\"counter\":1},\"name\":\"test\"}}").toString(),
+			new JSONObject(msg).toString());
 
 		component.putBrowserProperty("somepropp", "tester");
 

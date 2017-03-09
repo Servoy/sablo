@@ -247,6 +247,10 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 		return typeof (formStates[name]) !== 'undefined' && formStates[name].resolved;
 	}
 
+	function hasFormStateWithData(name) {
+		return typeof (formStates[name]) !== 'undefined' && !formStates[name].initializing && formStates[name].resolved;
+	}
+
 	return <sablo.ISabloApplication>{
 		connect: function(context, queryArgs, websocketUri) {
 			wsSessionArgs = {
@@ -467,9 +471,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 
 		hasResolvedFormState: hasResolvedFormState,
 
-		hasFormStateWithData: function(name) {
-			return typeof (formStates[name]) !== 'undefined' && !formStates[name].initializing && formStates[name].resolved;
-		},
+		hasFormStateWithData: hasFormStateWithData,
 
 		clearFormState: function(formName) {
 			delete formStates[formName];
@@ -612,7 +614,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 		getExecutor: function(formName) {
 			return {
 				on: function(beanName, eventName, property, args, rowId) {
-					return getFormStateWithData(formName).then(function(formState) {
+					var onFunction = function(formState) {
 						// this is onaction, onfocuslost which is really configured in the html so it really 
 						// is something that goes to the server
 						var newargs = $sabloUtils.getEventArgs(args, eventName);
@@ -623,10 +625,18 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 						var cmd = { formname: formName, beanname: beanName, event: eventName, args: newargs, changes: data }
 						if (rowId) cmd['rowId'] = rowId
 						return callService('formService', 'executeEvent', cmd, false)
-					},
-						function(err) {
-							$log.error("Error getting form state: " + err);
-						});
+					};
+					if(hasFormStateWithData(formName)) {
+						return onFunction(formStates[formName]);
+					}
+					else {
+						return getFormStateWithData(formName).then(function(formState) {
+								return onFunction(formState);
+							},
+							function(err) {
+								$log.error("Error getting form state: " + err);
+							});
+					}
 				}
 			}
 		},

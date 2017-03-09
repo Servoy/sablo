@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.sablo</groupId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>8.1.2.3031-SNAPSHOT</version>
   <artifactId>sablo-core</artifactId>
   <packaging>jar</packaging>
   <name>Sablo Core</name>  
@@ -82,7 +82,7 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <version>[1.7,1.8)</version>
+                  <version>[1.8,)</version>
                 </requireJavaVersion>
               </rules>    
             </configuration>

@@ -76,6 +76,17 @@ public class WebsocketSessionWindows implements IWindow
 	}
 
 	@Override
+	public IWebsocketEndpoint getEndpoint()
+	{
+		// just return the fist windows endpoint
+		for (IWindow window : session.getWindows())
+		{
+			return window.getEndpoint();
+		}
+		throw new IllegalStateException("no endpoint found for the WebsocketSessionWindows, session has no windows");
+	}
+
+	@Override
 	public long getLastPingTime()
 	{
 		long lastPingTime = 0;
@@ -170,11 +181,13 @@ public class WebsocketSessionWindows implements IWindow
 	@Override
 	public Object invokeApi(WebComponent receiver, WebObjectFunctionDefinition apiFunction, Object[] arguments, PropertyDescription argumentTypes)
 	{
+		Object retValue = null;
 		for (IWindow window : session.getWindows())
 		{
-			window.invokeApi(receiver, apiFunction, arguments, argumentTypes);
+			if (retValue == null) retValue = window.invokeApi(receiver, apiFunction, arguments, argumentTypes);
+			else window.invokeApi(receiver, apiFunction, arguments, argumentTypes);
 		}
-		return null;
+		return retValue;
 	}
 
 	@Override

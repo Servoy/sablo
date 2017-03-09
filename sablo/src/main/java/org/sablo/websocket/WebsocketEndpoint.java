@@ -95,6 +95,12 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		return window;
 	}
 
+	@Override
+	public Session getSession()
+	{
+		return session;
+	}
+
 	public void start(Session newSession, String sessionid, String winname, final String winid) throws Exception
 	{
 		this.session = newSession;
