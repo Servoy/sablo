@@ -75,7 +75,7 @@ public class ModifiablePropertiesGenerator
 				if (!first1) w.println(',');
 				first1 = false;
 				w.print("    '");
-				w.print(webComponentSpec.getName()); // use just name for now as if two packages define components with the exact same name that won't work correctly anyway
+				w.print(webComponentSpec.getScriptingName()); // use just name for now as if two packages define components with the exact same name that won't work correctly anyway; and new web object action does include package name in name by default
 				w.println("': {");
 				boolean first2 = true;
 				for (PropertyDescription prop : pushToServerWatchProps)

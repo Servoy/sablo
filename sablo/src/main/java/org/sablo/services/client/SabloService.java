@@ -65,7 +65,7 @@ public class SabloService
 			pd.putProperty("1", argumentPD);
 			pd.putProperty("2", new PropertyDescription("success", BooleanPropertyType.INSTANCE));
 		}
-		CurrentWindow.get().executeAsyncServiceCall(SABLO_SERVICE, "resolveDeferedEvent",
+		CurrentWindow.get().executeAsyncServiceCall(clientService, "resolveDeferedEvent",
 			new Object[] { Integer.valueOf(defid), argument, Boolean.valueOf(success) }, pd);
 	}
 }

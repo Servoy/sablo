@@ -47,26 +47,24 @@ public class ClientService extends BaseWebObject implements IClientService
 {
 
 	private static final Logger log = LoggerFactory.getLogger(ClientService.class.getCanonicalName());
-	private String jsName = null;
 
 	public ClientService(String serviceName, WebObjectSpecification spec)
 	{
 		super(serviceName, spec);
-		jsName = convertToJSName(serviceName);
 	}
 
+	@Override
+	public String getScriptingName()
+	{
+		return getSpecification() != null ? getSpecification().getScriptingName() : getName();
+	}
 
 	@Override
 	public Object executeServiceCall(String functionName, Object[] arguments) throws IOException
 	{
-		WebObjectSpecification spec = WebServiceSpecProvider.getSpecProviderState().getWebComponentSpecification(name);
-		WebObjectFunctionDefinition apiFunction = null;
-		if (spec != null)
-		{
-			apiFunction = spec.getApiFunction(functionName);
-		}
+		WebObjectFunctionDefinition apiFunction = specification.getApiFunction(functionName);
 
-		Object retValue = CurrentWindow.get().executeServiceCall(jsName, functionName, arguments, apiFunction, new IToJSONWriter<IBrowserConverterContext>()
+		Object retValue = CurrentWindow.get().executeServiceCall(this, functionName, arguments, apiFunction, new IToJSONWriter<IBrowserConverterContext>()
 		{
 
 			@Override
@@ -78,8 +76,8 @@ public class ClientService extends BaseWebObject implements IClientService
 				{
 					JSONUtils.addKeyIfPresent(w, keyInParent);
 
-					w.object().key("services").object().key(getName()).object();
-					clientDataConversions.pushNode("services").pushNode(getName());
+					w.object().key("services").object().key(getScriptingName()).object();
+					clientDataConversions.pushNode("services").pushNode(getScriptingName());
 
 					writeProperties(converter, w, serviceChanges.content, serviceChanges.contentType, clientDataConversions);
 
@@ -95,7 +93,7 @@ public class ClientService extends BaseWebObject implements IClientService
 
 		if (retValue != null)
 		{
-			if (spec != null)
+			if (specification != null)
 			{
 				if (apiFunction != null && apiFunction.getReturnType() != null)
 				{
@@ -117,7 +115,7 @@ public class ClientService extends BaseWebObject implements IClientService
 
 	public void executeAsyncServiceCall(String functionName, Object[] arguments)
 	{
-		CurrentWindow.get().executeAsyncServiceCall(jsName, functionName, arguments, getParameterTypes(functionName));
+		CurrentWindow.get().executeAsyncServiceCall(this, functionName, arguments, getParameterTypes(functionName));
 	}
 
 	protected PropertyDescription getParameterTypes(String functionName)
@@ -133,15 +131,71 @@ public class ClientService extends BaseWebObject implements IClientService
 		return parameterTypes;
 	}
 
+	/**
+	 * Transform service names like testpackage-myTestService into testPackageMyTestService - as latter is how getServiceScope gets called (generated code) from service client js,
+	 * and former is how auto-add-watches code knows the name (from the WebObjectSpecification)...
+	 */
 	public static String convertToJSName(String name)
 	{
+		// this should do the same as websocket.ts #scriptifyServiceNameIfNeeded()
 		int index = name.indexOf('-');
-		while (index != -1 && name.length() > index + 2)
+		while (index != -1 && name.length() > index + 1)
 		{
 			name = name.substring(0, index) + Character.toUpperCase(name.charAt(index + 1)) + name.substring(index + 2);
 			index = name.indexOf('-');
 		}
 		return name;
+	}
+
+//	/**
+//	 * Guess-transforms service script names like testPackageMyTestService into testpackage-myTestService or testpackage-MyTestService. (example inspired from what new service action would generate)
+//	 * This reverse transformation is ambiguous, so it can be used for guessing, not to be depended on. It's not a full reverse of {@link #convertToJSName(String)}.
+//	 *
+//	 * It can't know if the char after the dash was upper or lower when converting to script name; it cannot also know how many dashes there were...
+//	 *
+//	 * @return an array of possible initial service names based on the given scripting name. It has one or more items in it.
+//	 */
+//	public static String[] convertFromJSNameByGuessing(String jsName)
+//	{
+//		List<String> possibleServiceNames = new ArrayList<>();
+//		possibleServiceNames.add(jsName);
+//
+//		if (jsName != null)
+//		{
+//			for (int i = 0; i < jsName.length(); i++)
+//			{
+//				if (Character.isUpperCase(jsName.charAt(i)))
+//				{
+//					possibleServiceNames.add(jsName.substring(0, i) + "-" + jsName.substring(i));
+//					possibleServiceNames.add(jsName.substring(0, i) + "-" + Character.toLowerCase(jsName.charAt(i)) + jsName.substring(i + 1));
+//					break;
+//				}
+//			}
+//		}
+//
+//		return possibleServiceNames.toArray(new String[possibleServiceNames.size()]);
+//	}
+
+	public static WebObjectSpecification getServiceDefinitionFromScriptingName(String scriptingName)
+	{
+		WebObjectSpecification serviceDefinition = WebServiceSpecProvider.getSpecProviderState().getWebComponentSpecification(scriptingName);
+		if (serviceDefinition == null)
+		{
+			// just search in all available services - which one has that scripting name
+			WebObjectSpecification[] allServiceSpecs = WebServiceSpecProvider.getSpecProviderState().getAllWebComponentSpecifications();
+			if (allServiceSpecs != null)
+			{
+				for (WebObjectSpecification ss : allServiceSpecs)
+				{
+					if (scriptingName.equals(ss.getScriptingName()))
+					{
+						serviceDefinition = ss;
+						break;
+					}
+				}
+			}
+		}
+		return serviceDefinition;
 	}
 
 }

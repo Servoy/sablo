@@ -561,18 +561,7 @@ public abstract class BaseWebObject
 				PropertyDescription propertyDesc = specification.getProperty(firstProperty);
 				if (propertyDesc != null)
 				{
-					if (getDefaultFromSpecAsWellIfNeeded)
-					{
-						defaultProperty = propertyDesc.getDefaultValue();
-						if (!propertyDesc.hasDefault() && propertyDesc.getType() != null)
-						{
-							defaultProperty = propertyDesc.getType().defaultValue(propertyDesc);
-						}
-					}
-					else if (defaultProperty == null && propertyDesc.getType() != null)
-					{
-						defaultProperty = propertyDesc.getType().defaultValue(propertyDesc);
-					}
+					defaultProperty = getDefaultFromPD(getDefaultFromSpecAsWellIfNeeded, propertyDesc);
 				}
 			}
 
@@ -617,6 +606,25 @@ public abstract class BaseWebObject
 			oldValue = wrapPropertyValue(propertyName, null, oldValue);
 		}
 		return oldValue;
+	}
+
+	public static Object getDefaultFromPD(boolean getDefaultFromSpecAsWellIfNeeded, PropertyDescription propertyDesc)
+	{
+		Object defaultPropertyValue = null;
+		if (getDefaultFromSpecAsWellIfNeeded)
+		{
+			defaultPropertyValue = propertyDesc.getDefaultValue(); // can be a null or non-null
+			if (!propertyDesc.hasDefault() && propertyDesc.getType() != null)
+			{
+				// if spec has no default value specified, take it from property type
+				defaultPropertyValue = propertyDesc.getType().defaultValue(propertyDesc);
+			}
+		}
+		else if (propertyDesc.getType() != null)
+		{
+			defaultPropertyValue = propertyDesc.getType().defaultValue(propertyDesc);
+		}
+		return defaultPropertyValue;
 	}
 
 	/** Check if a property can be modified from the outside (browser client).

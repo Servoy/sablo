@@ -24,6 +24,7 @@ import java.util.Map;
 import org.json.JSONObject;
 import org.sablo.eventthread.IEventDispatcher;
 import org.sablo.services.client.SabloService;
+import org.sablo.websocket.impl.ClientService;
 
 /**
  * Interface for classes handling a websocket user session.
@@ -96,6 +97,11 @@ public interface IWebsocketSession
 	IServerService getServerService(String name);
 
 	IClientService getClientService(String name);
+
+	/**
+	 * @see ClientService#convertToJSName(String)
+	 */
+	IClientService getClientServiceByScriptingName(String scriptingName);
 
 	Collection<IClientService> getServices();
 

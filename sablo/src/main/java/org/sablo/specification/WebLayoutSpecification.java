@@ -134,7 +134,7 @@ public class WebLayoutSpecification extends WebObjectSpecification
 	public WebLayoutSpecification(String name, String packageName, String displayName, String categoryName, String icon, String preview, String definition,
 		Object configObject, boolean topContainer, List<String> allowedChildren, List<String> excludedChildren, String designStyleClass)
 	{
-		super(name, packageName, displayName, categoryName, icon, preview, definition, null, configObject);
+		super(name, packageName, IPackageReader.WEB_LAYOUT, displayName, categoryName, icon, preview, definition, null, configObject);
 		this.topContainer = topContainer;
 		this.allowedChildren = allowedChildren;
 		this.excludedChildren = excludedChildren;

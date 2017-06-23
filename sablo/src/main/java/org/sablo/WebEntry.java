@@ -44,7 +44,7 @@ import org.sablo.websocket.WebsocketSessionManager;
  * Subclasses should carry the @WebFilter annotation
  * @author jblok
  */
-public abstract class WebEntry implements Filter, IContributionFilter
+public abstract class WebEntry implements Filter, IContributionFilter, IContributionEntryFilter
 {
 
 	private final String endpointType;
@@ -121,7 +121,7 @@ public abstract class WebEntry implements Filter, IContributionFilter
 			((HttpServletResponse)servletResponse).setCharacterEncoding("UTF-8");
 			PrintWriter w = servletResponse.getWriter();
 			IndexPageEnhancer.enhance(indexPageResource, request.getContextPath(), cssContributions, jsContributions, extraMetaData, variableSubstitution, w,
-				this);
+				this, this);
 			w.flush();
 			return;
 		}
@@ -151,5 +151,8 @@ public abstract class WebEntry implements Filter, IContributionFilter
 	@Override
 	public void destroy()
 	{
+		WebComponentSpecProvider.disposeInstance();
+
+		WebServiceSpecProvider.disposeInstance();
 	}
 }

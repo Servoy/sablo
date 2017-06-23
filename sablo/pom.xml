@@ -1,190 +1,191 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<prerequisites>
+		<maven>3.3.3</maven>
+	</prerequisites>
+	<groupId>org.sablo</groupId>
+	<version>8.2.0.3100-SNAPSHOT</version>
+	<artifactId>sablo-core</artifactId>
+	<packaging>jar</packaging>
+	<name>Sablo Core</name>
+	<organization>
+		<name>Servoy</name>
+		<url>servoy.com</url>
+	</organization>
 
-  <groupId>org.sablo</groupId>
-  <version>8.1.2.3031-SNAPSHOT</version>
-  <artifactId>sablo-core</artifactId>
-  <packaging>jar</packaging>
-  <name>Sablo Core</name>  
-  <organization>
-  	<name>Servoy</name>
-  	<url>servoy.com</url>
-  </organization>
-  <url>http://maven.apache.org</url>
-  <properties>
-	  <maven.compiler.source>1.7</maven.compiler.source>
-	  <maven.compiler.target>1.7</maven.compiler.target>
-  </properties>
+	<url>http://maven.apache.org</url>
+	<properties>
+		<maven.compiler.source>1.7</maven.compiler.source>
+		<maven.compiler.target>1.7</maven.compiler.target>
+		<jenkins.javascript_tests.reportsDirectory>target/protractor-reports</jenkins.javascript_tests.reportsDirectory>
+	</properties>
 
-  <build>
-      <plugins>
-	<plugin>
-	   <groupId>com.github.eirslett</groupId>
-	   <artifactId>frontend-maven-plugin</artifactId>
-	   <version>0.0.29</version>
-	   <executions>
- 
-		<!-- 1. Install node and npm locally -->
-		<execution>
-			<id>install node and npm</id>
-			<goals>
-				<goal>install-node-and-npm</goal>
-			</goals>
-			<configuration>
-				<nodeVersion>v5.7.1</nodeVersion>
-				<npmVersion>3.6.0</npmVersion>
-			</configuration>
-		</execution>
- 
-		<!-- 2. Install karma and karma plugins -->
-		<execution>
-			<id>npm install</id>
-			<goals>
-				<goal>npm</goal>
-			</goals>
-		</execution>
- 
-    	<!-- 3. npm run build -->
-		<execution>
-			<id>npm run build</id>
-			<goals>
-				<goal>npm</goal>
-			</goals>
-			<configuration>
-				<arguments>run build</arguments>
-			</configuration>
-		</execution>
- 
-		<!-- 4. Run karma tests -->
-		<execution>
-			<id>javascript tests</id>
-			<goals>
-				<goal>karma</goal>
-			</goals>
-			<configuration>
-				<karmaConfPath>client_tests/karma.conf</karmaConfPath>
-			</configuration>
-		</execution>
-	   </executions>
-          </plugin>
-          
-       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.4.1</version>
-        <executions>
-          <execution>
-            <id>enforce-java</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireJavaVersion>
-                  <version>[1.8,)</version>
-                </requireJavaVersion>
-              </rules>    
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-          
-	<plugin>
-	        <groupId>org.apache.maven.plugins</groupId>
-	        <artifactId>maven-jar-plugin</artifactId>
-			<version>2.6</version>
-	        <configuration>
-	          <archive>
-	            <manifestFile>META-INF/MANIFEST.MF</manifestFile>
-	          </archive>
-	        </configuration>
-          </plugin>
-      </plugins>
-      <pluginManagement>
-   		<plugins>
-          <plugin>
-		     <groupId>org.apache.maven.plugins</groupId>
-		     <artifactId>maven-eclipse-plugin</artifactId>
-		     <version>2.9</version>
-		     <configuration>
-		       <pde>true</pde>
-		       <downloadSources>true</downloadSources>
-		     </configuration>
-		  </plugin>
-   		</plugins>
-      </pluginManagement>
-      
-        <resources>
-	      <resource>
-	           <filtering>false</filtering>
-	           <directory>src/main/resources</directory>
-	       </resource>
-	      <resource>
-	           <directory>META-INF</directory>
-	           <excludes>
-          		<exclude>**/*.ts</exclude>
-          	   </excludes>
-	           <targetPath>META-INF</targetPath>
-	       </resource>
-           <resource>
-       		     <directory>src/test/java</directory>
-                 <includes>
-                    <include>**/*.spec</include>
-                     <include>**/*.manifest</include>
-                 </includes>
-           </resource>
-       </resources>
-  </build>
-  
-  <dependencies>
-	<dependency>
-		<groupId>junit</groupId>
-		<artifactId>junit</artifactId>
-		<version>4.11</version>
-		<scope>test</scope>
-	</dependency>
-	<dependency>
-	    <groupId>org.mockito</groupId>
-	    <artifactId>mockito-core</artifactId>
-	    <version>1.10.19</version>
-	    <scope>test</scope>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>com.github.eirslett</groupId>
+				<artifactId>frontend-maven-plugin</artifactId>
+				<version>1.4</version>
+				<executions>
+
+					<!-- 1. Install node and npm locally -->
+					<execution>
+						<id>install node and npm</id>
+						<goals>
+							<goal>install-node-and-npm</goal>
+						</goals>
+						<configuration>
+							<nodeVersion>v6.10.1</nodeVersion>
+							<npmVersion>4.4.4</npmVersion>
+						</configuration>
+					</execution>
+
+					<!-- 2. Install karma and karma plugins -->
+					<execution>
+						<id>npm install</id>
+						<goals>
+							<goal>npm</goal>
+						</goals>
+					</execution>
+
+					<!-- 3. npm run build -->
+					<execution>
+						<id>npm run build</id>
+						<goals>
+							<goal>npm</goal>
+						</goals>
+						<configuration>
+							<arguments>run build</arguments>
+						</configuration>
+					</execution>
+
+					<!-- 4. Run karma tests -->
+					<execution>
+						<id>javascript_tests</id>
+						<goals>
+							<goal>karma</goal>
+						</goals>
+						<configuration>
+							<karmaConfPath>client_tests/karma.conf</karmaConfPath>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>1.4.1</version>
+				<executions>
+					<execution>
+						<id>enforce-java</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireJavaVersion>
+									<version>[1.7,)</version>
+								</requireJavaVersion>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.0.2</version>
+				<configuration>
+					<archive>
+						<manifestFile>META-INF/MANIFEST.MF</manifestFile>
+					</archive>
+				</configuration>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-eclipse-plugin</artifactId>
+					<version>2.10</version>
+					<configuration>
+						<pde>true</pde>
+						<downloadSources>true</downloadSources>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+
+		<resources>
+			<resource>
+				<directory>META-INF</directory>
+				<excludes>
+					<exclude>**/*.ts</exclude>
+				</excludes>
+				<targetPath>META-INF</targetPath>
+			</resource>
+			<resource>
+				<directory>src/test/java</directory>
+				<includes>
+					<include>**/*.spec</include>
+					<include>**/*.manifest</include>
+				</includes>
+			</resource>
+		</resources>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
 		</dependency>
-	<dependency>
-		<groupId>javax.servlet</groupId>
-		<artifactId>javax.servlet-api</artifactId>
-		<version>3.1.0</version>
-		<scope>provided</scope>
-	</dependency>
-	<dependency>
-		<groupId>javax.websocket</groupId>
-		<artifactId>javax.websocket-api</artifactId>
-		<version>1.0</version>
-		<scope>provided</scope>
-	</dependency>
-	<dependency>
-		<groupId>org.json</groupId>
-		<artifactId>json</artifactId>
-		<version>20140107</version>
-	</dependency>
-	<dependency>
-		<groupId>org.slf4j</groupId>
-		<artifactId>slf4j-api</artifactId>
-		<version>1.7.7</version>
-	</dependency>
-	<dependency>
-		<groupId>commons-io</groupId>
-		<artifactId>commons-io</artifactId>
-		<version>2.4</version>
-	</dependency>
-	<dependency>
-	    <groupId>org.osgi</groupId>
-	    <artifactId>org.osgi.core</artifactId>
-	    <version>5.0.0</version>
-	    <scope>compile</scope>
-		<optional>true</optional>
-	</dependency>
-	
-</dependencies>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>1.10.19</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.websocket</groupId>
+			<artifactId>javax.websocket-api</artifactId>
+			<version>1.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20140107</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.7</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.core</artifactId>
+			<version>5.0.0</version>
+			<scope>compile</scope>
+			<optional>true</optional>
+		</dependency>
+
+	</dependencies>
 
 </project>

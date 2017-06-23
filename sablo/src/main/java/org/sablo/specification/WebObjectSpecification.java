@@ -39,6 +39,7 @@ import org.sablo.specification.property.IPropertyType;
 import org.sablo.specification.property.types.FunctionPropertyType;
 import org.sablo.specification.property.types.ObjectPropertyType;
 import org.sablo.specification.property.types.TypesRegistry;
+import org.sablo.websocket.impl.ClientService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +93,7 @@ public class WebObjectSpecification extends PropertyDescription
 
 	private final Map<String, WebObjectFunctionDefinition> handlers = new HashMap<>(); // second String is always a "function" for now, but in the future it will probably contain more (to specify sent args/types...)
 	private final Map<String, WebObjectFunctionDefinition> apis = new HashMap<>();
-	private final Map<String, WebObjectFunctionDefinition> serverApis = new HashMap<>();
+	private final Map<String, WebObjectFunctionDefinition> internalApis = new HashMap<>();
 	private final String definition;
 	private final JSONArray libraries;
 	private final String displayName;
@@ -101,6 +102,11 @@ public class WebObjectSpecification extends PropertyDescription
 	private final String packageName;
 
 	private final Map<String, IPropertyType< ? >> foundTypes;
+
+	/**
+	 * Different then name only for services, not components/layouts.
+	 */
+	private final String scriptingName;
 
 	private URL serverScript;
 
@@ -112,10 +118,14 @@ public class WebObjectSpecification extends PropertyDescription
 
 	private boolean supportsGrouping;
 
-	public WebObjectSpecification(String name, String packageName, String displayName, String categoryName, String icon, String preview, String definition,
-		JSONArray libs)
+	/**
+	 * @param packageType one of {@link IPackageReader#WEB_SERVICE}, {@link IPackageReader#WEB_COMPONENT} and {@link IPackageReader#WEB_LAYOUT}.
+	 */
+	public WebObjectSpecification(String name, String packageName, String packageType, String displayName, String categoryName, String icon, String preview,
+		String definition, JSONArray libs)
 	{
 		super(name, null);
+		this.scriptingName = scriptifyNameIfNeeded(name, packageType);
 		this.packageName = packageName;
 		this.displayName = displayName;
 		this.categoryName = categoryName;
@@ -126,10 +136,14 @@ public class WebObjectSpecification extends PropertyDescription
 		this.foundTypes = new HashMap<>();
 	}
 
-	public WebObjectSpecification(String name, String packageName, String displayName, String categoryName, String icon, String preview, String definition,
-		JSONArray libs, Object configObject)
+	/**
+	 * @param packageType one of {@link IPackageReader#WEB_SERVICE}, {@link IPackageReader#WEB_COMPONENT} and {@link IPackageReader#WEB_LAYOUT}.
+	 */
+	public WebObjectSpecification(String name, String packageName, String packageType, String displayName, String categoryName, String icon, String preview,
+		String definition, JSONArray libs, Object configObject)
 	{
 		super(name, null, configObject);
+		this.scriptingName = scriptifyNameIfNeeded(name, packageType);
 		this.packageName = packageName;
 		this.displayName = displayName;
 		this.categoryName = categoryName;
@@ -140,6 +154,15 @@ public class WebObjectSpecification extends PropertyDescription
 		this.foundTypes = new HashMap<>();
 	}
 
+	protected String scriptifyNameIfNeeded(String name, String packageType)
+	{
+		String scriptingN = name;
+		if (scriptingN != null && IPackageReader.WEB_SERVICE.equals(packageType))
+		{
+			scriptingN = ClientService.convertToJSName(scriptingN);
+		} // else other types (components/layouts don't get their scope on client in the same way and work directly with "name")
+		return scriptingN;
+	}
 
 	/**
 	 * @param serverScript the serverScript to set
@@ -163,9 +186,9 @@ public class WebObjectSpecification extends PropertyDescription
 		apis.put(apiFunction.getName(), apiFunction);
 	}
 
-	protected final void addServerApiFunction(WebObjectFunctionDefinition apiFunction)
+	protected final void addInternalApiFunction(WebObjectFunctionDefinition apiFunction)
 	{
-		serverApis.put(apiFunction.getName(), apiFunction);
+		internalApis.put(apiFunction.getName(), apiFunction);
 	}
 
 	protected final void addHandler(WebObjectFunctionDefinition propertyDescription)
@@ -199,14 +222,19 @@ public class WebObjectSpecification extends PropertyDescription
 		return apis.get(apiFunctionName);
 	}
 
-	public WebObjectFunctionDefinition getServerApiFunction(String apiFunctionName)
+	public WebObjectFunctionDefinition getInternalApiFunction(String apiFunctionName)
 	{
-		return serverApis.get(apiFunctionName);
+		return internalApis.get(apiFunctionName);
 	}
 
 	public Map<String, WebObjectFunctionDefinition> getApiFunctions()
 	{
 		return Collections.unmodifiableMap(apis);
+	}
+
+	public Map<String, WebObjectFunctionDefinition> getInternalApiFunctions()
+	{
+		return Collections.unmodifiableMap(internalApis);
 	}
 
 	public String getDisplayName()
@@ -217,6 +245,14 @@ public class WebObjectSpecification extends PropertyDescription
 	public String getCategoryName()
 	{
 		return categoryName;
+	}
+
+	/**
+	 * This is the name used in client side scripting (module name, for services service scope and factory name...).
+	 */
+	public String getScriptingName()
+	{
+		return scriptingName;
 	}
 
 	public String getIcon()
@@ -296,7 +332,7 @@ public class WebObjectSpecification extends PropertyDescription
 
 	public static Map<String, IPropertyType< ? >> getTypes(JSONObject typesContainer) throws JSONException
 	{
-		WebObjectSpecification spec = new WebObjectSpecification("", "", "", null, null, null, "", null);
+		WebObjectSpecification spec = new WebObjectSpecification("", "", IPackageReader.WEB_COMPONENT, "", null, null, null, "", null);
 		spec.parseTypes(typesContainer);
 		return spec.foundTypes;
 	}
@@ -306,9 +342,9 @@ public class WebObjectSpecification extends PropertyDescription
 	{
 		JSONObject json = new JSONObject(specfileContent);
 
-		WebObjectSpecification spec = new WebObjectSpecification(json.getString("name"), packageName, json.optString("displayName", null),
-			json.optString("categoryName", null), json.optString("icon", null), json.optString("preview", null), json.getString("definition"),
-			json.optJSONArray("libraries"));
+		WebObjectSpecification spec = new WebObjectSpecification(json.getString("name"), packageName, reader != null ? reader.getPackageType() : null,
+			json.optString("displayName", null), json.optString("categoryName", null), json.optString("icon", null), json.optString("preview", null),
+			json.getString("definition"), json.optJSONArray("libraries"));
 
 		if (json.has("serverscript"))
 		{
@@ -351,14 +387,14 @@ public class WebObjectSpecification extends PropertyDescription
 			}
 		}
 		//internal api
-		if (json.has("serverApi"))
+		if (json.has("internalApi"))
 		{
-			JSONObject api = json.getJSONObject("serverApi");
+			JSONObject api = json.getJSONObject("internalApi");
 			Iterator<String> itk = api.keys();
 			while (itk.hasNext())
 			{
 				WebObjectFunctionDefinition def = parseFunctionDefinition(spec, api, itk.next());
-				spec.addServerApiFunction(def);
+				spec.addInternalApiFunction(def);
 			}
 		}
 		spec.setSupportGrouping(json.has("group") ? json.optBoolean("group", true) : true);

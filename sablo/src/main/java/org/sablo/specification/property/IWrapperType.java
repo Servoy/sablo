@@ -15,12 +15,16 @@
  */
 package org.sablo.specification.property;
 
+import org.sablo.BaseWebObject;
 import org.sablo.specification.PropertyDescription;
 
 
 /**
  * Property types that are wrapped into a custom class.<br/>
  * This is also a JSON converting type, but conversions happen to and from wrapped value directly.
+ *
+ * @param <T> the type the value of this property has to the outside world (when doing getProperty() or setProperty())
+ * @param <W> the type of (underlying) value that this type stores in the {@link BaseWebObject}'s map.
  *
  * @author gboros
  */

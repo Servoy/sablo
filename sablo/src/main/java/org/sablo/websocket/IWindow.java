@@ -105,17 +105,17 @@ public interface IWindow
 	/**
 	 * Execute a (client/browser) service call asynchronously.
 	 *
-	 * @param serviceName the name of the service to call client side.
+	 * @param clientService the service to call client side.
 	 * @param functionName the name of the service's function to call.
 	 * @param arguments the arguments to be passed to the service's function call.
 	 * @param argumentTypes the types of arguments passed; can be null (the types are used for correct 'to JSON' conversion for websocket traffic).
 	 */
-	void executeAsyncServiceCall(String serviceName, String functionName, Object[] arguments, PropertyDescription argumentTypes);
+	void executeAsyncServiceCall(IClientService clientService, String functionName, Object[] arguments, PropertyDescription argumentTypes);
 
 	/**
 	 * Execute a (client/browser) service call asynchronously and returns the resulting value.
 	 *
-	 * @param serviceName the name of the service to call client side.
+	 * @param clientService the service to call client side.
 	 * @param functionName the name of the service's function to call.
 	 * @param arguments the arguments to be passed to the service's function call.
 	 * @param apiFunction
@@ -124,7 +124,7 @@ public interface IWindow
 	 * @return remote result.
 	 * @throws IOException if such an exception happens.
 	 */
-	Object executeServiceCall(String serviceName, String functionName, Object[] arguments, WebObjectFunctionDefinition apiFunction,
+	Object executeServiceCall(IClientService serviceName, String functionName, Object[] arguments, WebObjectFunctionDefinition apiFunction,
 		IToJSONWriter<IBrowserConverterContext> pendingChangesWriter, boolean blockEventProcessing) throws IOException;
 
 	/**

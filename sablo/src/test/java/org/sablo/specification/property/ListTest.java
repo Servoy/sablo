@@ -53,20 +53,30 @@ public class ListTest
 		lst.add(new ChangeAwareMap<String, Object>(new HashMap<String, String>()));
 		lst.add(new ChangeAwareMap<String, Object>(new HashMap<String, String>()));
 
+		assertEquals(4, lst.addedIndexes.size());
 		assertTrue(changed[0]);
 
+		lst.clearChanges();
 		changed[0] = false;
 
+		assertEquals(0, lst.changedIndexes.size());
 		lst.get(0).put("test", "test");
-		assertEquals(lst.changedIndexes.size(), 1);
+		assertEquals(1, lst.changedIndexes.size());
 
-		assertEquals(lst.changedIndexes.toArray()[0], new Integer(0));
+		assertEquals(new Integer(0), lst.changedIndexes.toArray()[0]);
 
 		lst.clearChanges();
 
 		lst.set(1, lst.get(2));
 		lst.set(2, lst.get(3));
 		lst.remove(3);
+
+		assertEquals(2, lst.changedIndexes.size());
+		assertEquals(new Integer(1), lst.changedIndexes.toArray()[0]);
+		assertEquals(new Integer(2), lst.changedIndexes.toArray()[1]);
+
+		assertEquals(1, lst.removedIndexes.size());
+		assertEquals(new Integer(3), lst.removedIndexes.toArray()[0]);
 
 		lst.clearChanges();
 
@@ -122,28 +132,28 @@ public class ListTest
 	/*
 	 * @Test public void sameValueRemoveIndexTest() { ChangeAwareList<ChangeAwareMap<String, Object>, Object> lst = new ChangeAwareList<ChangeAwareMap<String,
 	 * Object>, Object>( new ArrayList<ChangeAwareMap<String, Object>>());
-	 * 
+	 *
 	 * final boolean[] changed = new boolean[1]; IChangeListener listener = new IChangeListener() {
-	 * 
+	 *
 	 * @Override public void valueChanged() { changed[0] = true; } }; lst.attachToBaseObject(listener, null);
-	 * 
+	 *
 	 * ChangeAwareMap<String, Object> value = new ChangeAwareMap<String, Object>(new HashMap<String, String>()); lst.add(value); lst.add(value); lst.add(value);
 	 * lst.add(value);
-	 * 
+	 *
 	 * assertTrue(changed[0]);
-	 * 
+	 *
 	 * changed[0] = false;
-	 * 
+	 *
 	 * lst.clearChanges();
-	 * 
+	 *
 	 * lst.remove(1);
-	 * 
+	 *
 	 * assertTrue(changed[0]);
-	 * 
+	 *
 	 * lst.clearChanges();
-	 * 
+	 *
 	 * lst.get(1).put("test1", "test1");
-	 * 
+	 *
 	 * assertEquals(1, lst.changedIndexes.size()); assertEquals(new Integer(1), lst.changedIndexes.toArray()[0]); }
 	 */
 }

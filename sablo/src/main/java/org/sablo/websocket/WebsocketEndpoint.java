@@ -66,9 +66,9 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 
 	private final String endpointType;
 
-	private Session session;
+	private volatile Session session;
 
-	private IWindow window;
+	private volatile IWindow window;
 
 	private final Map<Integer, List<Object>> pendingMessages = new HashMap<>();
 
@@ -115,7 +115,6 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 
 		try
 		{
-			window.setEndpoint(this);
 			final IWindow win = window;
 
 			wsSession.init();
@@ -126,6 +125,8 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 				@Override
 				public void run()
 				{
+					win.setEndpoint(WebsocketEndpoint.this);
+
 					if (CurrentWindow.safeGet() == win && session != null) // window or session my already be closed
 					{
 						win.onOpen(session.getRequestParameterMap());
@@ -179,9 +180,9 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		{
 			if (window.getSession() != null)
 			{
+				final IEventDispatcher eventDispatcher = window.getSession().getEventDispatcher();
 				for (final Integer pendingMessageId : pendingMessages.keySet())
 				{
-					final IEventDispatcher eventDispatcher = window.getSession().getEventDispatcher();
 					eventDispatcher.addEvent(new Runnable()
 					{
 						@Override
@@ -195,15 +196,34 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 					}, IEventDispatcher.EVENT_LEVEL_SYNC_API_CALL);
 				}
 				pendingMessages.clear();
+
+				eventDispatcher.addEvent(new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						unbindWindow();
+					}
+				});
+			}
+			else
+			{
+				unbindWindow();
 			}
 
-			IWindow win = window;
-			window = null;
-			win.setEndpoint(null);
 		}
 		session = null;
 
 		if (closeReason.getCloseCode() != CloseCodes.SERVICE_RESTART) WebsocketSessionManager.closeInactiveSessions();
+	}
+
+	private void unbindWindow()
+	{
+		if (window != null)
+		{
+			window.setEndpoint(null);
+			window = null;
+		}
 	}
 
 	public void onError(Throwable t)
@@ -247,6 +267,11 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 			{
 				log.warn("could not reply to ping message for window " + window, e);
 			}
+			return;
+		}
+		if (window == null)
+		{
+			log.info("incomming message " + msg + " but the window is already unbinded");
 			return;
 		}
 
@@ -363,11 +388,10 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 					log.info("Unknown service called from the client: " + serviceName);
 				}
 			}
-
 			else if (obj.has("servicedatapush"))
 			{
-				final String serviceName = obj.optString("servicedatapush");
-				final IClientService service = window.getSession().getClientService(serviceName);
+				final String serviceScriptingName = obj.optString("servicedatapush");
+				final IClientService service = window.getSession().getClientServiceByScriptingName(serviceScriptingName);
 				if (service != null)
 				{
 					final int eventLevel = obj.optInt("prio", IEventDispatcher.EVENT_LEVEL_DEFAULT);
@@ -389,7 +413,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 							}
 							catch (JSONException e)
 							{
-								log.error("JSONException while executing service " + serviceName + " datachange.", e);
+								log.error("JSONException while executing service " + serviceScriptingName + " datachange.", e);
 								return;
 							}
 						}
@@ -397,7 +421,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 				}
 				else
 				{
-					log.info("Unknown service datapush from client; ignoring: " + serviceName);
+					log.info("Unknown service datapush from client; ignoring: " + serviceScriptingName);
 				}
 
 			}

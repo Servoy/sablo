@@ -5,5 +5,7 @@
     },
     "include": [
         "META-INF/**/*.ts"
-    ]   
+    ],
+	"buildOnSave": true,
+	"compileOnSave": true   
 }

@@ -98,6 +98,11 @@ public interface IClientService
 	 */
 	public String getName();
 
+	/**
+	 * @see ClientService#convertToJSName(String).
+	 */
+	public String getScriptingName();
+
 	void writeProperties(IToJSONConverter<IBrowserConverterContext> converter, JSONWriter w, Map<String, Object> propertyValues,
 		PropertyDescription propertyTypes, DataConversion clientDataConversions) throws IllegalArgumentException, JSONException;
 

@@ -26,6 +26,7 @@ import org.sablo.WebComponent;
 import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.WebObjectFunctionDefinition;
 import org.sablo.specification.property.IBrowserConverterContext;
+import org.sablo.websocket.IClientService;
 import org.sablo.websocket.IToJSONWriter;
 import org.sablo.websocket.IWebsocketEndpoint;
 import org.sablo.websocket.IWebsocketSession;
@@ -156,23 +157,23 @@ public class WebsocketSessionWindows implements IWindow
 	}
 
 	@Override
-	public void executeAsyncServiceCall(String serviceName, String functionName, Object[] arguments, PropertyDescription argumentTypes)
+	public void executeAsyncServiceCall(IClientService clientService, String functionName, Object[] arguments, PropertyDescription argumentTypes)
 	{
 		for (IWindow window : session.getWindows())
 		{
-			window.executeAsyncServiceCall(serviceName, functionName, arguments, argumentTypes);
+			window.executeAsyncServiceCall(clientService, functionName, arguments, argumentTypes);
 		}
 	}
 
 	@Override
-	public Object executeServiceCall(String serviceName, String functionName, Object[] arguments, WebObjectFunctionDefinition apiFunction,
+	public Object executeServiceCall(IClientService clientService, String functionName, Object[] arguments, WebObjectFunctionDefinition apiFunction,
 		IToJSONWriter<IBrowserConverterContext> pendingChangesWriter, boolean blockEventProcessing) throws IOException
 	{
 		// always just return the first none null value.
 		Object retValue = null;
 		for (IWindow window : session.getWindows())
 		{
-			Object val = window.executeServiceCall(serviceName, functionName, arguments, apiFunction, pendingChangesWriter, blockEventProcessing);
+			Object val = window.executeServiceCall(clientService, functionName, arguments, apiFunction, pendingChangesWriter, blockEventProcessing);
 			retValue = retValue != null ? retValue : val;
 		}
 		return retValue;

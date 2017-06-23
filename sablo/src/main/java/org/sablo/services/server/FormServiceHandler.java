@@ -145,6 +145,11 @@ public class FormServiceHandler implements IEventDispatchAwareServerService
 			log.warn("Data requested from unknown form '" + formName + "'");
 			return null;
 		}
+		if (!form.isVisible())
+		{
+			log.warn("Data requested from invisible form '" + formName + "'");
+			return null;
+		}
 
 		EmbeddableJSONWriter initialFormDataWriter = new EmbeddableJSONWriter();
 

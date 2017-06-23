@@ -76,7 +76,7 @@ public class WebComponentLibTest
 	@Test
 	public void testLibVersion() throws Exception
 	{
-		String allContributions = IndexPageEnhancer.getAllContributions(null, null, null, null);
+		String allContributions = IndexPageEnhancer.getAllContributions(null, null, null, null, null);
 		Assert.assertTrue(allContributions.contains("lib1.js"));
 		Assert.assertTrue(allContributions.contains("lib2.js"));
 		Assert.assertTrue(allContributions.contains("url2.js"));

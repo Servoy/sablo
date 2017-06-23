@@ -4,6 +4,7 @@
 
 /// <reference path="../../../../typings/angularjs/angular.d.ts" />
 /// <reference path="../../../../typings/window/window.d.ts" />
+/// <reference path="../../../../typings/sablo/sablo.d.ts" />
 
 var webSocketModule = angular.module('webSocketModule', ['pushToServerData']).config(function($provide, $logProvider,$rootScopeProvider) {
 	window.____logProvider = $logProvider; // just in case someone wants to alter debug at runtime from browser console for example
@@ -69,13 +70,15 @@ angular.module('pushToServer', []).factory('$propertyWatchesRegistry', function 
 	function watchDumbProperties(scope, model, propertiesToAutoWatch, changedCallbackFunction) {
 		var unwatchF = [];
 		function getChangeFunction(property, initialV) {
+			var firstTime = true;
 			return function(newValue, oldValue) {
-				if (typeof initialV !== 'undefined') {
+				if (firstTime) {
 					// value from server should not be sent back; but as directives in their controller methods can already change the values or properties
 					// (so before the first watch execution) we can't just rely only on the "if (oldValue === newValue) return;" below cause in that case it won't send
 					// a value that actually changed to server
 					oldValue = initialV;
 					initialV = undefined;
+					firstTime = false;
 				}
 				if (oldValue === newValue) return;
 				changedCallbackFunction(newValue, oldValue, property);
@@ -137,6 +140,8 @@ webSocketModule.factory('$webSocket',
 	var lastServerMessageNumber = null;
 
 	var nextMessageId = 1;
+	
+	var functionsToExecuteAfterIncommingMessageWasHandled = undefined;
 
 	var getNextMessageId = function() {
 		return nextMessageId++;
@@ -154,6 +159,8 @@ webSocketModule.factory('$webSocket',
 	var handleMessage = function(message) {
 		var obj
 		var responseValue
+		var functionsToExecuteAfterIncommingMessageWasHandled = [];
+
 		try {
 			if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Received message from server: " + JSON.stringify(message));
 
@@ -320,7 +327,25 @@ webSocketModule.factory('$webSocket',
 				}
 				sendMessageObject(response);
 			}
+		} finally {
+			var err;
+			for (var i = 0; i < functionsToExecuteAfterIncommingMessageWasHandled.length; i++) {
+				try {
+					functionsToExecuteAfterIncommingMessageWasHandled[i]();
+				} catch (e) {
+					$log.error("Error (follows below) in executing PostIncommingMessageHandlingTask: " + functionsToExecuteAfterIncommingMessageWasHandled[i]);
+					$log.error(e);
+					err = e;
+				}
+			}
+			functionsToExecuteAfterIncommingMessageWasHandled = undefined;
+			if (err) throw err;
 		}
+	}
+	
+	var addIncomingMessageHandlingDoneTask = function(func) {
+		if (functionsToExecuteAfterIncommingMessageWasHandled) functionsToExecuteAfterIncommingMessageWasHandled.push(func);
+		else func(); // will not addPostIncommingMessageHandlingTask while not handling an incoming message; the task can execute right away then (maybe it was called due to a change detected in a watch instead of property listener)
 	}
 
 	var sendMessageObject = function(obj) {
@@ -391,6 +416,7 @@ webSocketModule.factory('$webSocket',
 	var wsSession = new WebsocketSession();
 
 	var connected = 'INITIAL'; // INITIAL/CONNECTED/RECONNECTING/CLOSED
+	if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode: ... INITIAL (" + new Date().getTime() + ")");
 	var pendingMessages = undefined
 
 	// heartbeat, detect disconnects before websocket gives us connection-closed.
@@ -398,6 +424,8 @@ webSocketModule.factory('$webSocket',
 	var lastHeartbeat = undefined;
 	function startHeartbeat() {
 		if (!angular.isDefined(heartbeatMonitor)) {
+			if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Starting heartbeat... (" + new Date().getTime() + ")");
+
 			lastHeartbeat = new Date().getTime();
 			heartbeatMonitor = $interval(function() {
 				if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Sending heartbeat... (" + new Date().getTime() + ")");
@@ -405,7 +433,7 @@ webSocketModule.factory('$webSocket',
 				if (isConnected() && new Date().getTime() - lastHeartbeat > 8000) {
 					// no response within 8 seconds
 					if (connected !== 'RECONNECTING') {
-						if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Heartbeat timed out; connection lots; waiting to reconnect... (" + new Date().getTime() + ")");
+						if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode (Heartbeat timed out; connection lost; waiting to reconnect): ... RECONNECTING (" + new Date().getTime() + ")");
 						connected = 'RECONNECTING';
 						$rootScope.$apply();
 					}
@@ -416,14 +444,15 @@ webSocketModule.factory('$webSocket',
 	
 	function stopHeartbeat() {
 		if (angular.isDefined(heartbeatMonitor)) {
+			if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Stopping heartbeat... (" + new Date().getTime() + ")");
 			$interval.cancel(heartbeatMonitor);
 			heartbeatMonitor = undefined;
 		}
 	}
 	
 	function setConnected() {
-
 		connected = 'CONNECTED';
+		if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode: ... CONNECTED (" + new Date().getTime() + ")");
 
 		if (pendingMessages) {
 			for (var i in pendingMessages) {
@@ -540,7 +569,10 @@ webSocketModule.factory('$webSocket',
 			websocket.onclose = function(evt) {
 				stopHeartbeat();
 				$rootScope.$apply(function() {
-					if (connected != 'CLOSED') connected = 'RECONNECTING';
+					if (connected != 'CLOSED') {
+						connected = 'RECONNECTING';
+						if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode (onclose receidev while not CLOSED): ... RECONNECTING (" + new Date().getTime() + ")");
+					}
 				});
 				for (var handler in onCloseHandlers) {
 					onCloseHandlers[handler](evt);
@@ -561,6 +593,7 @@ webSocketModule.factory('$webSocket',
 					// server disconnected, do not try to reconnect
 					$rootScope.$apply(function() {
 						connected = 'CLOSED';
+						if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode (onconnecting got a server disconnect/close with reason " + evt.reason + "): ... CLOSED (" + new Date().getTime() + ")");
 					});
 				}
 			}
@@ -597,10 +630,13 @@ webSocketModule.factory('$webSocket',
 
 		isReconnecting: isReconnecting,
 		
+		addIncomingMessageHandlingDoneTask: addIncomingMessageHandlingDoneTask,
+		
 		disconnect: function() {
 			if(websocket) {
 				websocket.close();
 				connected = 'CLOSED';
+				if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode (disconnect): ... CLOSED (" + new Date().getTime() + ")");
 			}
 		},
 
@@ -616,9 +652,10 @@ webSocketModule.factory('$webSocket',
 		var changes = {}
 		var conversionInfo = serviceScopesConversionInfo[servicename];
 		if (property) {
-			if (conversionInfo && conversionInfo[property]) changes[property] = $sabloConverters.convertFromClientToServer(now[property], conversionInfo[property], prev[property]);
-			else changes[property] = $sabloUtils.convertClientObject(now[property])
+			if (conversionInfo && conversionInfo[property]) changes[property] = $sabloConverters.convertFromClientToServer(now, conversionInfo[property], prev);
+			else changes[property] = $sabloUtils.convertClientObject(now);
 		} else {
+			// TODO hmm I think it will never go through here anymore; remove this else code
 			// first build up a list of all the properties both have.
 			var fulllist = $sabloUtils.getCombinedPropertyNames(now,prev);
 			var changes = {};
@@ -637,7 +674,7 @@ webSocketModule.factory('$webSocket',
 				}
 			}
 		}
-		for (var prop in changes) {
+		for (var prop in changes) { // weird way to only send it if it has at least one element
 			wsSession.sendMessageObject({servicedatapush:servicename,changes:changes})
 			return;
 		}
@@ -645,11 +682,31 @@ webSocketModule.factory('$webSocket',
 	var getChangeNotifier = function(servicename, property) {
 		return function() {
 			var serviceModel = serviceScopes[servicename].model;
-			sendServiceChanges(serviceModel, serviceModel, servicename, property);
+			sendServiceChanges(serviceModel[property], serviceModel[property], servicename, property);
 		}
 	};
+	
+	function scriptifyServiceNameIfNeeded(serviceName) {
+		if (serviceName) {
+			// transform serviceNames like testpackage-myTestService into testPackageMyTestService - as latter is how getServiceScope usually gets called (from developer generated code for services) from service client js;
+			// but who knows, maybe someone will try the dashed version and wonder why it doesn't work
+			
+			// this should do the same as ClientService.java #convertToJSName()
+			var packageAndName = serviceName.split("-");
+			if (packageAndName.length > 1) {
+				serviceName = packageAndName[0];
+				for (var i = 1; i < packageAndName.length; i++) {
+					if (packageAndName[1].length > 0) serviceName += packageAndName[i].charAt(0).toUpperCase() + packageAndName[i].slice(1);
+				}
+			}
+		}
+		return serviceName;
+	}
+
 	return {
 		getServiceScope: function(serviceName) {
+			serviceName = scriptifyServiceNameIfNeeded(serviceName);
+			
 			if (!serviceScopes[serviceName]) {
 				serviceScopes[serviceName] = serviceScopes.$new(true);
 				serviceScopes[serviceName].model = {};
@@ -885,13 +942,13 @@ webSocketModule.factory('$webSocket',
 		var fulllist = {}
 		if (prev) {
 			var prevNames = Object.getOwnPropertyNames(prev);
-			for(var i=0;i<prevNames.length;i++) {
+			for(var i=0; i < prevNames.length; i++) {
 				fulllist[prevNames[i]] = true;
 			}
 		}
 		if (now) {
 			var nowNames = Object.getOwnPropertyNames(now);
-			for(var i=0;i<nowNames.length;i++) {
+			for(var i=0;i < nowNames.length;i++) {
 				fulllist[nowNames[i]] = true;
 			}
 		}

@@ -714,7 +714,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 				var designTabSeq = $parse($attrs['sabloTabseq'])($scope);
 				if (!designTabSeq) designTabSeq = 0;
 				var config = $parse($attrs['sabloTabseqConfig'])($scope);
-
+				var tabSeqCallback = $parse($attrs['sablotabseqcallback']);
 
 				var designChildIndexToArrayPosition = {};
 				var designChildTabSeq = []; // contains ordered numbers that will be keys in 'runtimeChildIndexes'; can have duplicates
@@ -794,8 +794,18 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 
 				function updateCurrentDomElTabIndex() {
 					if (hasOwnTabIndex()) {
-						if (runtimeIndex.startIndex !== 0) $attrs.$set('tabindex', runtimeIndex.startIndex);
-						else $attrs.$set('tabindex', undefined);
+						if (runtimeIndex.startIndex !== 0)
+						{	
+							$attrs.$set('tabindex', runtimeIndex.startIndex);
+						}
+						else 
+						{	
+							$attrs.$set('tabindex', undefined);
+						}
+						if (tabSeqCallback)
+						{
+							tabSeqCallback($scope, {$tabindex : (runtimeIndex.startIndex !== 0 ? runtimeIndex.startIndex : undefined)});
+						}	
 					}
 				}
 

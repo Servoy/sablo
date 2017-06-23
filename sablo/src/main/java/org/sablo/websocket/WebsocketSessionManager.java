@@ -54,7 +54,7 @@ public class WebsocketSessionManager
 	public static void removeSession(String uuid)
 	{
 		// if there is a current window, first send all pending changes
-		if (CurrentWindow.exists())
+		if (CurrentWindow.exists() && CurrentWindow.get().hasEndpoint())
 		{
 			try
 			{

@@ -18,6 +18,7 @@ package org.sablo.specification.property;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -47,6 +48,8 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 
 	protected static final String CONTENT_VERSION = "vEr";
 	protected static final String UPDATES = "u";
+	protected static final String REMOVES = "r";
+	protected static final String ADDITIONS = "a";
 	protected static final String INDEX = "i";
 	protected static final String VALUE = "v";
 	protected static final String PUSH_TO_SERVER = "w";
@@ -353,6 +356,8 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 			if (conversionMarkers != null) conversionMarkers.convert(CustomJSONArrayType.TYPE_NAME); // so that the client knows it must use the custom client side JS for what JSON it gets
 
 			Set<Integer> changes = changeAwareList.getChangedIndexes();
+			List<Integer> removed = changeAwareList.getRemovedIndexes();
+			List<Integer> added = changeAwareList.getAddedIndexes();
 			List<WT> wrappedBaseListReadOnly = changeAwareList.getWrappedBaseListForReadOnly();
 			writer.object();
 
@@ -385,7 +390,7 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 					writer.endObject();
 				}
 			}
-			else if (changes.size() > 0)
+			else if (changes.size() > 0 || removed.size() > 0 || added.size() > 0)
 			{
 				// else write changed indexes / granular update:
 				writer.key(CONTENT_VERSION).value(changeAwareList.getListContentVersion());
@@ -395,26 +400,22 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 					writer.key(INITIALIZE).value(true);
 				}
 
-				writer.key(UPDATES).array();
-				DataConversion arrayConversionMarkers = new DataConversion();
-				int i = 0;
-				for (Integer idx : changes)
+				if (removed.size() > 0)
 				{
-					arrayConversionMarkers.pushNode(String.valueOf(i++));
-					writer.object().key(INDEX).value(idx);
-					arrayConversionMarkers.pushNode(VALUE);
-					JSONUtils.changesToBrowserJSONValue(writer, VALUE, wrappedBaseListReadOnly.get(idx.intValue()), getCustomJSONTypeDefinition(),
-						arrayConversionMarkers, dataConverterContext);
-					arrayConversionMarkers.popNode();
-					writer.endObject();
-					arrayConversionMarkers.popNode();
+					writer.key(REMOVES).array();
+					for (Integer idx : removed)
+					{
+						writer.value(idx);
+					}
+					writer.endArray();
 				}
-				writer.endArray();
-				if (arrayConversionMarkers.getConversions().size() > 0)
+				if (added.size() > 0)
 				{
-					writer.key(JSONUtils.TYPES_KEY).object();
-					JSONUtils.writeConversions(writer, arrayConversionMarkers.getConversions());
-					writer.endObject();
+					writeValues(writer, dataConverterContext, added, wrappedBaseListReadOnly, ADDITIONS);
+				}
+				if (changes.size() > 0)
+				{
+					writeValues(writer, dataConverterContext, changes, wrappedBaseListReadOnly, UPDATES);
 				}
 			}
 			else if (changeAwareList.mustSendTypeToClient())
@@ -435,6 +436,32 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 			writer.value(JSONObject.NULL); // TODO how to handle null values which have no version info (special watches/complete array set from client)? if null is on server and something is set on client or the other way around?
 		}
 		return writer;
+	}
+
+	private void writeValues(JSONWriter writer, IBrowserConverterContext dataConverterContext, Collection<Integer> changes, List<WT> wrappedBaseListReadOnly,
+		String k)
+	{
+		writer.key(k).array();
+		DataConversion arrayConversionMarkers = new DataConversion();
+		int i = 0;
+		for (Integer idx : changes)
+		{
+			arrayConversionMarkers.pushNode(String.valueOf(i++));
+			writer.object().key(INDEX).value(idx);
+			arrayConversionMarkers.pushNode(VALUE);
+			JSONUtils.changesToBrowserJSONValue(writer, VALUE, wrappedBaseListReadOnly.get(idx.intValue()), getCustomJSONTypeDefinition(),
+				arrayConversionMarkers, dataConverterContext);
+			arrayConversionMarkers.popNode();
+			writer.endObject();
+			arrayConversionMarkers.popNode();
+		}
+		writer.endArray();
+		if (arrayConversionMarkers.getConversions().size() > 0)
+		{
+			writer.key(JSONUtils.TYPES_KEY).object();
+			JSONUtils.writeConversions(writer, arrayConversionMarkers.getConversions());
+			writer.endObject();
+		}
 	}
 
 	@Override

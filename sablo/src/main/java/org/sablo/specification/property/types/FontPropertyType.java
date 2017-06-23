@@ -109,7 +109,7 @@ public class FontPropertyType extends DefaultPropertyType<Font> implements IClas
 	@Override
 	public Object parseConfig(JSONObject json)
 	{
-		return Boolean.valueOf(json != null && json.optBoolean("stringformat"));
+		return null;
 	}
 
 	@Override

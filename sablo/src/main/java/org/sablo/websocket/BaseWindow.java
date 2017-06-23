@@ -62,10 +62,16 @@ import org.slf4j.LoggerFactory;
 public class BaseWindow implements IWindow
 {
 
+	/**
+	 *
+	 */
 	private static final String API_KEY_DELAY_UNTIL_FORM_LOADS = "delayUntilFormLoads"; //$NON-NLS-1$
 	private static final String API_SERVER_ONLY_KEY_FORM_CONTAINER = "forServerOnly_formContainer"; //$NON-NLS-1$
 	private static final String API_SERVER_ONLY_KEY_COMPONENT = "forServerOnly_component"; //$NON-NLS-1$
 	private static final String API_SERVER_ONLY_KEY_ARG_TYPES = "forServerOnly_callTypes"; //$NON-NLS-1$
+	private static final String API_SERVER_ONLY_KEY_SERVICE = "forServerOnly_service"; //$NON-NLS-1$
+	private static final String API_KEY_NAME = "name"; //$NON-NLS-1$
+	private static final String API_KEY_CALL = "call"; //$NON-NLS-1$
 	private static final String API_KEY_ARGS = "args"; //$NON-NLS-1$
 	private static final String API_KEY_FUNCTION_NAME = "api"; //$NON-NLS-1$
 	private static final String API_KEY_COMPONENT_NAME = "bean"; //$NON-NLS-1$
@@ -226,9 +232,9 @@ public class BaseWindow implements IWindow
 			TypedData<Map<String, Object>> sd = service.getProperties();
 			if (!sd.content.isEmpty())
 			{
-				serviceData.put(service.getName(), sd.content);
+				serviceData.put(service.getScriptingName(), sd.content);
 			}
-			if (sd.contentType != null) serviceDataTypes.putProperty(service.getName(), sd.contentType);
+			if (sd.contentType != null) serviceDataTypes.putProperty(service.getScriptingName(), sd.contentType);
 		}
 
 		if (serviceData.size() > 0)
@@ -249,8 +255,8 @@ public class BaseWindow implements IWindow
 
 						for (IClientService service : services)
 						{
-							Map<String, Object> dataForThisService = serviceData.get(service.getName());
-							String serviceName = service.getName();
+							String serviceName = service.getScriptingName();
+							Map<String, Object> dataForThisService = serviceData.get(serviceName);
 							if (dataForThisService != null && dataForThisService.size() > 0)
 							{
 								clientDataConversions.pushNode(serviceName);
@@ -494,8 +500,19 @@ public class BaseWindow implements IWindow
 			{
 				hasContentToSend = true;
 				clientDataConversions.pushNode("services");
-				FullValueToJSONConverter.INSTANCE.toJSONValue(w, "services", serviceCalls, serviceCallTypes, clientDataConversions,
-					new BrowserConverterContext((ClientService)session.getClientService((String)serviceCalls.get(0).get("name")), PushToServerEnum.allow));
+				w.key("services");
+
+				w.array();
+				for (int i = 0; i < serviceCalls.size(); i++)
+				{
+					if (clientDataConversions != null) clientDataConversions.pushNode(String.valueOf(i));
+					ClientService clientService = (ClientService)serviceCalls.get(i).remove(API_SERVER_ONLY_KEY_SERVICE);
+					FullValueToJSONConverter.INSTANCE.toJSONValue(w, null, serviceCalls.get(i), serviceCallTypes.getProperty(String.valueOf(i)),
+						clientDataConversions, new BrowserConverterContext(clientService, PushToServerEnum.allow));
+					if (clientDataConversions != null) clientDataConversions.popNode();
+				}
+				w.endArray();
+
 				clientDataConversions.popNode();
 			}
 			if (delayedOrAsyncApiCalls.size() > 0)
@@ -527,9 +544,9 @@ public class BaseWindow implements IWindow
 							w.key("calls").array();
 						}
 						PropertyDescription callTypes = (PropertyDescription)delayedCall.remove(API_SERVER_ONLY_KEY_ARG_TYPES);
-						w.object().key("call").object();
+						w.object().key(API_KEY_CALL).object();
 						clientDataConversions.pushNode(String.valueOf(callIdx));
-						clientDataConversions.pushNode("call");
+						clientDataConversions.pushNode(API_KEY_CALL);
 						JSONUtils.writeData(converter, w, delayedCall, callTypes, clientDataConversions,
 							new BrowserConverterContext(component, PushToServerEnum.allow));
 						clientDataConversions.popNode();
@@ -614,40 +631,41 @@ public class BaseWindow implements IWindow
 	}
 
 	@Override
-	public Object executeServiceCall(String serviceName, String functionName, Object[] arguments, WebObjectFunctionDefinition apiFunction,
+	public Object executeServiceCall(IClientService clientService, String functionName, Object[] arguments, WebObjectFunctionDefinition apiFunction,
 		IToJSONWriter<IBrowserConverterContext> pendingChangesWriter, boolean blockEventProcessing) throws IOException
 	{
 		PropertyDescription argumentTypes = (apiFunction != null ? BaseWebObject.getParameterTypes(apiFunction) : null);
-		addServiceCall(serviceName, functionName, arguments, argumentTypes);
+		addServiceCall(clientService, functionName, arguments, argumentTypes);
 		try
 		{
 			return sendSyncMessage(pendingChangesWriter, ChangesToJSONConverter.INSTANCE, blockEventProcessing); // will return response from last service call
 		}
 		catch (CancellationException e)
 		{
-			throw new RuntimeException("Cancelled while executing service call " + serviceName + "." + functionName + "(...). Arguments: " +
+			throw new RuntimeException("Cancelled while executing service call " + clientService.getName() + "." + functionName + "(...). Arguments: " +
 				(arguments == null ? null : Arrays.asList(arguments)), e);
 		}
 		catch (TimeoutException e)
 		{
-			throw new RuntimeException("Timed out while executing service call " + serviceName + "." + functionName + "(...). Arguments: " +
+			throw new RuntimeException("Timed out while executing service call " + clientService.getName() + "." + functionName + "(...). Arguments: " +
 				(arguments == null ? null : Arrays.asList(arguments)), e);
 		}
 	}
 
 	@Override
-	public void executeAsyncServiceCall(String serviceName, String functionName, Object[] arguments, PropertyDescription argumentTypes)
+	public void executeAsyncServiceCall(IClientService clientService, String functionName, Object[] arguments, PropertyDescription argumentTypes)
 	{
-		addServiceCall(serviceName, functionName, arguments, argumentTypes);
+		addServiceCall(clientService, functionName, arguments, argumentTypes);
 	}
 
-	private void addServiceCall(String serviceName, String functionName, Object[] arguments, PropertyDescription argumentTypes)
+	private void addServiceCall(IClientService clientService, String functionName, Object[] arguments, PropertyDescription argumentTypes)
 	{
 		// {"services":[{name:serviceName,call:functionName,args:argumentsArray}]}
 		Map<String, Object> serviceCall = new HashMap<>();
 		PropertyDescription typesOfThisCall = AggregatedPropertyType.newAggregatedProperty();
-		serviceCall.put("name", serviceName);
-		serviceCall.put("call", functionName);
+		serviceCall.put(API_SERVER_ONLY_KEY_SERVICE, clientService);
+		serviceCall.put(API_KEY_NAME, clientService.getScriptingName());
+		serviceCall.put(API_KEY_CALL, functionName);
 		if (argumentTypes != null && argumentTypes.getProperties().size() > 0)
 		{
 			int typesNumber = argumentTypes.getProperties().size();
@@ -738,7 +756,7 @@ public class BaseWindow implements IWindow
 					w.object();
 					contentHasBeenWritten = true;
 				}
-				String childName = service.getName();
+				String childName = service.getScriptingName();
 				w.key(childName).object();
 				clientDataConversions.pushNode(childName);
 				service.writeProperties(converter, w, changes.content, changes.contentType, clientDataConversions);
@@ -783,8 +801,8 @@ public class BaseWindow implements IWindow
 					clientDataConversions.popNode();
 					Map<String, Object> call = getApiCallObject(receiver, apiFunction, arguments, argumentTypes, callContributions);
 					PropertyDescription callTypes = (PropertyDescription)call.remove(API_SERVER_ONLY_KEY_ARG_TYPES);
-					w.key("call").object();
-					clientDataConversions.pushNode("call");
+					w.key(API_KEY_CALL).object();
+					clientDataConversions.pushNode(API_KEY_CALL);
 					JSONUtils.writeData(converter, w, call, callTypes, clientDataConversions, new BrowserConverterContext(receiver, PushToServerEnum.allow));
 					clientDataConversions.popNode();
 					w.endObject();

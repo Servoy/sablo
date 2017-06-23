@@ -72,7 +72,8 @@ public class IndexPageEnhancer
 	 * @throws IOException
 	 */
 	public static void enhance(URL resource, String contextPath, Collection<String> cssContributions, Collection<String> jsContributions,
-		Collection<String> extraMetaData, Map<String, String> variableSubstitution, Writer writer, IContributionFilter contributionFilter) throws IOException
+		Collection<String> extraMetaData, Map<String, String> variableSubstitution, Writer writer, IContributionFilter contributionFilter,
+		IContributionEntryFilter contributionEntryFilter) throws IOException
 	{
 		String index_file = IOUtils.toString(resource);
 		String lowercase_index_file = index_file.toLowerCase();
@@ -96,7 +97,8 @@ public class IndexPageEnhancer
 		}
 		else
 		{
-			sb.insert(headend + COMPONENT_CONTRIBUTIONS.length(), getAllContributions(cssContributions, jsContributions, extraMetaData, contributionFilter));
+			sb.insert(headend + COMPONENT_CONTRIBUTIONS.length(),
+				getAllContributions(cssContributions, jsContributions, extraMetaData, contributionFilter, contributionEntryFilter));
 		}
 		if (headstart < 0)
 		{
@@ -119,9 +121,9 @@ public class IndexPageEnhancer
 		return String.format("<base href=\"%s/\">\n", contextPath);
 	}
 
-	public static Object[] getAllContributions(Boolean supportGrouping)
+	public static Object[] getAllContributions(Boolean supportGrouping, IContributionEntryFilter ceFilter)
 	{
-		return getAllContributions(null, supportGrouping);
+		return getAllContributions(null, supportGrouping, ceFilter);
 	}
 
 	/**
@@ -134,7 +136,7 @@ public class IndexPageEnhancer
 	 * @return an object array which has as a first element the collection of css contributions, and as
 	 * the second element the collection of the js contributions.
 	 */
-	public static Object[] getAllContributions(Set<String> exportedWebObjects, Boolean supportGrouping)
+	public static Object[] getAllContributions(Set<String> exportedWebObjects, Boolean supportGrouping, IContributionEntryFilter ceFilter)
 	{
 		ArrayList<String> allCSSContributions = new ArrayList<String>();
 		ArrayList<String> allJSContributions = new ArrayList<String>();
@@ -169,6 +171,10 @@ public class IndexPageEnhancer
 
 		for (JSONObject lib : allLibraries.values())
 		{
+			if (ceFilter != null)
+			{
+				lib = ceFilter.filterContributionEntry(lib);
+			}
 			switch (lib.optString("mimetype"))
 			{
 				case "text/javascript" :
@@ -189,9 +195,9 @@ public class IndexPageEnhancer
 	 * @return headContributions
 	 */
 	static String getAllContributions(Collection<String> cssContributions, Collection<String> jsContributions, Collection<String> extraMetaData,
-		IContributionFilter contributionFilter)
+		IContributionFilter contributionFilter, IContributionEntryFilter contributionEntryFilter)
 	{
-		Object[] all = getAllContributions(null);
+		Object[] all = getAllContributions(null, contributionEntryFilter);
 		ArrayList<String> allCSSContributions = (ArrayList<String>)all[0];
 		ArrayList<String> allJSContributions = (ArrayList<String>)all[1];
 

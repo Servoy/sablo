@@ -34,6 +34,7 @@ import org.sablo.eventthread.IEventDispatcher;
 import org.sablo.eventthread.WebsocketSessionWindows;
 import org.sablo.services.client.SabloService;
 import org.sablo.services.server.FormServiceHandler;
+import org.sablo.specification.WebObjectSpecification;
 import org.sablo.specification.WebServiceSpecProvider;
 import org.sablo.websocket.impl.ClientService;
 import org.sablo.websocket.utils.ObjectReference;
@@ -55,7 +56,8 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	private static final Logger log = LoggerFactory.getLogger(BaseWebsocketSession.class.getCanonicalName());
 
 	private final Map<String, IServerService> serverServices = new HashMap<>();
-	private final Map<String, IClientService> services = new HashMap<>();
+	private final Map<String, IClientService> servicesByName = new HashMap<>();
+	private final Map<String, IClientService> servicesByScriptingName = new HashMap<>();
 	private final List<ObjectReference<IWindow>> windows = new ArrayList<>();
 
 	private final String uuid;
@@ -347,6 +349,8 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 			}
 		}
 
+		servicesByName.clear();
+		servicesByScriptingName.clear();
 	}
 
 	protected void onDispose()
@@ -377,12 +381,30 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	@Override
 	public IClientService getClientService(String name)
 	{
-		IClientService clientService = services.get(name);
+		IClientService clientService = servicesByName.get(name);
 		if (clientService == null)
 		{
 			clientService = createClientService(name);
-			services.put(name, clientService);
+			servicesByName.put(name, clientService);
+			servicesByScriptingName.put(clientService.getScriptingName(), clientService);
 		}
+		return clientService;
+	}
+
+	@Override
+	public IClientService getClientServiceByScriptingName(String scriptingName)
+	{
+		IClientService clientService = servicesByScriptingName.get(scriptingName);
+
+		if (clientService == null && scriptingName != null)
+		{
+			// hmm, it was not accessed before using it's real name (that would have created the IClientService instance for it and registered it also by scripting name)...
+			// we have to find a client service who's scripting name we know but real name we don't (the conversion cannot be done directly)
+			// first search for it directly (in case original name didn't have dashes, it will be the same)
+			WebObjectSpecification sd = ClientService.getServiceDefinitionFromScriptingName(scriptingName);
+			if (sd != null) clientService = getClientService(sd.getName()); // from now on we will know this service by scriptingName as well as it will be created here
+		}
+
 		return clientService;
 	}
 
@@ -395,13 +417,9 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	@Override
 	public Collection<IClientService> getServices()
 	{
-		return Collections.unmodifiableCollection(services.values());
+		return Collections.unmodifiableCollection(servicesByName.values());
 	}
 
-	/**
-	 * @param name
-	 * @return
-	 */
 	protected IClientService createClientService(String name)
 	{
 		return new ClientService(name, WebServiceSpecProvider.getSpecProviderState().getWebComponentSpecification(name));
