@@ -47,9 +47,12 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 	public static final String TYPE_NAME = "JSON_arr";
 
 	protected static final String CONTENT_VERSION = "vEr";
-	protected static final String UPDATES = "u";
-	protected static final String REMOVES = "r";
-	protected static final String ADDITIONS = "a";
+
+	protected static final String CHANGE_TYPE_UPDATES = "u";
+	protected static final String CHANGE_TYPE_BY_REF = "x";
+	protected static final String CHANGE_TYPE_REMOVES = "r";
+	protected static final String CHANGE_TYPE_ADDITIONS = "a";
+
 	protected static final String INDEX = "i";
 	protected static final String VALUE = "v";
 	protected static final String PUSH_TO_SERVER = "w";
@@ -159,7 +162,7 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 			{
 				if (previousChangeAwareList == null || clientReceivedJSON.getInt(CONTENT_VERSION) == previousChangeAwareList.getListContentVersion())
 				{
-					if (clientReceivedJSON.has(UPDATES))
+					if (clientReceivedJSON.has(CHANGE_TYPE_UPDATES))
 					{
 						if (previousChangeAwareList == null)
 						{
@@ -178,7 +181,7 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 								// as browser initiated it; also JSON conversions work on wrapped values
 								List<WT> wrappedBaseListReadOnly = previousChangeAwareList.getWrappedBaseListForReadOnly();
 
-								JSONArray updatedRows = updates.getJSONArray(UPDATES);
+								JSONArray updatedRows = updates.getJSONArray(CHANGE_TYPE_UPDATES);
 								for (int i = updatedRows.length() - 1; i >= 0; i--)
 								{
 									JSONObject row = updatedRows.getJSONObject(i);
@@ -191,7 +194,8 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 										WT newWrappedEl = (WT)JSONUtils.fromJSON(wrappedBaseListReadOnly.get(idx), val, getCustomJSONTypeDefinition(),
 											dataConverterContext, returnValueAdjustedIncommingValueForIndex);
 										previousChangeAwareList.setInWrappedBaseList(idx, newWrappedEl, false);
-										if (returnValueAdjustedIncommingValueForIndex.value.booleanValue()) previousChangeAwareList.markElementChanged(idx);
+										if (returnValueAdjustedIncommingValueForIndex.value.booleanValue())
+											previousChangeAwareList.markElementChangedByRef(idx);
 									}
 									else
 									{
@@ -328,7 +332,7 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 
 
 		for (Integer idx : adjustedNewValueIndexes)
-			retVal.markElementChanged(idx.intValue());
+			retVal.markElementChangedByRef(idx.intValue());
 
 		return retVal;
 	}
@@ -355,9 +359,11 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 		{
 			if (conversionMarkers != null) conversionMarkers.convert(CustomJSONArrayType.TYPE_NAME); // so that the client knows it must use the custom client side JS for what JSON it gets
 
-			Set<Integer> changes = changeAwareList.getChangedIndexes();
+			Set<Integer> indexesWithChangedContent = changeAwareList.getIndexesWithContentUpdates();
+			Set<Integer> indexesChangedByRed = changeAwareList.getIndexesChangedByRef();
 			List<Integer> removed = changeAwareList.getRemovedIndexes();
 			List<Integer> added = changeAwareList.getAddedIndexes();
+
 			List<WT> wrappedBaseListReadOnly = changeAwareList.getWrappedBaseListForReadOnly();
 			writer.object();
 
@@ -390,7 +396,7 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 					writer.endObject();
 				}
 			}
-			else if (changes.size() > 0 || removed.size() > 0 || added.size() > 0)
+			else if (indexesWithChangedContent.size() > 0 || indexesChangedByRed.size() > 0 || removed.size() > 0 || added.size() > 0)
 			{
 				// else write changed indexes / granular update:
 				writer.key(CONTENT_VERSION).value(changeAwareList.getListContentVersion());
@@ -402,7 +408,7 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 
 				if (removed.size() > 0)
 				{
-					writer.key(REMOVES).array();
+					writer.key(CHANGE_TYPE_REMOVES).array();
 					for (Integer idx : removed)
 					{
 						writer.value(idx);
@@ -411,11 +417,15 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 				}
 				if (added.size() > 0)
 				{
-					writeValues(writer, dataConverterContext, added, wrappedBaseListReadOnly, ADDITIONS);
+					writeValues(writer, dataConverterContext, added, wrappedBaseListReadOnly, CHANGE_TYPE_ADDITIONS);
 				}
-				if (changes.size() > 0)
+				if (indexesChangedByRed.size() > 0)
 				{
-					writeValues(writer, dataConverterContext, changes, wrappedBaseListReadOnly, UPDATES);
+					writeValues(writer, dataConverterContext, indexesChangedByRed, wrappedBaseListReadOnly, CHANGE_TYPE_BY_REF);
+				}
+				if (indexesWithChangedContent.size() > 0)
+				{
+					writeValues(writer, dataConverterContext, indexesWithChangedContent, wrappedBaseListReadOnly, CHANGE_TYPE_UPDATES);
 				}
 			}
 			else if (changeAwareList.mustSendTypeToClient())
@@ -439,9 +449,9 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 	}
 
 	private void writeValues(JSONWriter writer, IBrowserConverterContext dataConverterContext, Collection<Integer> changes, List<WT> wrappedBaseListReadOnly,
-		String k)
+		String changeType)
 	{
-		writer.key(k).array();
+		writer.key(changeType == CHANGE_TYPE_BY_REF ? CHANGE_TYPE_UPDATES : changeType).array(); // client doesn't care if it was a full or contents change - it only needs to know it was an update
 		DataConversion arrayConversionMarkers = new DataConversion();
 		int i = 0;
 		for (Integer idx : changes)
@@ -449,8 +459,16 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object> 
 			arrayConversionMarkers.pushNode(String.valueOf(i++));
 			writer.object().key(INDEX).value(idx);
 			arrayConversionMarkers.pushNode(VALUE);
-			JSONUtils.changesToBrowserJSONValue(writer, VALUE, wrappedBaseListReadOnly.get(idx.intValue()), getCustomJSONTypeDefinition(),
-				arrayConversionMarkers, dataConverterContext);
+			if (changeType == CHANGE_TYPE_UPDATES)
+			{
+				JSONUtils.changesToBrowserJSONValue(writer, VALUE, wrappedBaseListReadOnly.get(idx.intValue()), getCustomJSONTypeDefinition(),
+					arrayConversionMarkers, dataConverterContext);
+			}
+			else // this has to be CHANGE_TYPE_ADDITIONS or CHANGE_TYPE_BY_REF - both should sent full value of that element
+			{
+				JSONUtils.toBrowserJSONFullValue(writer, VALUE, wrappedBaseListReadOnly.get(idx.intValue()), getCustomJSONTypeDefinition(),
+					arrayConversionMarkers, dataConverterContext);
+			}
 			arrayConversionMarkers.popNode();
 			writer.endObject();
 			arrayConversionMarkers.popNode();

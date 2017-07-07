@@ -103,6 +103,7 @@ public abstract class Container extends WebComponent
 	public boolean writeAllComponentsChanges(JSONWriter w, String keyInParent, IToJSONConverter<IBrowserConverterContext> converter,
 		DataConversion clientDataConversions) throws JSONException
 	{
+		// converter here is always ChangesToJSONConverter except for some unit tests
 		boolean contentHasBeenWritten = this.writeOwnComponentChanges(w, keyInParent, "", converter, clientDataConversions);
 		for (WebComponent wc : getComponents())
 		{

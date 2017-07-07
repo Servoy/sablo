@@ -55,10 +55,18 @@ public class WebComponent extends BaseWebObject
 	}
 
 	@Override
-	public boolean flagPropertyAsDirty(String key, boolean dirty)
+	public boolean markPropertyAsChangedByRef(String key)
 	{
-		boolean modified = super.flagPropertyAsDirty(key, dirty);
-		if (dirty && modified && parent != null) parent.markAsChanged();
+		boolean modified = super.markPropertyAsChangedByRef(key);
+		if (modified && parent != null) parent.markAsChanged();
+		return modified;
+	}
+
+	@Override
+	public boolean markPropertyContentsUpdated(String key)
+	{
+		boolean modified = super.markPropertyContentsUpdated(key);
+		if (modified && parent != null) parent.markAsChanged();
 		return modified;
 	}
 

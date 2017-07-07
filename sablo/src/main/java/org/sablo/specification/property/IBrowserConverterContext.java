@@ -28,7 +28,7 @@ public interface IBrowserConverterContext
 	BaseWebObject getWebObject();
 
 	/**
-	 * Spec file can define "pushToServer" setting for each property. But for nested properties we want that setting to be used by all
+	 * .spec file can define "pushToServer" setting for each property. But for nested properties we want that setting to be used by all
 	 * children of that property. So if the root property is defined as 'reject' then all nested properties will be reject as well.
 	 *
 	 * We cannot store this in the PropertyDescriptions directly cause the same custom/nested type can be used in multiple properties in the spec,

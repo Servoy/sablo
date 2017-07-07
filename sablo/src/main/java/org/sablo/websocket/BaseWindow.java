@@ -262,7 +262,9 @@ public class BaseWindow implements IWindow
 								clientDataConversions.pushNode(serviceName);
 								w.key(serviceName);
 								w.object();
-								service.writeProperties(converter, w, dataForThisService, serviceDataTypes.getProperty(serviceName), clientDataConversions);
+								// here converter is FullValueToJSONConverter; see below arg
+								service.writeProperties(converter, null, w,
+									new TypedData<Map<String, Object>>(dataForThisService, serviceDataTypes.getProperty(serviceName)), clientDataConversions);
 								w.endObject();
 								clientDataConversions.popNode();
 							}
@@ -614,7 +616,7 @@ public class BaseWindow implements IWindow
 				clientDataConversions.popNode();
 
 				clientDataConversions.pushNode("services");
-				changesFound = writeAllServicesChanges(w, "services", ChangesToJSONConverter.INSTANCE, clientDataConversions) || changesFound;
+				changesFound = writeAllServicesChanges(w, "services", clientDataConversions) || changesFound;
 				clientDataConversions.popNode();
 
 				w.endObject();
@@ -741,8 +743,7 @@ public class BaseWindow implements IWindow
 		return formContainer.isVisible(); // subclasses may decide to override this and also send changes for hidden forms
 	}
 
-	public boolean writeAllServicesChanges(JSONWriter w, String keyInParent, IToJSONConverter<IBrowserConverterContext> converter,
-		DataConversion clientDataConversions) throws JSONException
+	public boolean writeAllServicesChanges(JSONWriter w, String keyInParent, DataConversion clientDataConversions) throws JSONException
 	{
 		boolean contentHasBeenWritten = false;
 		for (IClientService service : getSession().getServices().toArray(new IClientService[0])) // toArray is used here to try to avoid a ConcurrentModificationException while looping
@@ -759,7 +760,7 @@ public class BaseWindow implements IWindow
 				String childName = service.getScriptingName();
 				w.key(childName).object();
 				clientDataConversions.pushNode(childName);
-				service.writeProperties(converter, w, changes.content, changes.contentType, clientDataConversions);
+				service.writeProperties(ChangesToJSONConverter.INSTANCE, FullValueToJSONConverter.INSTANCE, w, changes, clientDataConversions);
 				clientDataConversions.popNode();
 				w.endObject();
 			}
@@ -797,13 +798,14 @@ public class BaseWindow implements IWindow
 					w.object();
 
 					clientDataConversions.pushNode("forms");
-					writeAllComponentsChanges(w, "forms", converter, clientDataConversions);
+					writeAllComponentsChanges(w, "forms", converter, clientDataConversions); // converter here is ChangesToJSONConverter.INSTANCE (see below arg to 'sendSyncMessage')
 					clientDataConversions.popNode();
 					Map<String, Object> call = getApiCallObject(receiver, apiFunction, arguments, argumentTypes, callContributions);
 					PropertyDescription callTypes = (PropertyDescription)call.remove(API_SERVER_ONLY_KEY_ARG_TYPES);
 					w.key(API_KEY_CALL).object();
 					clientDataConversions.pushNode(API_KEY_CALL);
-					JSONUtils.writeData(converter, w, call, callTypes, clientDataConversions, new BrowserConverterContext(receiver, PushToServerEnum.allow));
+					JSONUtils.writeData(FullValueToJSONConverter.INSTANCE, w, call, callTypes, clientDataConversions,
+						new BrowserConverterContext(receiver, PushToServerEnum.allow));
 					clientDataConversions.popNode();
 					w.endObject();
 

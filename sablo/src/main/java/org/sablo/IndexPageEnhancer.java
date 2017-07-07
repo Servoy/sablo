@@ -274,8 +274,6 @@ public class IndexPageEnhancer
 							else if (versionCheck > 0)
 							{
 								log.warn("same lib with lower version found: " + allLib + " using lib: " + lib);
-								// remove the previous key, will be added later on again.
-								allLibs.remove(key);
 							}
 						}
 						else if (storedVersion != null)

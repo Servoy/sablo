@@ -29,6 +29,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONWriter;
+import org.sablo.CustomObjectContext;
 import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.WebObjectSpecification.PushToServerEnum;
 import org.sablo.util.ValueReference;
@@ -94,6 +95,12 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 	public ChangeAwareMap<ET, WT> wrap(Map<String, ET> value, ChangeAwareMap<ET, WT> previousValue, PropertyDescription propertyDescription,
 		IWrappingContext dataConverterContext)
 	{
+		return internalWrap(value, previousValue, propertyDescription, dataConverterContext, null);
+	}
+
+	protected ChangeAwareMap<ET, WT> internalWrap(Map<String, ET> value, ChangeAwareMap<ET, WT> previousValue, PropertyDescription propertyDescription,
+		IWrappingContext dataConverterContext, CustomObjectContext<ET, WT> initialComponentOrServiceExtension)
+	{
 		if (value instanceof ChangeAwareMap< ? , ? >) return (ChangeAwareMap<ET, WT>)value;
 
 		Map<String, ET> wrappedMap = wrapMap(value, propertyDescription, dataConverterContext);
@@ -101,7 +108,8 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 		{
 			// ok now we have the map or wrap map (depending on if child types are IWrapperType or not)
 			// wrap this further into a change-aware map; this is used to be able to track changes and perform server to browser full or granular updates
-			return new ChangeAwareMap<ET, WT>(wrappedMap, previousValue != null ? previousValue.getListContentVersion() + 1 : 1);
+			return new ChangeAwareMap<ET, WT>(wrappedMap, previousValue != null ? previousValue.getListContentVersion() + 1 : 1,
+				initialComponentOrServiceExtension, getCustomJSONTypeDefinition());
 		}
 		return null;
 	}
@@ -111,7 +119,7 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 		return (IPropertyType<ET>)getCustomJSONTypeDefinition().getProperty(childPropertyName).getType();
 	}
 
-	private Map<String, ET> wrapMap(Map<String, ET> value, PropertyDescription pd, IWrappingContext dataConverterContext)
+	protected Map<String, ET> wrapMap(Map<String, ET> value, PropertyDescription pd, IWrappingContext dataConverterContext)
 	{
 		// this type will wrap (if needed; that means it will end up as a normal list if element type is not wrapped type
 		// or a WrapperList otherwise) an [] or List into a list; unwrap will simply return that list that will further
@@ -202,7 +210,8 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 										WT newWrappedEl = (WT)JSONUtils.fromJSON(wrappedBaseMap.get(key), val, keyPD, dataConverterContext,
 											returnValueAdjustedIncommingValueForKey);
 										previousChangeAwareMap.putInWrappedBaseList(key, newWrappedEl, false);
-										if (returnValueAdjustedIncommingValueForKey.value.booleanValue()) previousChangeAwareMap.markElementChanged(key);
+
+										if (returnValueAdjustedIncommingValueForKey.value.booleanValue()) previousChangeAwareMap.markElementChangedByRef(key); // if for example type is INTEGER and we got 3.3 from client it will probably be converted to 3 and it needs to be resent to client
 									}
 									else
 									{
@@ -319,6 +328,7 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 					ValueReference<Boolean> returnValueAdjustedIncommingValueForKey = new ValueReference<Boolean>(Boolean.FALSE);
 					map.put(key, (WT)JSONUtils.fromJSON(oldVal, clientReceivedJSON.opt(key), getCustomJSONTypeDefinition().getProperty(key),
 						dataConverterContext, returnValueAdjustedIncommingValueForKey));
+
 					if (returnValueAdjustedIncommingValueForKey.value.booleanValue()) adjustedNewValueKeys.add(key);
 				}
 				catch (JSONException e)
@@ -347,10 +357,10 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 
 		// TODO how to handle previous null value here; do we need to re-send to client or not (for example initially both client and server had values, at the same time server==null client sends full update); how do we kno case server version is unknown then
 		ChangeAwareMap<ET, WT> retVal = new ChangeAwareMap<ET, WT>(newBaseMap,
-			previousChangeAwareMap != null ? previousChangeAwareMap.increaseContentVersion() : 1);
+			previousChangeAwareMap != null ? previousChangeAwareMap.increaseContentVersion() : 1, null, getCustomJSONTypeDefinition());
 
 		for (String key : adjustedNewValueKeys)
-			retVal.markElementChanged(key);
+			retVal.markElementChangedByRef(key);
 
 		return retVal;
 	}
@@ -377,7 +387,6 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 		{
 			if (conversionMarkers != null) conversionMarkers.convert(CustomJSONObjectType.TYPE_NAME); // so that the client knows it must use the custom client side JS for what JSON it gets
 
-			Set<String> changes = changeAwareMap.getChangedKeys();
 			Map<String, WT> wrappedBaseMap = changeAwareMap.getWrappedBaseMapForReadOnly();
 			writer.object();
 			if (changeAwareMap.mustSendAll() || fullValue)
@@ -408,47 +417,51 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 					writer.endObject();
 				}
 			}
-			else if (changes.size() > 0)
-			{
-				// else write changed indexes / granular update:
-				writer.key(CONTENT_VERSION).value(changeAwareMap.getListContentVersion());
-				if (changeAwareMap.mustSendTypeToClient())
-				{
-					// updates + mustSendTypeToClient can happen if child elements are also similar - and need to instrument their values client-side when set by reference/completely from browser
-					writer.key(INITIALIZE).value(true);
-				}
-
-				writer.key(UPDATES).array();
-				DataConversion objConversionMarkers = new DataConversion();
-				int i = 0;
-				for (String k : changes)
-				{
-					objConversionMarkers.pushNode(String.valueOf(i++));
-					writer.object().key(KEY).value(k);
-					objConversionMarkers.pushNode(VALUE);
-					JSONUtils.changesToBrowserJSONValue(writer, VALUE, wrappedBaseMap.get(k), getCustomJSONTypeDefinition().getProperty(k),
-						objConversionMarkers, dataConverterContext);
-					objConversionMarkers.popNode();
-					writer.endObject();
-					objConversionMarkers.popNode();
-				}
-				writer.endArray();
-				if (objConversionMarkers.getConversions().size() > 0)
-				{
-					writer.key(JSONUtils.TYPES_KEY).object();
-					JSONUtils.writeConversions(writer, objConversionMarkers.getConversions());
-					writer.endObject();
-				}
-			}
-			else if (changeAwareMap.mustSendTypeToClient())
-			{
-				writer.key(CONTENT_VERSION).value(changeAwareMap.getListContentVersion());
-				writer.key(INITIALIZE).value(true);
-			}
 			else
 			{
-				writer.key(NO_OP).value(true);
+				Set<String> keysWithUpdates = changeAwareMap.getKeysWithUpdates();
+				Set<String> keysChangedByRef = changeAwareMap.getKeysChangedByRef();
+
+				if (keysWithUpdates.size() > 0 || keysChangedByRef.size() > 0)
+				{
+
+					// else write changed indexes / granular update:
+					writer.key(CONTENT_VERSION).value(changeAwareMap.getListContentVersion());
+					if (changeAwareMap.mustSendTypeToClient())
+					{
+						// updates + mustSendTypeToClient can happen if child elements are also similar - and need to instrument their values client-side when set by reference/completely from browser
+						writer.key(INITIALIZE).value(true);
+					}
+
+					writer.key(UPDATES).array();
+					DataConversion objConversionMarkers = new DataConversion();
+
+					// we only get here if fullValue == false (so this is not a fullToJSON (or servoy initialToJSON))
+					// we will write granular update with fully value of a changed key if we have changes by reference; for changed keys by content we will write updates from that key
+					int nextIndexInChangesArray = writeValueForChangedElements(writer, dataConverterContext, wrappedBaseMap, keysWithUpdates,
+						objConversionMarkers, 0, true);
+					writeValueForChangedElements(writer, dataConverterContext, wrappedBaseMap, keysChangedByRef, objConversionMarkers, nextIndexInChangesArray,
+						false);
+
+					writer.endArray();
+					if (objConversionMarkers.getConversions().size() > 0)
+					{
+						writer.key(JSONUtils.TYPES_KEY).object();
+						JSONUtils.writeConversions(writer, objConversionMarkers.getConversions());
+						writer.endObject();
+					}
+				}
+				else if (changeAwareMap.mustSendTypeToClient())
+				{
+					writer.key(CONTENT_VERSION).value(changeAwareMap.getListContentVersion());
+					writer.key(INITIALIZE).value(true);
+				}
+				else
+				{
+					writer.key(NO_OP).value(true);
+				}
 			}
+
 			writer.endObject();
 			changeAwareMap.clearChanges();
 		}
@@ -458,6 +471,34 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 			writer.value(JSONObject.NULL); // TODO how to handle null values which have no version info (special watches/complete array set from client)? if null is on server and something is set on client or the other way around?
 		}
 		return writer;
+	}
+
+	protected int writeValueForChangedElements(JSONWriter writer, IBrowserConverterContext dataConverterContext, Map<String, WT> wrappedBaseMap,
+		Set<String> keysWithUpdates, DataConversion objConversionMarkers, int startIndexInArrayOfChangesForClient, boolean keysWithUpdatedContent)
+	{
+		for (String k : keysWithUpdates)
+		{
+			objConversionMarkers.pushNode(String.valueOf(startIndexInArrayOfChangesForClient++));
+			writer.object().key(KEY).value(k);
+			objConversionMarkers.pushNode(VALUE);
+			if (keysWithUpdatedContent)
+			{
+				// this method is only called when the custom object is requested to send updates (not full values); so we can assume that we can send only changes if possible (this method will never be expected to fully send properties, no matter how they changed)
+				// the value of these keys has changed content inside it - let it send only changes (if it is change aware of course)
+				JSONUtils.changesToBrowserJSONValue(writer, VALUE, wrappedBaseMap.get(k), getCustomJSONTypeDefinition().getProperty(k), objConversionMarkers,
+					dataConverterContext);
+			}
+			else
+			{
+				// the value has changed completely by reference; send it's full contents
+				JSONUtils.toBrowserJSONFullValue(writer, VALUE, wrappedBaseMap.get(k), getCustomJSONTypeDefinition().getProperty(k), objConversionMarkers,
+					dataConverterContext);
+			}
+			objConversionMarkers.popNode();
+			writer.endObject();
+			objConversionMarkers.popNode();
+		}
+		return startIndexInArrayOfChangesForClient;
 	}
 
 	@Override

@@ -29,7 +29,12 @@
 		"active": "boolean",
 		"foreground": "color",
 		"size": "dimension",
-		"mnemonic": "string"
+		"mnemonic": "string",
+		"subtypearray": "mysubtype[]"
+	  },
+	  "mysubtype": {
+		"caption": "string",
+		"in_date": "date"
 	  }
 	}
 } 

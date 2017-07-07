@@ -82,7 +82,11 @@ public class WebComponentLibTest
 		Assert.assertTrue(allContributions.contains("url2.js"));
 		Assert.assertTrue(allContributions.contains("url2.css"));
 		Assert.assertFalse(allContributions.contains("url1.js"));
-		Assert.assertTrue(allContributions.indexOf("b.js") < allContributions.indexOf("url2.js"));
+
+		// the below test is invalid, as there is no guarantee on the order of the lib1 and lib2 loading order,
+		// they are loaded during the read of the manifest, but the manifest does not guarantee order of entries (it stores them as hashmap)
+		//Assert.assertTrue(allContributions.indexOf("b.js") < allContributions.indexOf("url2.js"));
+
 		Assert.assertTrue(allContributions.indexOf("url2.js") < allContributions.indexOf("a.js"));
 	}
 }

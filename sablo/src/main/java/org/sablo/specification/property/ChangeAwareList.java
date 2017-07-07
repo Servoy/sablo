@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
 
-import org.sablo.BaseWebObject;
 import org.sablo.IChangeListener;
+import org.sablo.IWebObjectContext;
 
 /**
  * This list is able to do handle/keep track of server side changes.
@@ -51,9 +51,10 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 
 	// TODO in order to have fine-grained add/remove operations as well in the future we would need a list of change operations that can be add/remove/change instead
 	protected IChangeListener changeMonitor;
-	protected BaseWebObject component;
+	protected IWebObjectContext webObjectContext;
 
-	protected Set<Integer> changedIndexes = new HashSet<Integer>();
+	protected Set<Integer> indexesWithContentUpdates = new HashSet<Integer>();
+	protected Set<Integer> indexesChangedByRef = new HashSet<Integer>();
 	protected List<Integer> removedIndexes = new ArrayList<Integer>();
 	protected List<Integer> addedIndexes = new ArrayList<Integer>();
 	protected boolean allChanged;
@@ -110,9 +111,17 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 	/**
 	 * You should not change the contents of the returned Set.
 	 */
-	public Set<Integer> getChangedIndexes()
+	public Set<Integer> getIndexesChangedByRef()
 	{
-		return changedIndexes;
+		return indexesChangedByRef;
+	}
+
+	/**
+	 * You should not change the contents of the returned Set.
+	 */
+	public Set<Integer> getIndexesWithContentUpdates()
+	{
+		return indexesWithContentUpdates;
 	}
 
 	public boolean mustSendTypeToClient()
@@ -122,15 +131,18 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 
 	public boolean mustSendAll()
 	{
-		int totalChanges = addedIndexes.size() + removedIndexes.size() + changedIndexes.size();
-		return allChanged || (totalChanges > 1 && totalChanges > size() / 2);
+		int totalChanges = addedIndexes.size() + removedIndexes.size() + indexesWithContentUpdates.size() + indexesChangedByRef.size();
+		//we should send all if allChanged is true or if we have more types of changes
+		return allChanged || !(totalChanges == indexesWithContentUpdates.size() + indexesChangedByRef.size() || totalChanges == addedIndexes.size() ||
+			totalChanges == removedIndexes.size());
 	}
 
 	public void clearChanges()
 	{
 		allChanged = false;
 		mustSendTypeToClient = false;
-		changedIndexes.clear();
+		indexesWithContentUpdates.clear();
+		indexesChangedByRef.clear();
 		removedIndexes.clear();
 		addedIndexes.clear();
 	}
@@ -175,8 +187,8 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 		{
 			detachIfNeeded(index, tmp, false);
 			attachToBaseObjectIfNeeded(index, value, false);
+			if (markChanged) markElementChangedByRef(index);
 		}
-		if (markChanged) markElementChanged(index);
 
 		return tmp;
 	}
@@ -200,13 +212,25 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 	{
 		boolean oldMustSendTypeToClient = mustSendTypeToClient;
 		mustSendTypeToClient = true;
-		if (changedIndexes.size() == 0 && !allChanged && !oldMustSendTypeToClient && changeMonitor != null) changeMonitor.valueChanged();
+		if (indexesChangedByRef.size() == 0 && indexesWithContentUpdates.size() == 0 && !allChanged && !oldMustSendTypeToClient && addedIndexes.size() == 0 &&
+			removedIndexes.size() == 0 && changeMonitor != null) changeMonitor.valueChanged();
 	}
 
-	protected void markElementChanged(int i)
+	protected void markElementContentsUpdated(int i)
 	{
-		if (!addedIndexes.contains(Integer.valueOf(i)) && changedIndexes.add(Integer.valueOf(i)) && !allChanged && !mustSendTypeToClient &&
-			changeMonitor != null) changeMonitor.valueChanged();
+		if (!addedIndexes.contains(Integer.valueOf(i)) && !indexesChangedByRef.contains(Integer.valueOf(i)) &&
+			indexesWithContentUpdates.add(Integer.valueOf(i)) && !allChanged && !mustSendTypeToClient && changeMonitor != null) changeMonitor.valueChanged();
+	}
+
+	protected void markElementChangedByRef(int i)
+	{
+		if (!addedIndexes.contains(Integer.valueOf(i)) && indexesChangedByRef.add(Integer.valueOf(i)))
+		{
+			// so it was now added to 'indexesChangedByRef'
+			if (!allChanged && !indexesWithContentUpdates.contains(Integer.valueOf(i)) && !mustSendTypeToClient && changeMonitor != null)
+				changeMonitor.valueChanged();
+			else indexesWithContentUpdates.remove(Integer.valueOf(i)); // remove it from 'indexesWithContentUpdates' if present - as that element will be sent fully now
+		}
 	}
 
 	private void markElementRemoved(int i)
@@ -223,7 +247,8 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 	{
 		boolean alreadyCh = allChanged;
 		allChanged = true;
-		if (!alreadyCh && changedIndexes.size() == 0 && !mustSendTypeToClient && changeMonitor != null) changeMonitor.valueChanged();
+		if (!alreadyCh && indexesWithContentUpdates.size() == 0 && indexesChangedByRef.size() == 0 && !mustSendTypeToClient && changeMonitor != null)
+			changeMonitor.valueChanged();
 	}
 
 	protected void attachToBaseObjectIfNeeded(int i, WT el, boolean insert)
@@ -232,10 +257,10 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 	}
 
 	@Override
-	public void attachToBaseObject(final IChangeListener changeMonitor, BaseWebObject component)
+	public void attachToBaseObject(final IChangeListener changeMonitor, IWebObjectContext webObjectContext)
 	{
 		this.changeMonitor = changeMonitor;
-		this.component = component;
+		this.webObjectContext = webObjectContext;
 
 		List<WT> wrappedBaseList = getWrappedBaseList();
 		int i = 0;
@@ -250,7 +275,7 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 
 	protected boolean isChanged()
 	{
-		return (allChanged || mustSendTypeToClient || changedIndexes.size() > 0 || removedIndexes.size() > 0);
+		return (allChanged || mustSendTypeToClient || indexesChangedByRef.size() > 0 || indexesWithContentUpdates.size() > 0 || removedIndexes.size() > 0);
 	}
 
 	// called whenever a new element was added or inserted into the array
@@ -262,7 +287,7 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 		{
 			ChangeAwareList<ET, WT>.IndexChangeListener changeHandler = new IndexChangeListener(i);
 			changeHandlers.add(changeHandler);
-			((ISmartPropertyValue)el).attachToBaseObject(changeHandler, component);
+			((ISmartPropertyValue)el).attachToBaseObject(changeHandler, webObjectContext);
 		}
 
 		if (insert)
@@ -290,7 +315,7 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 		@Override
 		public void valueChanged()
 		{
-			markElementChanged(attachedToIdx);
+			markElementContentsUpdated(attachedToIdx);
 		}
 
 		@Override
@@ -312,7 +337,7 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 			i++;
 		}
 
-		component = null;
+		webObjectContext = null;
 		changeMonitor = null;
 	}
 
@@ -516,12 +541,13 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 	{
 		WT oldWV = getWrappedBaseList().get(index);
 		ET tmp = baseList.set(index, element);
+		WT newWV = getWrappedBaseList().get(index);
 
-		if (tmp != element)
+		if (oldWV != newWV)
 		{
 			detachIfNeeded(index, oldWV, false);
-			attachToBaseObjectIfNeeded(index, getWrappedBaseList().get(index), false);
-			markElementChanged(index);
+			attachToBaseObjectIfNeeded(index, newWV, false);
+			markElementChangedByRef(index);
 		}
 		return tmp;
 	}
@@ -635,9 +661,14 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 			int i = it.previousIndex() + 1;
 			WT oldWV = getWrappedBaseList().get(i);
 			it.set(e);
-			detachIfNeeded(i, oldWV, false);
-			attachToBaseObjectIfNeeded(i, getWrappedBaseList().get(i), false);
-			markElementChanged(i);
+			WT newWV = getWrappedBaseList().get(i);
+
+			if (oldWV != newWV)
+			{
+				detachIfNeeded(i, oldWV, false);
+				attachToBaseObjectIfNeeded(i, newWV, false);
+				markElementChangedByRef(i);
+			}
 		}
 
 		@Override

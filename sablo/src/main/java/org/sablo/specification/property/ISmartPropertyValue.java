@@ -16,8 +16,8 @@
 
 package org.sablo.specification.property;
 
-import org.sablo.BaseWebObject;
 import org.sablo.IChangeListener;
+import org.sablo.IWebObjectContext;
 
 /**
  * The representation of a property value that is aware of it's surroundings.
@@ -33,9 +33,9 @@ public interface ISmartPropertyValue
 	 * Method that will get called when this property value is attached to a component/service.<br>
 	 *
 	 * @param changeMonitor an object that can be used to notify the system that something in this property has changed.
-	 * @param component the component to which the complex property belongs.
+	 * @param webObjectContext the component context to which the complex property has been attached (could be a BaseWebObject)
 	 */
-	void attachToBaseObject(IChangeListener changeMonitor, BaseWebObject component);
+	void attachToBaseObject(IChangeListener changeMonitor, IWebObjectContext webObjectContext);
 
 	/**
 	 * Called when a property is detached from a component/service; cleanup can happen here.

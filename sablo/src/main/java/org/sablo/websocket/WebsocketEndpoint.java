@@ -208,6 +208,8 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 			}
 			else
 			{
+				// this should never happen; window.getSession() can never be null (session is a final field in BaseWindow that is always initialized with non-null values)
+				// (I didn't comment out the if/else though because all this goes through interfaces that don't guarantee that...)
 				unbindWindow();
 			}
 

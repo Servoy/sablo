@@ -16,7 +16,6 @@
 package org.sablo.websocket.impl;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.json.JSONException;
 import org.json.JSONWriter;
@@ -31,9 +30,10 @@ import org.sablo.specification.property.IBrowserConverterContext;
 import org.sablo.websocket.CurrentWindow;
 import org.sablo.websocket.IClientService;
 import org.sablo.websocket.IToJSONWriter;
-import org.sablo.websocket.TypedData;
+import org.sablo.websocket.TypedDataWithChangeInfo;
 import org.sablo.websocket.utils.DataConversion;
 import org.sablo.websocket.utils.JSONUtils;
+import org.sablo.websocket.utils.JSONUtils.FullValueToJSONConverter;
 import org.sablo.websocket.utils.JSONUtils.IToJSONConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,7 +71,7 @@ public class ClientService extends BaseWebObject implements IClientService
 			public boolean writeJSONContent(JSONWriter w, String keyInParent, IToJSONConverter<IBrowserConverterContext> converter,
 				DataConversion clientDataConversions) throws JSONException
 			{
-				TypedData<Map<String, Object>> serviceChanges = getAndClearChanges();
+				TypedDataWithChangeInfo serviceChanges = getAndClearChanges();
 				if (serviceChanges.content != null && serviceChanges.content.size() > 0)
 				{
 					JSONUtils.addKeyIfPresent(w, keyInParent);
@@ -79,7 +79,8 @@ public class ClientService extends BaseWebObject implements IClientService
 					w.object().key("services").object().key(getScriptingName()).object();
 					clientDataConversions.pushNode("services").pushNode(getScriptingName());
 
-					writeProperties(converter, w, serviceChanges.content, serviceChanges.contentType, clientDataConversions);
+					// converter is always ChangesToJSONConverter here; so if some property changed completely, use the FullValueToJSONConverter
+					writeProperties(converter, FullValueToJSONConverter.INSTANCE, w, serviceChanges, clientDataConversions);
 
 					clientDataConversions.popNode().popNode();
 					w.endObject().endObject().endObject();

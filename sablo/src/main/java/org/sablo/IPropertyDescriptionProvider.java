@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Servoy BV
+ * Copyright (C) 2017 Servoy BV
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,36 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.sablo.specification.property;
 
-import org.sablo.BaseWebObject;
+package org.sablo;
+
+import java.util.Collection;
+
+import org.sablo.specification.PropertyDescription;
+import org.sablo.specification.property.IPropertyType;
+
 
 /**
- * Context for wrapping/unwrapping.
- *
+ * Classes implementing this interface are able to provide PropertyDescription s by type, name, ...
+ * 
  * @author acostescu
  */
-public class WrappingContext implements IWrappingContext
+public interface IPropertyDescriptionProvider
 {
 
-	protected final BaseWebObject webObject;
-	private final String propertyName;
+	PropertyDescription getPropertyDescription(String name);
 
-	public WrappingContext(BaseWebObject webObject, String propertyName)
-	{
-		this.webObject = webObject;
-		this.propertyName = propertyName;
-	}
-
-	public BaseWebObject getWebObject()
-	{
-		return webObject;
-	}
-
-	@Override
-	public String getPropertyName()
-	{
-		return propertyName;
-	}
+	Collection<PropertyDescription> getProperties(IPropertyType< ? > type);
 
 }

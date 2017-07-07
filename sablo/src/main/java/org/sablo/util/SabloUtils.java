@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Servoy BV
+ * Copyright (C) 2017 Servoy BV
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,36 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.sablo.specification.property;
 
-import org.sablo.BaseWebObject;
+package org.sablo.util;
 
 /**
- * Context for wrapping/unwrapping.
- *
+ * Some basic utility methods.
+ * 
  * @author acostescu
  */
-public class WrappingContext implements IWrappingContext
+public class SabloUtils
 {
 
-	protected final BaseWebObject webObject;
-	private final String propertyName;
-
-	public WrappingContext(BaseWebObject webObject, String propertyName)
+	/**
+	 * Compares two objects via .equals() no matter if they are null or not.
+	 *
+	 * @param left object
+	 * @param right object
+	 * @return true if they are equal, false otherwise.
+	 */
+	public static boolean safeEquals(Object left, Object right)
 	{
-		this.webObject = webObject;
-		this.propertyName = propertyName;
-	}
-
-	public BaseWebObject getWebObject()
-	{
-		return webObject;
-	}
-
-	@Override
-	public String getPropertyName()
-	{
-		return propertyName;
+		if (left == null)
+		{
+			return right == null;
+		}
+		return left.equals(right);
 	}
 
 }

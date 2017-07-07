@@ -15,6 +15,9 @@
  */
 package org.sablo;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,8 +52,10 @@ import org.sablo.specification.property.types.ProtectedConfig;
 import org.sablo.specification.property.types.VisiblePropertyType;
 import org.sablo.util.ValueReference;
 import org.sablo.websocket.TypedData;
+import org.sablo.websocket.TypedDataWithChangeInfo;
 import org.sablo.websocket.utils.DataConversion;
 import org.sablo.websocket.utils.JSONUtils;
+import org.sablo.websocket.utils.JSONUtils.FullValueToJSONConverter;
 import org.sablo.websocket.utils.JSONUtils.IToJSONConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,10 +65,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author jcompagner
  */
-public abstract class BaseWebObject
+public abstract class BaseWebObject implements IWebObjectContext
 {
 
 	private static final TypedData<Map<String, Object>> EMPTY_PROPERTIES = new TypedData<Map<String, Object>>(Collections.<String, Object> emptyMap(), null);
+	private static final TypedDataWithChangeInfo EMPTY_PROPERTIES_WITH_CHANGE_INFO = new TypedDataWithChangeInfo(Collections.<String, Object> emptyMap(), null,
+		null);
 
 	private static final Logger log = LoggerFactory.getLogger(BaseWebObject.class.getCanonicalName());
 
@@ -81,14 +88,21 @@ public abstract class BaseWebObject
 	protected final Map<String, Object> defaultPropertiesUnwrapped = new HashMap<>();
 
 	/**
-	 * the changed properties
+	 * Keeps track of properties that have changed content.
 	 */
-	private final Set<String> changedProperties = new HashSet<>(3);
+	private final Set<String> propertiesWithChangedContent = new HashSet<>(3);
+
+	/**
+	 * Keeps track of properties that have changed by reference (a different (!=) value was assigned to them).
+	 */
+	private final Set<String> propertiesChangedByRef = new HashSet<>(3);
 
 	/**
 	 * the event handlers
 	 */
 	private final ConcurrentMap<String, IEventHandler> eventHandlers = new ConcurrentHashMap<String, IEventHandler>();
+
+	private PropertyChangeSupport propertyChangeSupport;
 
 	protected final String name;
 
@@ -316,7 +330,7 @@ public abstract class BaseWebObject
 	 */
 	public Object getProperty(String propertyName)
 	{
-		return unwrapValue(propertyName, getRawPropertyValue(propertyName, true));
+		return unwrapValue(propertyName, getRawPropertyValue(propertyName));
 	}
 
 	protected Object unwrapValue(String propertyName, Object object)
@@ -338,7 +352,14 @@ public abstract class BaseWebObject
 
 	public boolean hasChanges()
 	{
-		for (String propertyName : changedProperties)
+		for (String propertyName : propertiesWithChangedContent)
+		{
+			if (isVisible(propertyName) || isVisibilityProperty(propertyName))
+			{
+				return true;
+			}
+		}
+		for (String propertyName : propertiesChangedByRef)
 		{
 			if (isVisible(propertyName) || isVisibilityProperty(propertyName))
 			{
@@ -354,20 +375,29 @@ public abstract class BaseWebObject
 	 * When the component is not visible, only the visibility-properties are returned and cleared from the changes.
 	 *
 	 */
-	public TypedData<Map<String, Object>> getAndClearChanges()
+	public TypedDataWithChangeInfo getAndClearChanges()
 	{
-		if (changedProperties.isEmpty())
+		if (propertiesChangedByRef.isEmpty() && propertiesWithChangedContent.isEmpty())
 		{
-			return EMPTY_PROPERTIES;
+			return EMPTY_PROPERTIES_WITH_CHANGE_INFO;
 		}
 
 		Map<String, Object> changes = null;
 		PropertyDescription changeTypes = null;
-		for (String propertyName : changedProperties.toArray(new String[changedProperties.size()]))
+		Set<String> propertiesWithContentUpdateOnly = null;
+
+		// add all changes to an array to iterate on all
+		int idxStartChangedByRef = propertiesWithChangedContent.size();
+		ArrayList<String> allChangedPropertyNames = new ArrayList<String>(idxStartChangedByRef + propertiesChangedByRef.size());
+		allChangedPropertyNames.addAll(propertiesWithChangedContent);
+		allChangedPropertyNames.addAll(propertiesChangedByRef);
+
+		for (int i = 0; i < allChangedPropertyNames.size(); i++)
 		{
+			String propertyName = allChangedPropertyNames.get(i);
 			if (isVisible(propertyName) || isVisibilityProperty(propertyName))
 			{
-				flagPropertyAsDirty(propertyName, false);
+				clearChangedStatusForProperty(propertyName);
 				if (changes == null)
 				{
 					changes = new HashMap<>();
@@ -382,15 +412,21 @@ public abstract class BaseWebObject
 					}
 					changeTypes.putProperty(propertyName, t);
 				}
+				if (i < idxStartChangedByRef)
+				{
+					// this is a property with content updates only
+					if (propertiesWithContentUpdateOnly == null) propertiesWithContentUpdateOnly = new HashSet<>();
+					propertiesWithContentUpdateOnly.add(propertyName);
+				}
 			}
 		}
 
 		if (changes == null)
 		{
-			return EMPTY_PROPERTIES;
+			return EMPTY_PROPERTIES_WITH_CHANGE_INFO;
 		}
 
-		return new TypedData<Map<String, Object>>(changes, changeTypes);
+		return new TypedDataWithChangeInfo(changes, changeTypes, propertiesWithContentUpdateOnly);
 	}
 
 	/**
@@ -425,7 +461,8 @@ public abstract class BaseWebObject
 	 */
 	public void clearChanges()
 	{
-		changedProperties.clear();
+		propertiesChangedByRef.clear();
+		propertiesWithChangedContent.clear();
 	}
 
 	/**
@@ -434,12 +471,15 @@ public abstract class BaseWebObject
 	 */
 	public void setDefaultProperty(String propertyName, Object propertyValue)
 	{
-		Object oldUnwrappedV = unwrapValue(propertyName, getRawPropertyValue(propertyName, false));
+		Object oldWrappedValue = getRawPropertyValue(propertyName);
+
 		defaultPropertiesUnwrapped.put(propertyName, propertyValue);
-		Object newUnwrappedV = unwrapValue(propertyName, getRawPropertyValue(propertyName, false)); // a default value wrap/unwrap might result in a different value
+
+		Object newWrappedValue = getRawPropertyValue(propertyName);
+		Object newUnwrappedV = unwrapValue(propertyName, newWrappedValue); // a default value wrap/unwrap might result in a different value
 		if (newUnwrappedV != propertyValue) defaultPropertiesUnwrapped.put(propertyName, newUnwrappedV);
 
-		if (newUnwrappedV != oldUnwrappedV) onPropertyChange(propertyName, oldUnwrappedV, newUnwrappedV);
+		if (oldWrappedValue != newWrappedValue) onPropertyChange(propertyName, oldWrappedValue, newWrappedValue);
 	}
 
 	/**
@@ -450,12 +490,16 @@ public abstract class BaseWebObject
 	@SuppressWarnings("nls")
 	public boolean setProperty(String propertyName, Object propertyValue)
 	{
-		Object canBeWrapped = propertyValue;
+		boolean dirty = false;
+
+		Object oldWrappedValue = getRawPropertyValue(propertyName);
+		Object wrappedValue = wrapPropertyValue(propertyName, oldWrappedValue, propertyValue);
 
 		Map<String, Object> map = properties;
 		String firstPropertyPart = propertyName;
 		String lastPropertyPart = propertyName;
 		String[] parts = propertyName.split("\\.");
+		// TODO this doesn't seem to work properly with arrays while getter does treat that as well
 		if (parts.length > 1)
 		{
 			firstPropertyPart = parts[0];
@@ -463,72 +507,56 @@ public abstract class BaseWebObject
 			for (int i = 0; i < parts.length - 1; i++)
 			{
 				path += parts[i];
-				Map<String, Object> propertyMap = (Map<String, Object>)getRawPropertyValue(path, false); // arg is false cause spec. default values for custom object types cannot be java maps directly but JOSNObjects so they would have wrong type; we expect the default value to be already converted and set into "defaultPropertiesUnwrapped" in this case...
+
+				// instanceof check below because spec. default values for custom object types cannot be java maps directly but JOSNObjects so they would have wrong type; we expect the default value to be already converted and set into "defaultPropertiesUnwrapped" in this case...
+				Object rawPV = getRawPropertyValue(path);
+				Map<String, Object> propertyMap = (rawPV instanceof Map< ? , ? > ? (Map<String, Object>)rawPV : null);
 				if (propertyMap == null)
 				{
 					propertyMap = new HashMap<>();
-					map.put(parts[i], wrapPropertyValue(parts[i], null, propertyMap));
+					map.put(parts[i], wrapPropertyValue(path, null, propertyMap));
 				}
 				path += ".";
 				map = propertyMap;
 			}
 			lastPropertyPart = parts[parts.length - 1];
 		}
-		else
-		{
-			try
-			{
-				Object oldValue = getRawPropertyValue(propertyName, true);
-				canBeWrapped = wrapPropertyValue(propertyName, oldValue, propertyValue);
-			}
-			catch (Exception e)
-			{
-				// TODO change this as part of SVY-6337
-				throw new RuntimeException(e);
-			}
-		}
 
 		if (map.containsKey(lastPropertyPart))
 		{
 			// existing property
 			Object oldValue = getProperty(propertyName); // this unwraps it
-			map.put(lastPropertyPart, canBeWrapped);
+			map.put(lastPropertyPart, wrappedValue);
 			propertyValue = getProperty(propertyName); // this is required as a wrap + unwrap might result in a different object then the initial one
-
-			// TODO I think this could be wrapped values in onPropertyChange (would need less unwrapping)
-			// TODO if this is a sub property then we fire here the onproperty change for the top level property with the values of a subproperty..
-			onPropertyChange(firstPropertyPart, oldValue, propertyValue);
 
 			if ((oldValue != null && !oldValue.equals(propertyValue)) || (propertyValue != null && !propertyValue.equals(oldValue)))
 			{
-				flagPropertyAsDirty(firstPropertyPart, true);
-				return true;
+				markPropertyAsChangedByRef(firstPropertyPart);
+				dirty = true;
 			}
 		}
 		else
 		{
 			// new property
-			map.put(lastPropertyPart, canBeWrapped);
+			map.put(lastPropertyPart, wrappedValue);
 			propertyValue = getProperty(propertyName); // this is required as a wrap + unwrap might result in a different object then the initial one
 
-			// TODO I think this could be wrapped values in onPropertyChange (would need less unwrapping)
-			onPropertyChange(firstPropertyPart, null, propertyValue);
-
-			flagPropertyAsDirty(firstPropertyPart, true);
-			return true;
+			markPropertyAsChangedByRef(firstPropertyPart);
+			dirty = true;
 		}
-		return false;
+
+		// FIXME if this is a sub property then we fire here the onproperty change for the top level property with the values of a subproperty...
+		if (oldWrappedValue != wrappedValue) onPropertyChange(propertyName, oldWrappedValue, wrappedValue);
+
+		return dirty;
 	}
 
 	/**
-	 * Gets the current value from the properties, if not set then it fallbacks to the default properties (which it then wraps)
+	 * Gets the current value from the properties, if not set then it could fall-back to default properties value from spec - if possible.
 	 * DO NOT USE THIS METHOD; when possible please use {@link #getProperty(String)}, {@link #getProperties()} or {@link #getAllPropertyNames(boolean)} instead.
-	 *
-	 * @param getDefaultFromSpecAsWellIfNeeded some property type implementations might use the spec default value to generate a more complex runtime value for themselfes and put that in defaultPropertiesUnwrapped map.
-	 * In this case getting the default value directly from spec file and using it unchanged as a runtime value can cause problems as it's an incorrect value type...
 	 */
 	@SuppressWarnings("nls")
-	public Object getRawPropertyValue(String propertyName, boolean getDefaultFromSpecAsWellIfNeeded)
+	public Object getRawPropertyValue(String propertyName)
 	{
 		String[] parts = propertyName.split("\\.");
 		String firstProperty = parts[0];
@@ -561,7 +589,7 @@ public abstract class BaseWebObject
 				PropertyDescription propertyDesc = specification.getProperty(firstProperty);
 				if (propertyDesc != null)
 				{
-					defaultProperty = getDefaultFromPD(getDefaultFromSpecAsWellIfNeeded, propertyDesc);
+					defaultProperty = getDefaultFromPD(propertyDesc);
 				}
 			}
 
@@ -608,22 +636,20 @@ public abstract class BaseWebObject
 		return oldValue;
 	}
 
-	public static Object getDefaultFromPD(boolean getDefaultFromSpecAsWellIfNeeded, PropertyDescription propertyDesc)
+	/**
+	 * If the value of a property is not set, try to see if the type or property description wants to return a value anyway.<br/>
+	 * Can be overridden by extending classes in case the PD and type default values are treated earlier or in some other way...
+	 */
+	public Object getDefaultFromPD(PropertyDescription propertyDesc)
 	{
 		Object defaultPropertyValue = null;
-		if (getDefaultFromSpecAsWellIfNeeded)
+		defaultPropertyValue = propertyDesc.getDefaultValue(); // can be a null or non-null
+		if (!propertyDesc.hasDefault() && propertyDesc.getType() != null)
 		{
-			defaultPropertyValue = propertyDesc.getDefaultValue(); // can be a null or non-null
-			if (!propertyDesc.hasDefault() && propertyDesc.getType() != null)
-			{
-				// if spec has no default value specified, take it from property type
-				defaultPropertyValue = propertyDesc.getType().defaultValue(propertyDesc);
-			}
-		}
-		else if (propertyDesc.getType() != null)
-		{
+			// if spec has no default value specified, take it from property type
 			defaultPropertyValue = propertyDesc.getType().defaultValue(propertyDesc);
 		}
+
 		return defaultPropertyValue;
 	}
 
@@ -657,7 +683,7 @@ public abstract class BaseWebObject
 
 	protected void doPutBrowserProperty(String propertyName, Object propertyValue) throws JSONException
 	{
-		Object oldWrappedValue = getRawPropertyValue(propertyName, true);
+		Object oldWrappedValue = getRawPropertyValue(propertyName);
 		ValueReference<Boolean> returnValueAdjustedIncommingValue = new ValueReference<Boolean>(Boolean.FALSE);
 		Object newWrappedValue = convertValueFromJSON(propertyName, oldWrappedValue, propertyValue, returnValueAdjustedIncommingValue);
 		if (propertyName.indexOf('.') < 0 && propertyName.indexOf('[') < 0)
@@ -666,13 +692,12 @@ public abstract class BaseWebObject
 			properties.put(propertyName, newWrappedValue);
 		}
 
-		// TODO I think this could be wrapped values in onPropertyChange (would need less unwrapping)
 		if (oldWrappedValue != newWrappedValue)
 		{
-			onPropertyChange(propertyName, unwrapValue(propertyName, oldWrappedValue), unwrapValue(propertyName, newWrappedValue));
+			onPropertyChange(propertyName, oldWrappedValue, newWrappedValue);
 		}
 
-		if (returnValueAdjustedIncommingValue.value.booleanValue()) flagPropertyAsDirty(propertyName, true);
+		if (returnValueAdjustedIncommingValue.value.booleanValue()) markPropertyAsChangedByRef(propertyName);
 	}
 
 	/**
@@ -680,58 +705,82 @@ public abstract class BaseWebObject
 	 *
 	 * @param propertyName
 	 *            the property name
-	 * @param oldValue
-	 *            the old val
-	 * @param newValue
-	 *            the new val
+	 * @param oldWrappedValue
+	 *            the old  wrapped val
+	 * @param newWrappedValue
+	 *            the new wrapped val
 	 */
-	protected void onPropertyChange(String propertyName, final Object oldValue, final Object newValue)
+	protected void onPropertyChange(String propertyName, final Object oldWrappedValue, final Object newWrappedValue)
 	{
-		if ((newValue instanceof ISmartPropertyValue || oldValue instanceof ISmartPropertyValue) && newValue != oldValue)
+		if ((newWrappedValue instanceof ISmartPropertyValue || oldWrappedValue instanceof ISmartPropertyValue) && newWrappedValue != oldWrappedValue)
 		{
 			final String complexPropertyRoot = propertyName;
 
 			// NOTE here newValue and oldValue are the unwrapped values in case of wrapper types; TODO maybe we should use wrapped values here
 
-			if (oldValue instanceof ISmartPropertyValue)
+			if (oldWrappedValue instanceof ISmartPropertyValue)
 			{
-				((ISmartPropertyValue)oldValue).detach();
+				((ISmartPropertyValue)oldWrappedValue).detach();
 			}
 
 			// in case the 'smart' value completely changed by ref., no use keeping it in default values as it is too smart and it might want to notify changes later, although it wouldn't make sense cause the value is different now
 			Object defaultSmartValue = defaultPropertiesUnwrapped.get(complexPropertyRoot);
-			if (defaultSmartValue instanceof ISmartPropertyValue && defaultSmartValue != newValue)
+			if (defaultSmartValue instanceof ISmartPropertyValue && defaultSmartValue != newWrappedValue)
 			{
 				defaultPropertiesUnwrapped.remove(complexPropertyRoot);
 				((ISmartPropertyValue)defaultSmartValue).detach();
 			}
 
 			// a new complex property is linked to this component; initialize it
-			if (newValue instanceof ISmartPropertyValue)
+			if (newWrappedValue instanceof ISmartPropertyValue)
 			{
-				((ISmartPropertyValue)newValue).attachToBaseObject(new IChangeListener()
+				((ISmartPropertyValue)newWrappedValue).attachToBaseObject(new IChangeListener()
 				{
 					@Override
 					public void valueChanged()
 					{
-						flagPropertyAsDirty(complexPropertyRoot, true);
+						markPropertyContentsUpdated(complexPropertyRoot);
 
 						if (defaultPropertiesUnwrapped.containsKey(complexPropertyRoot))
 						{
 							// something changed in this 'smart' property - so it no longer represents the default value; remove
 							// it from default values (as the value reference is the same but the content changed) and put it in properties map
-							properties.put(complexPropertyRoot, newValue);
+							properties.put(complexPropertyRoot, newWrappedValue);
 							defaultPropertiesUnwrapped.remove(complexPropertyRoot);
 						}
 					}
 				}, this);
 			}
 		}
+		if (propertyChangeSupport != null) propertyChangeSupport.firePropertyChange(propertyName, oldWrappedValue, newWrappedValue);
 	}
 
-	public boolean flagPropertyAsDirty(String key, boolean dirty)
+	public boolean markPropertyAsChangedByRef(String key)
 	{
-		return dirty ? changedProperties.add(key) : changedProperties.remove(key);
+		boolean somethingHappened = propertiesChangedByRef.add(key); // whether or not we will add it to a changes map (if it is already there or can't be removed, it will be false)
+		if (somethingHappened) propertiesWithChangedContent.remove(key); // we just added it to be sent fully; remove it from contents changed so that it will not be sent twice
+
+		return somethingHappened;
+	}
+
+	public boolean clearChangedStatusForProperty(String key)
+	{
+		boolean somethingHappened = propertiesChangedByRef.remove(key); // whether or not we will add or remove it from a changes map (if it is already there or can't be removed, it will be false)
+		// remove it from any of the 2 changes map (it can't be in both)
+		somethingHappened = propertiesWithChangedContent.remove(key) || somethingHappened;
+
+		return somethingHappened;
+	}
+
+	public boolean markPropertyContentsUpdated(String key)
+	{
+		boolean somethingHappened = false;
+		if (!propertiesWithChangedContent.contains(key) && !propertiesChangedByRef.contains(key))
+		{
+			somethingHappened = propertiesWithChangedContent.add(key);
+		} // else don't add it in the changes map as it's already in the ref. changed map; it will be fully sent to client
+
+		return somethingHappened;
 	}
 
 	protected boolean writeComponentProperties(JSONWriter w, IToJSONConverter<IBrowserConverterContext> converter, String nodeName,
@@ -754,16 +803,17 @@ public abstract class BaseWebObject
 			if (isVisibilityProperty(propertyName) || isVisible(propertyName))
 			{
 				data.put(propertyName, entry.getValue());
-				flagPropertyAsDirty(propertyName, false);
+				clearChangedStatusForProperty(propertyName);
 			}
 			else
 			{
 				// will be sent as changed when component becomes visible
-				flagPropertyAsDirty(propertyName, true);
+				markPropertyAsChangedByRef(propertyName);
 			}
 		}
 
-		writeProperties(converter, w, data, typedProperties.contentType, clientDataConversions);
+		// here converter is always a full-value-to-json type; so don give a second parameter as this should be used in any case (we don't want to send changes)
+		writeProperties(converter, null, w, new TypedData<Map<String, Object>>(data, typedProperties.contentType), clientDataConversions);
 		clientDataConversions.popNode();
 		w.endObject();
 
@@ -864,12 +914,13 @@ public abstract class BaseWebObject
 			Object pUnwrapped = getProperty(pN);
 			if (pUnwrapped instanceof ISmartPropertyValue) ((ISmartPropertyValue)pUnwrapped).detach(); // clear any listeners/held resources
 		}
+		propertyChangeSupport = null;
 	}
 
-	protected boolean writeOwnComponentChanges(JSONWriter w, String keyInParent, String nodeName, IToJSONConverter<IBrowserConverterContext> converter,
+	public boolean writeOwnComponentChanges(JSONWriter w, String keyInParent, String nodeName, IToJSONConverter<IBrowserConverterContext> converter,
 		DataConversion clientDataConversions) throws JSONException
 	{
-		TypedData<Map<String, Object>> changes = getAndClearChanges();
+		TypedDataWithChangeInfo changes = getAndClearChanges();
 		if (changes.content.isEmpty())
 		{
 			return false;
@@ -882,26 +933,45 @@ public abstract class BaseWebObject
 
 		w.key(nodeName).object();
 		clientDataConversions.pushNode(nodeName);
-		writeProperties(converter, w, changes.content, changes.contentType, clientDataConversions);
+		// converter here is always ChangesToJSONConverter except for some unit tests
+		writeProperties(converter, FullValueToJSONConverter.INSTANCE, w, changes, clientDataConversions);
 		clientDataConversions.popNode();
 		w.endObject();
 
 		return true;
 	}
 
-	public void writeProperties(IToJSONConverter<IBrowserConverterContext> converter, JSONWriter w, Map<String, Object> propertyValues,
-		PropertyDescription propertyTypes, DataConversion clientDataConversions) throws IllegalArgumentException, JSONException
+	/**
+	 * @param converterForSendingFullValue can be null, if only the main converter should be used.
+	 */
+	public void writeProperties(IToJSONConverter<IBrowserConverterContext> mainConverter,
+		IToJSONConverter<IBrowserConverterContext> converterForSendingFullValue, JSONWriter w, TypedData<Map<String, Object>> propertiesToWrite,
+		DataConversion clientDataConversions) throws IllegalArgumentException, JSONException
 	{
-		for (Entry<String, ? > entry : propertyValues.entrySet())
+		TypedDataWithChangeInfo propertiesToWriteWithChangeInfo = (propertiesToWrite instanceof TypedDataWithChangeInfo)
+			? (TypedDataWithChangeInfo)propertiesToWrite : null;
+
+		for (Entry<String, Object> entry : propertiesToWrite.content.entrySet())
 		{
 			clientDataConversions.pushNode(entry.getKey());
-			PropertyDescription pd = propertyTypes != null ? propertyTypes.getProperty(entry.getKey()) : null;
+			PropertyDescription pd = propertiesToWrite.contentType != null ? propertiesToWrite.contentType.getProperty(entry.getKey()) : null;
 
 			BrowserConverterContext context;
 			if (pd != null) context = new BrowserConverterContext(this, pd.getPushToServer());
 			else context = new BrowserConverterContext(this, PushToServerEnum.reject); // should this ever happen? should we use allow here instead?
 
-			converter.toJSONValue(w, entry.getKey(), entry.getValue(), pd, clientDataConversions, context);
+			if (propertiesToWriteWithChangeInfo != null && converterForSendingFullValue != null &&
+				propertiesToWriteWithChangeInfo.hasFullyChanged(entry.getKey()))
+			{
+				// the property val needs to be sent whole - use the right converter for that
+				converterForSendingFullValue.toJSONValue(w, entry.getKey(), entry.getValue(), pd, clientDataConversions, context);
+			}
+			else
+			{
+				// use 'main' converter (which can be a full value converter or only changes converter depending on caller wants)
+				mainConverter.toJSONValue(w, entry.getKey(), entry.getValue(), pd, clientDataConversions, context);
+			}
+
 			clientDataConversions.popNode();
 		}
 	}
@@ -974,6 +1044,48 @@ public abstract class BaseWebObject
 			};
 		}
 		return parameterTypes;
+	}
+
+	public PropertyDescription getPropertyDescription(String propertyName)
+	{
+		return specification.getProperty(propertyName);
+	}
+
+	@Override
+	public BaseWebObject getUnderlyingWebObject()
+	{
+		return this;
+	}
+
+	@Override
+	public IWebObjectContext getParentContext()
+	{
+		return null;
+	}
+
+	@Override
+	public Collection<PropertyDescription> getProperties(IPropertyType< ? > type)
+	{
+		return specification.getProperties(type);
+	}
+
+	/**
+	 * These listeners will be triggered when the property changes by reference.
+	 */
+	public void addPropertyChangeListener(String propertyName, PropertyChangeListener listener)
+	{
+		if (propertyChangeSupport == null) propertyChangeSupport = new PropertyChangeSupport(this);
+		if (propertyName == null) propertyChangeSupport.addPropertyChangeListener(listener);
+		else propertyChangeSupport.addPropertyChangeListener(propertyName, listener);
+	}
+
+	public void removePropertyChangeListener(String propertyName, PropertyChangeListener listener)
+	{
+		if (propertyChangeSupport != null)
+		{
+			if (propertyName == null) propertyChangeSupport.removePropertyChangeListener(listener);
+			else propertyChangeSupport.removePropertyChangeListener(propertyName, listener);
+		}
 	}
 
 }

@@ -21,7 +21,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.awt.Color;
 import java.io.InputStream;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.json.JSONObject;
@@ -36,25 +38,29 @@ import org.sablo.specification.property.BrowserConverterContext;
 import org.sablo.specification.property.ChangeAwareList;
 import org.sablo.specification.property.types.AggregatedPropertyType;
 import org.sablo.websocket.TypedData;
+import org.sablo.websocket.utils.DataConversion;
 import org.sablo.websocket.utils.JSONUtils;
+import org.sablo.websocket.utils.JSONUtils.ChangesToJSONConverter;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 
 /**
  * @author acostescu
  */
 @SuppressWarnings("nls")
-public class CustomArrayTypeTest
+public class CustomArrayAndCustomObjectTypeTest
 {
 
 	@BeforeClass
 	public static void setUp() throws Exception
 	{
-		InputStream is = CustomArrayTypeTest.class.getResourceAsStream("WebComponentTest.manifest");
+		InputStream is = CustomArrayAndCustomObjectTypeTest.class.getResourceAsStream("WebComponentTest.manifest");
 		byte[] bytes = new byte[is.available()];
 		is.read(bytes);
 		String manifest = new String(bytes);
 		is.close();
 
-		is = CustomArrayTypeTest.class.getResourceAsStream("WebComponentTest-mycomponent.spec");
+		is = CustomArrayAndCustomObjectTypeTest.class.getResourceAsStream("WebComponentTest-mycomponent.spec");
 		bytes = new byte[is.available()];
 		is.read(bytes);
 		String comp = new String(bytes);
@@ -338,6 +344,114 @@ public class CustomArrayTypeTest
 		assertEquals(
 			"{\"msg\":{\"simpleArrayAllow\":{\"vEr\":5,\"v\":[5,150,3,2,1]},\"name\":\"test\"},\"svy_types\":{\"msg\":{\"simpleArrayAllow\":\"JSON_arr\"}}}",
 			msg);
+	}
+
+	@Test
+	public void shouldHandleDifferentlyChangeByRefAndChangeOfContentInElements() throws Exception
+	{
+		WebComponent component = new WebComponent("mycomponent", "test");
+		BrowserConverterContext allowDataConverterContext = new BrowserConverterContext(component, PushToServerEnum.allow);
+		assertNull(component.getProperty("types"));
+
+		// arrays are wrapped in a smart array that can wrap and convert/handle changes automatically
+		Object[] array = new Object[0];
+		assertTrue(component.setProperty("types", array));
+
+		ChangeAwareList<Object, Object> typesArray = (ChangeAwareList)component.getProperty("types"); // ChangeAwareList
+
+		// test array element reference change on component (should sent whole value, not a NO-OP)
+		JSONAssert.assertEquals("{\"comp\":{\"test\":{\"types\":{\"vEr\":2,\"v\":[]}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
+
+		// test content changed of 1 property
+		Map<Object, Object> map = new HashMap<>();
+		map.put("name", "firstMyType");
+
+		typesArray.add(map);
+		map.put("name", "firstMyType1"); // changing it should still send full value of the map - as a granular add of the array
+
+		JSONAssert.assertEquals(
+			"{\"comp\":{\"test\":{\"types\":{\"a\":[{\"v\":{\"vEr\":2,\"v\":{\"name\":\"firstMyType\"}},\"i\":0}],\"vEr\":2,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}}}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
+
+		// set a whole new obj/map into an existing index of the array - that map should be sent fully as an update of the array, instead of NO-OP
+		map = new HashMap<>();
+		map.put("name", "hmm1");
+		typesArray.set(0, map);
+
+		JSONAssert.assertEquals(
+			"{\"comp\":{\"test\":{\"types\":{\"vEr\":2,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}},\"u\":[{\"v\":{\"vEr\":4,\"v\":{\"name\":\"hmm1\"}},\"i\":0}]}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
+
+
+		// only a change in the array and a change in the map should get sent
+		map = (Map<Object, Object>)typesArray.get(0);
+		map.put("text", "txthmm1");
+
+		JSONAssert.assertEquals(
+			"{\"comp\":{\"test\":{\"types\":{\"vEr\":2,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}},\"u\":[{\"v\":{\"vEr\":4,\"u\":[{\"v\":\"txthmm1\",\"k\":\"text\"}]},\"i\":0}]}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
+
+		// set an array by ref - updates of that full sub-array value should be sent
+		map.put("subtypearray", new Object[0]);
+		JSONAssert.assertEquals(
+			"{\"comp\":{\"test\":{\"types\":{\"vEr\":2,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}},\"u\":[{\"v\":{\"vEr\":4,\"svy_types\":{\"0\":{\"v\":\"JSON_arr\"}},\"u\":[{\"v\":{\"vEr\":2,\"v\":[]},\"k\":\"subtypearray\"}]},\"i\":0}]}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
+
+		// once more to also test if it was not null previously
+		map.put("subtypearray", new Object[0]);
+		JSONAssert.assertEquals(
+			"{\"comp\":{\"test\":{\"types\":{\"vEr\":2,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}},\"u\":[{\"v\":{\"vEr\":4,\"svy_types\":{\"0\":{\"v\":\"JSON_arr\"}},\"u\":[{\"v\":{\"vEr\":4,\"v\":[]},\"k\":\"subtypearray\"}]},\"i\":0}]}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
+
+		// now add something to that sub-array and make a granular change to it - to test the parent object will send only an update
+		List<Map<String, Object>> list = (List<Map<String, Object>>)map.get("subtypearray");
+		list.add(new HashMap<String, Object>());
+		JSONAssert.assertEquals(
+			"{\"comp\":{\"test\":{\"types\":{\"vEr\":2,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}},\"u\":[{\"v\":{\"vEr\":4,\"svy_types\":{\"0\":{\"v\":\"JSON_arr\"}},\"u\":[{\"v\":{\"a\":[{\"v\":{\"vEr\":2,\"v\":{}},\"i\":0}],\"vEr\":4,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}}},\"k\":\"subtypearray\"}]},\"i\":0}]}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
+
+		list.get(0).put("caption", "captionhmm1");
+		JSONAssert.assertEquals(
+			"{\"comp\":{\"test\":{\"types\":{\"vEr\":2,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}},\"u\":[{\"v\":{\"vEr\":4,\"svy_types\":{\"0\":{\"v\":\"JSON_arr\"}},\"u\":[{\"v\":{\"vEr\":4,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}},\"u\":[{\"v\":{\"vEr\":2,\"u\":[{\"v\":\"captionhmm1\",\"k\":\"caption\"}]},\"i\":0}]},\"k\":\"subtypearray\"}]},\"i\":0}]}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
+
+		// set another property; see that only that granular update gets sent
+		list.get(0).put("in_date", new Date(12345));
+		JSONAssert.assertEquals(
+			"{\"comp\":{\"test\":{\"types\":{\"vEr\":2,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}},\"u\":[{\"v\":{\"vEr\":4,\"svy_types\":{\"0\":{\"v\":\"JSON_arr\"}},\"u\":[{\"v\":{\"vEr\":4,\"svy_types\":{\"0\":{\"v\":\"JSON_obj\"}},\"u\":[{\"v\":{\"vEr\":2,\"svy_types\":{\"0\":{\"v\":\"Date\"}},\"u\":[{\"v\":12345,\"k\":\"in_date\"}]},\"i\":0}]},\"k\":\"subtypearray\"}]},\"i\":0}]}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
+	}
+
+	@Test
+	public void shouldGivePrioToChangeByRefOnComponent() throws Exception
+	{
+		WebComponent component = new WebComponent("mycomponent", "test");
+		BrowserConverterContext allowDataConverterContext = new BrowserConverterContext(component, PushToServerEnum.allow);
+		assertNull(component.getProperty("types"));
+
+		// arrays are wrapped in a smart array that can wrap and convert/handle changes automatically
+		Object[] array = new Object[0];
+		assertTrue(component.setProperty("types", array));
+
+		ChangeAwareList<Object, Object> typesArray = (ChangeAwareList)component.getProperty("types"); // ChangeAwareList
+
+		// so now we have a ref change already for types; do add an element to notify a content change for types as well; ref
+		// change should be leading still because the full value was not yet sent and has to be sent no matter if there were changes afterwards
+		Map<Object, Object> map = new HashMap<>();
+		map.put("name", "firstMyType");
+		typesArray.add(map);
+
+		// test array element reference change on component (should sent whole value, not a NO-OP or an update)
+		JSONAssert.assertEquals(
+			"{\"comp\":{\"test\":{\"types\":{\"vEr\":2,\"v\":[{\"vEr\":2,\"v\":{\"name\":\"firstMyType\"}}],\"svy_types\":{\"0\":\"JSON_obj\"}}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
+
+		// now change by content and afterwards by ref; should still send only full prop. value
+		typesArray.remove(0);
+		component.setProperty("types", new Object[0]);
+		JSONAssert.assertEquals("{\"comp\":{\"test\":{\"types\":{\"vEr\":4,\"v\":[]}}}}",
+			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
 	}
 
 }

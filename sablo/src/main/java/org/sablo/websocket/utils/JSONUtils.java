@@ -27,6 +27,7 @@ import org.json.JSONObject;
 import org.json.JSONString;
 import org.json.JSONStringer;
 import org.json.JSONWriter;
+import org.sablo.WebComponent;
 import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.property.BrowserConverterContext;
 import org.sablo.specification.property.IBrowserConverterContext;
@@ -129,6 +130,14 @@ public class JSONUtils
 		return writer.endObject().toString();
 	}
 
+	public static <ContextT> String writeComponentChanges(WebComponent component, ChangesToJSONConverter converter, DataConversion dataConversion)
+		throws JSONException
+	{
+		JSONWriter writer = new JSONStringer().object();
+		if (component.writeOwnComponentChanges(writer, "comp", component.getName(), converter, dataConversion)) writer.endObject();
+		return writer.endObject().toString();
+	}
+
 //
 //	/**
 //	 * Writes the given object as design-time JSON into the JSONWriter.
@@ -151,7 +160,7 @@ public class JSONUtils
 	 * key is null and you want to write the converted value write only the converted value to the writer, ignore the key.
 	 */
 	public static JSONWriter toBrowserJSONFullValue(JSONWriter writer, String key, Object value, PropertyDescription valueType, DataConversion clientConversion,
-		BrowserConverterContext context) throws JSONException, IllegalArgumentException
+		IBrowserConverterContext context) throws JSONException, IllegalArgumentException
 	{
 		return JSONUtils.FullValueToJSONConverter.INSTANCE.toJSONValue(writer, key, value, valueType, clientConversion, context);
 	}

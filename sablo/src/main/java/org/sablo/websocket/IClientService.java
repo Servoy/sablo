@@ -20,7 +20,6 @@ import java.util.Map;
 
 import org.json.JSONException;
 import org.json.JSONWriter;
-import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.property.IBrowserConverterContext;
 import org.sablo.websocket.utils.DataConversion;
 import org.sablo.websocket.utils.JSONUtils.IToJSONConverter;
@@ -103,7 +102,7 @@ public interface IClientService
 	 */
 	public String getScriptingName();
 
-	void writeProperties(IToJSONConverter<IBrowserConverterContext> converter, JSONWriter w, Map<String, Object> propertyValues,
-		PropertyDescription propertyTypes, DataConversion clientDataConversions) throws IllegalArgumentException, JSONException;
+	void writeProperties(IToJSONConverter<IBrowserConverterContext> mainConverter, IToJSONConverter<IBrowserConverterContext> converterForSendingFullValue,
+		JSONWriter w, TypedData<Map<String, Object>> propertiesToWrite, DataConversion clientDataConversions) throws IllegalArgumentException, JSONException;
 
 }
