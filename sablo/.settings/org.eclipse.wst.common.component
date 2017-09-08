@@ -2,6 +2,5 @@
     <wb-module deploy-name="sablo">
         <wb-resource deploy-path="/" source-path="/src/main/java"/>
         <wb-resource deploy-path="/" source-path="/src/test/java"/>
-        <wb-resource deploy-path="/" source-path="/META-INF"/>
     </wb-module>
 </project-modules>

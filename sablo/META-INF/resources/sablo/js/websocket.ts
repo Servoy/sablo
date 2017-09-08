@@ -133,6 +133,10 @@ angular.module('pushToServer', []).factory('$propertyWatchesRegistry', function 
 webSocketModule.factory('$webSocket',
 		function($rootScope, $injector, $window, $log, $q, $services, $sabloConverters, $sabloUtils, $swingModifiers, $interval, wsCloseCodes,$sabloLoadingIndicator, $timeout, $sabloTestability) {
 
+	var pathname = null;
+	
+	var queryString = null;
+	
 	var websocket = null;
 	
 	var connectionArguments = {};
@@ -152,14 +156,39 @@ webSocketModule.factory('$webSocket',
 		  return obj && angular.isFunction(obj.then);
 	}
 	
+	function setPathname(name) {
+		pathname = name;
+	}
+	
+	function getPathname() {
+		return pathname || $window.location.pathname;
+	}
+	
+	function setQueryString(qs) {
+		queryString = qs;
+	}
+	
+	function getQueryString() {
+		if (queryString) {
+			return queryString;
+		}
+		
+		var search = $window.location.search;
+		if (search && search.indexOf('?') == 0) {
+			return search.substring(1);
+		}
+		
+		return search;
+	}
+	
 	var getURLParameter = function getURLParameter(name) {
-		return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec($window.location.search)||[,""])[1].replace(/\+/g, '%20'))||null
+		return decodeURIComponent((new RegExp('[&]?' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(getQueryString())||[,""])[1].replace(/\+/g, '%20'))||null
 	};
 
 	var handleMessage = function(message) {
 		var obj
 		var responseValue
-		var functionsToExecuteAfterIncommingMessageWasHandled = [];
+		functionsToExecuteAfterIncommingMessageWasHandled = [];
 
 		try {
 			if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Received message from server: " + JSON.stringify(message));
@@ -482,14 +511,14 @@ webSocketModule.factory('$webSocket',
 	}
 
 	function generateURL(context, args, queryArgs, websocketUri) {
-		var loc = window.location, new_uri;
-		if (loc.protocol === "https:") {
+		var new_uri;
+		if ($window.location.protocol === "https:") {
 			new_uri = "wss:";
 		} else {
 			new_uri = "ws:";
 		}
-		new_uri += "//" + loc.host;
-		var pathname = loc.pathname;
+		new_uri += "//" + $window.location.host;
+		var pathname = getPathname();
 		var lastIndex = pathname.lastIndexOf("/");
 		if (lastIndex > 0) {
 			pathname = pathname.substring(0, lastIndex);
@@ -521,9 +550,10 @@ webSocketModule.factory('$webSocket',
 			new_uri += "lastServerMessageNumber="+lastServerMessageNumber+"&";
 		}
 
-		if (loc.search)
+		var queryString = getQueryString();
+		if (queryString)
 		{
-			new_uri +=  loc.search.substring(1,loc.search.length); 
+			new_uri += queryString; 
 		}
 		else
 		{
@@ -640,7 +670,13 @@ webSocketModule.factory('$webSocket',
 			}
 		},
 
-		getURLParameter: getURLParameter
+		getURLParameter: getURLParameter,
+		
+		setPathname: setPathname,
+		getPathname: getPathname,
+		
+		setQueryString: setQueryString,
+		getQueryString: getQueryString	
 	};
 }).factory("$services", function($rootScope, $sabloConverters, $sabloUtils, $propertyWatchesRegistry, $log){
 	// serviceName:{} service model

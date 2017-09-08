@@ -108,7 +108,11 @@ declare namespace sablo {
         isReconnecting(): boolean,
 		addIncomingMessageHandlingDoneTask(func: ()=>void): void,
         disconnect():void,
-        getURLParameter(name:string): string
+        getURLParameter(name:string): string,
+        setPathname(pathname: string): void,
+        getPathname(): string,
+        setQueryString(queryString: string): void,
+        getQueryString(): string
 	}
 
 }

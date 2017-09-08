@@ -41,6 +41,7 @@ public class BaseWindowTest
 	@Test
 	public void shouldSetAndClearEndpoint() throws Exception
 	{
+		Mockito.when(websocketEndpointMock.hasSession()).thenReturn(Boolean.TRUE);
 		BaseWindow window = new BaseWindow(websocketSessionMock, "theuuid", "test");
 
 		assertFalse(window.hasEndpoint());
@@ -61,7 +62,9 @@ public class BaseWindowTest
 		BaseWindow window = new BaseWindow(websocketSessionMock, "theuuid", "test");
 
 		IWebsocketEndpoint endpoint2 = Mockito.mock(IWebsocketEndpoint.class);
+		Mockito.when(endpoint2.hasSession()).thenReturn(Boolean.TRUE);
 		IWebsocketEndpoint endpoint3 = Mockito.mock(IWebsocketEndpoint.class);
+		Mockito.when(endpoint3.hasSession()).thenReturn(Boolean.TRUE);
 
 		window.setEndpoint(websocketEndpointMock);
 		window.setEndpoint(endpoint2);

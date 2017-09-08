@@ -59,7 +59,7 @@ public class DatePropertyType extends DefaultPropertyType<Date> implements IClas
 	public Date fromJSON(Object newValue, Date previousValue, PropertyDescription pd, IBrowserConverterContext dataConverterContext,
 		ValueReference<Boolean> returnValueAdjustedIncommingValue)
 	{
-		if (newValue instanceof Long) return new Date(((Long)newValue).longValue());
+		if (newValue instanceof Number) return new Date(((Number)newValue).longValue());
 		return null;
 	}
 

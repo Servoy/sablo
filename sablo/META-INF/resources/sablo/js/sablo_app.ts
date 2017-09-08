@@ -2,6 +2,8 @@
 /// <reference path="../../../../typings/sablo/sablo.d.ts" />
 /// <reference path="../../../../typings/jquery/jquery.d.ts" />
 
+namespace sablo_app { export class Model{}}
+
 angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabloConstants", {
 	modelChangeNotifier: "$modelChangeNotifier"
 }).factory('$sabloApplication', function($rootScope: angular.IRootScopeService, $window: angular.IWindowService, $timeout: angular.ITimeoutService, $q: angular.IQService, $log: sablo.ILogService, $webSocket: sablo.IWebSocket, $sabloConverters: sablo.ISabloConverters, $sabloUtils: sablo.ISabloUtils, $sabloConstants: sablo.SabloConstants, webStorage) {
@@ -250,7 +252,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 	function hasFormStateWithData(name) {
 		return typeof (formStates[name]) !== 'undefined' && !formStates[name].initializing && formStates[name].resolved;
 	}
-
+	
 	return <sablo.ISabloApplication>{
 		connect: function(context, queryArgs, websocketUri) {
 			wsSessionArgs = {
@@ -488,7 +490,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 				// init all the objects for the beans.
 				state = formStates[formName] = { model: model, api: api, properties: formProperties, initializing: true };
 				for (var beanName in beanDatas) {
-					model[beanName] = {};
+					model[beanName] = new sablo_app.Model();
 					api[beanName] = {};
 				}
 			}
@@ -987,6 +989,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 			},
 
 			fromClientToServer: function(newClientData, oldClientData) {
+				if (newClientData === 0) return newClientData;
 				if (!newClientData) return null;
 
 				var r = newClientData;

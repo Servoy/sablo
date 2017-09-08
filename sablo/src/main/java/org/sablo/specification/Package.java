@@ -575,7 +575,10 @@ public class Package
 				ZipEntry entry = zip.getEntry(path);
 				if (entry != null)
 				{
-					return IOUtils.toString(zip.getInputStream(entry), charset);
+					try (InputStream is = zip.getInputStream(entry))
+					{
+						return IOUtils.toString(is, charset);
+					}
 				}
 			}
 			return null;

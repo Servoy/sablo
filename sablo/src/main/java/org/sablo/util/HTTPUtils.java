@@ -16,6 +16,12 @@
 
 package org.sablo.util;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -27,6 +33,7 @@ import javax.servlet.http.HttpServletResponse;
 
 public class HTTPUtils
 {
+
 	public static final String IF_MODIFIED_SINCE = "If-Modified-Since"; //$NON-NLS-1$
 	public static final String LAST_MODIFIED = "Last-Modified"; //$NON-NLS-1$
 
@@ -94,4 +101,39 @@ public class HTTPUtils
 		}
 		return false;
 	}
+
+
+	/**
+	 * Generate a query string in application/x-www-form-urlencoded format from a http request parametermap.
+	 *
+	 * @param parameterMap
+	 * @return
+	 * @throws ServletException
+	 */
+	public static String generateQueryString(Map<String, String[]> parameterMap) throws ServletException
+	{
+		StringBuilder queryString = new StringBuilder();
+		for (Entry<String, String[]> parameter : parameterMap.entrySet())
+		{
+			for (String value : parameter.getValue())
+			{
+				if (queryString.length() > 0)
+				{
+					queryString.append('&');
+				}
+
+				try
+				{
+					queryString.append(URLEncoder.encode(parameter.getKey(), "UTF-8")).append('=').append(URLEncoder.encode(value, "UTF-8"));
+				}
+				catch (UnsupportedEncodingException e)
+				{
+					throw new ServletException(e);
+				}
+			}
+		}
+		return queryString.toString();
+	}
+
+
 }

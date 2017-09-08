@@ -77,7 +77,7 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 			@Override
 			public void attachToBaseObjectIfNeeded(int i, WT value)
 			{
-				if (changeMonitor != null) attachToBaseObject(i, value, false);
+				ChangeAwareList.this.attachToBaseObjectIfNeeded(i, value, false);
 			}
 
 			@Override
@@ -253,7 +253,7 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 
 	protected void attachToBaseObjectIfNeeded(int i, WT el, boolean insert)
 	{
-		if (changeMonitor != null) attachToBaseObject(i, el, insert);
+		if (changeMonitor != null) attachToBaseObject(i, el, insert, false);
 	}
 
 	@Override
@@ -266,7 +266,7 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 		int i = 0;
 		for (WT el : wrappedBaseList)
 		{
-			attachToBaseObject(i, el, false);
+			attachToBaseObject(i, el, false, true);
 			i++;
 		}
 
@@ -281,13 +281,32 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 	// called whenever a new element was added or inserted into the array
 	// TODO currently here we use the wrapped value for ISmartPropertyValue, but BaseWebObject uses the unwrapped value; I think the BaseWebObject
 	// should be changes to use wrapped as well; either way, it should be the same (currently this works as we don't have any wrapper type with 'smart' values for which the wrapped value differs from the unwrapped value)
-	protected void attachToBaseObject(final int i, WT el, boolean insert)
+	protected void attachToBaseObject(final int i, WT el, boolean insert, boolean dueToFullArrayAttach)
 	{
 		if (el instanceof ISmartPropertyValue)
 		{
-			ChangeAwareList<ET, WT>.IndexChangeListener changeHandler = new IndexChangeListener(i);
-			changeHandlers.add(changeHandler);
-			((ISmartPropertyValue)el).attachToBaseObject(changeHandler, webObjectContext);
+			if (CustomJSONPropertyType.log.isDebugEnabled()) CustomJSONPropertyType.log.debug("[CAL] Checking to ATTACH idx " + i);
+
+			ChangeAwareList<ET, WT>.IndexChangeListener changeHandler = getChangeHandler(el);
+			if (changeHandler == null || dueToFullArrayAttach) // hmm I think if dueToFullArrayAttach is true then changeHandler would always be null (as elements would not be attached either...) but just in case
+			{
+				// new value, so attach it and give it a change handler
+				changeHandler = new IndexChangeListener(i, el);
+				changeHandlers.add(changeHandler);
+				((ISmartPropertyValue)el).attachToBaseObject(changeHandler, webObjectContext);
+			}
+			else
+			{
+				// note: if we already have a change handler for this value, that means that the value was already in the list before being added;
+				// that can happen when array operations such as splice are performed on the array from JS (for example a splice that remove one element
+				// from JS does copy elements after the removed one 1 by one to lower index; so it first attaches an already attached value to a lower index, then detachees it from it's previous index.
+				// we want in this case to not trigger either attach or detach - as basically the element is still in the array, but we must adjust change handler indexes
+
+				// just adjust the index of the change handler
+				changeHandler.attachedToIdx = i;
+				if (CustomJSONPropertyType.log.isDebugEnabled())
+					CustomJSONPropertyType.log.debug("[CAL] SKIPPING ATTACH due to el. already being added in the list (splice?) for idx " + i);
+			}
 		}
 
 		if (insert)
@@ -302,14 +321,26 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 		}
 	}
 
+	private ChangeAwareList<ET, WT>.IndexChangeListener getChangeHandler(WT el)
+	{
+		// we have to iterate here to find the change handler for the value; we cannot change "changeHandlers" into a map of "value -> change handler" to enhance searching because
+		// the values are mutable and can change hashCode, so they ("el") cannot be used as keys in a map (for example EL could be a ChangeAwareMap that can change contents so it can change hashcode)
+		for (IndexChangeListener ch : changeHandlers)
+			if (el == ch.forValue) return ch;
+
+		return null;
+	}
+
 	protected class IndexChangeListener implements IChangeListener
 	{
 
+		private final Object forValue;
 		private int attachedToIdx;
 
-		public IndexChangeListener(int attachedToIdx)
+		public IndexChangeListener(int attachedToIdx, Object forValue)
 		{
 			this.attachedToIdx = attachedToIdx;
+			this.forValue = forValue;
 		}
 
 		@Override
@@ -333,7 +364,7 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 		int i = 0;
 		for (WT el : wrappedBaseList)
 		{
-			detach(i, el, false);
+			detach(i, el, false, true);
 			i++;
 		}
 
@@ -343,24 +374,37 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 
 	// TODO currently here we use the wrapped value for ISmartPropertyValue, but BaseWebObject uses the unwrapped value; I think the BaseWebObject
 	// should be changes to use wrapped as well; either way, it should be the same (currently this works as we don't have any wrapper type with 'smart' values for which the wrapped value differs from the unwrapped value)
-	protected void detach(int idx, WT el, boolean remove)
+	protected void detach(int idx, WT el, boolean remove, boolean dueToFullArrayDetach)
 	{
 		if (el instanceof ISmartPropertyValue)
 		{
+			if (CustomJSONPropertyType.log.isDebugEnabled()) CustomJSONPropertyType.log.debug("[CAL] Checking to DETACH idx " + idx);
+
 			// if the wrapper list still has this el then don't call detach on it.
-			if (!getWrappedBaseList().contains(el))
+			if (dueToFullArrayDetach || (!containsByReference(getWrappedBaseList(), el)))
 			{
 				((ISmartPropertyValue)el).detach();
+
+				Iterator<IndexChangeListener> it = changeHandlers.iterator();
+				while (it.hasNext())
+				{
+					IndexChangeListener ch = it.next();
+					if (ch.forValue == el || ch.attachedToIdx == idx) it.remove();
+				}
 			}
-			Iterator<IndexChangeListener> it = changeHandlers.iterator();
-			while (it.hasNext())
+			else
 			{
-				IndexChangeListener ch = it.next();
-				if (ch.attachedToIdx == idx) it.remove();
-				else if (remove && ch.attachedToIdx > idx) ch.attachedToIdx--;
+				// it is still in the list after being removed from idx;
+				// that can happen when array operations such as splice are performed on the array from JS (for example a splice that remove one element
+				// from JS does copy elements after the removed one 1 by one to lower index; so it first sets an already attached value to a lower index, then removes/replaces it from it's previous index.
+				// we want in this case to not trigger either attach or detach - as basically the element is still in the array, but we must adjust change handler indexes;
+				// so we do nothing in this case as the
+				if (CustomJSONPropertyType.log.isDebugEnabled())
+					CustomJSONPropertyType.log.debug("[CAL] SKIPPING DETACH of still present element at idx " + idx);
 			}
 		}
-		else if (remove)
+
+		if (remove)
 		{
 			// other change handler indexes might need to be updated
 			Iterator<IndexChangeListener> it = changeHandlers.iterator();
@@ -372,9 +416,20 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 		}
 	}
 
+	/**
+	 * Search by reference, not using .equals(), because list.contains() would match similar maps/arrays/... even if the references are different.
+	 * When we don't want that, when we are only interested in references then we use this method.
+	 */
+	private static <X> boolean containsByReference(List<X> list, X elToSearchFor)
+	{
+		for (X el : list)
+			if (elToSearchFor == el) return true;
+		return false;
+	}
+
 	protected void detachIfNeeded(int idx, WT el, boolean remove)
 	{
-		if (changeMonitor != null) detach(idx, el, remove);
+		if (changeMonitor != null) detach(idx, el, remove, false);
 	}
 
 	@Override

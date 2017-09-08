@@ -36,6 +36,8 @@ import org.sablo.specification.WebComponentSpecProvider;
 import org.sablo.specification.WebObjectSpecification.PushToServerEnum;
 import org.sablo.specification.property.BrowserConverterContext;
 import org.sablo.specification.property.ChangeAwareList;
+import org.sablo.specification.property.ChangeAwareMap;
+import org.sablo.specification.property.CustomJSONArrayType;
 import org.sablo.specification.property.types.AggregatedPropertyType;
 import org.sablo.websocket.TypedData;
 import org.sablo.websocket.utils.DataConversion;
@@ -453,5 +455,112 @@ public class CustomArrayAndCustomObjectTypeTest
 		JSONAssert.assertEquals("{\"comp\":{\"test\":{\"types\":{\"vEr\":4,\"v\":[]}}}}",
 			JSONUtils.writeComponentChanges(component, ChangesToJSONConverter.INSTANCE, new DataConversion()), JSONCompareMode.NON_EXTENSIBLE);
 	}
+
+	@Test
+	public void shouldOnlyAttachDetachAsNeededAndKeepIndexesUpToDateInChangeHandlersWhenDoingArraySplice() throws Exception
+	{
+		WebComponent component = new WebComponent("mycomponent", "test");
+		BrowserConverterContext allowDataConverterContext = new BrowserConverterContext(component, PushToServerEnum.allow);
+		assertNull(component.getProperty("typesReject"));
+
+		// arrays are wrapped in a smart array that can wrap and convert/handle changes automatically
+		Object[] array = new Object[0];
+		assertTrue(component.setProperty("typesReject", array));
+
+		ChangeAwareList<Object, Object> typesArray = (ChangeAwareList)component.getProperty("typesReject"); // ChangeAwareList
+		PropertyDescription elementMapPD = ((CustomJSONArrayType)component.getPropertyDescription("typesReject").getType()).getCustomJSONTypeDefinition();
+
+		// just add some elements that won't be affected by splice
+		Map<String, Object> map = new HashMap<>();
+		map.put("name", "zero");
+		typesArray.add(map);
+
+		map = new HashMap<>();
+		map.put("name", "one");
+		typesArray.add(map);
+
+		map = new HashMap<>();
+		map.put("name", "two");
+		TestChangeAwareMap< ? , ? > testMap2 = new TestChangeAwareMap<>(map, elementMapPD);
+		assertEquals(0, testMap2.attachCalls);
+		assertEquals(0, testMap2.detachCalls);
+		typesArray.add(testMap2);
+		assertEquals(1, testMap2.attachCalls);
+		testMap2.attachCalls = 0;
+		assertEquals(0, testMap2.detachCalls);
+
+		map = new HashMap<>();
+		map.put("name", "three");
+		TestChangeAwareMap< ? , ? > testMap3 = new TestChangeAwareMap<>(map, elementMapPD);
+		assertEquals(0, testMap3.attachCalls);
+		assertEquals(0, testMap3.detachCalls);
+		typesArray.add(testMap3);
+		assertEquals(1, testMap3.attachCalls);
+		testMap3.attachCalls = 0;
+		assertEquals(0, testMap3.detachCalls);
+
+		map = new HashMap<>();
+		map.put("name", "four");
+		TestChangeAwareMap<Object, ? > testMap4 = new TestChangeAwareMap<>(map, elementMapPD);
+		assertEquals(0, testMap4.attachCalls);
+		assertEquals(0, testMap4.detachCalls);
+		typesArray.add(testMap4);
+		assertEquals(1, testMap4.attachCalls);
+		testMap4.attachCalls = 0;
+		assertEquals(0, testMap4.detachCalls);
+
+		// ok now simulate a JS splice operation that removes "two", see that it gets detached, but the others don't get detached
+		typesArray.set(2, typesArray.get(3));
+		typesArray.set(3, typesArray.get(4));
+		typesArray.remove(4);
+
+		assertTrue(typesArray.mustSendAll()); // it has both change and remove actions so it currently doesn't support sending granular updates for this situation
+		typesArray.clearChanges();
+
+		assertEquals(0, testMap2.attachCalls);
+		assertEquals(1, testMap2.detachCalls);
+
+		assertEquals(0, testMap3.attachCalls);
+		assertEquals(0, testMap3.detachCalls);
+
+		assertEquals(0, testMap4.attachCalls);
+		assertEquals(0, testMap4.detachCalls);
+
+		// ok, now if we alter what used to be at idx 4 (it is now at idx 3) see that the CAL reports correctly that idx 3 has changed
+		testMap4.put("text", "I changed");
+		assertTrue(!typesArray.mustSendAll());
+		assertEquals(0, typesArray.getIndexesChangedByRef().size());
+		assertEquals(0, typesArray.getRemovedIndexes().size());
+		assertTrue(!typesArray.mustSendTypeToClient());
+
+		assertEquals(1, typesArray.getIndexesWithContentUpdates().size());
+		assertTrue(typesArray.getIndexesWithContentUpdates().contains(Integer.valueOf(3)));
+	}
+
+	private class TestChangeAwareMap<ET, WT> extends ChangeAwareMap<ET, WT>
+	{
+		public TestChangeAwareMap(Map<String, ET> baseMap, PropertyDescription customObjectPD)
+		{
+			super(baseMap, null, customObjectPD);
+		}
+
+		private int attachCalls = 0;
+		private int detachCalls = 0;
+
+		@Override
+		public void attachToBaseObject(IChangeListener changeMntr, IWebObjectContext webObjectCntxt)
+		{
+			attachCalls++;
+			super.attachToBaseObject(changeMntr, webObjectCntxt);
+		}
+
+		@Override
+		public void detach()
+		{
+			detachCalls++;
+			super.detach();
+		}
+
+	};
 
 }

@@ -694,7 +694,7 @@ public class BaseWindow implements IWindow
 	@Override
 	public synchronized boolean hasEndpoint()
 	{
-		return endpoint != null;
+		return endpoint != null && endpoint.hasSession();
 	}
 
 	/**
