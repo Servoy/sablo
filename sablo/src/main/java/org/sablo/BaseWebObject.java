@@ -812,7 +812,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 			}
 		}
 
-		// here converter is always a full-value-to-json type; so don give a second parameter as this should be used in any case (we don't want to send changes)
+		// here converter is always a full-value-to-json type (full value or initial value, so not changes); so don't give a second parameter as this should be used in any case (we don't want to send changes)
 		writeProperties(converter, null, w, new TypedData<Map<String, Object>>(data, typedProperties.contentType), clientDataConversions);
 		clientDataConversions.popNode();
 		w.endObject();
