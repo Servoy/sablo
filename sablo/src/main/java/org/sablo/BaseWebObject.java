@@ -904,6 +904,11 @@ public abstract class BaseWebObject implements IWebObjectContext
 		return eventHandlers.containsKey(event);
 	}
 
+	public Set<String> getAllEventHandlerNames()
+	{
+		return eventHandlers.keySet();
+	}
+
 	/**
 	 * Called when this object will not longer be used - to release any held resources/remove listeners.
 	 */
