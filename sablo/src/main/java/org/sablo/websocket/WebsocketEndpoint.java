@@ -138,12 +138,27 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 				}
 			});
 		}
+		catch (Exception e)
+		{
+			handleException(e, wsSession);
+			throw e;
+		}
 		finally
 		{
 			CurrentWindow.set(null);
 		}
 
 		WebsocketSessionManager.closeInactiveSessions();
+	}
+
+	/**
+	 * Method to override the behavior to handle exceptions in the start() of this endpoint.
+	 *
+	 * @param e
+	 * @param wsSession
+	 */
+	protected void handleException(Exception e, IWebsocketSession wsSession)
+	{
 	}
 
 	@Override

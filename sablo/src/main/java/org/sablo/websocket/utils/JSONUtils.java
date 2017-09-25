@@ -351,6 +351,15 @@ public class JSONUtils
 			IPropertyType< ? > type = pd.getType();
 			if (type instanceof IPropertyConverterForBrowser< ? >)
 			{
+				if (type instanceof IClassPropertyType)
+				{
+					//check if already the desired type, can happen when calling the handler from the serverside script
+					if (((IClassPropertyType)type).getTypeClass().isInstance(newValue))
+					{
+						return newValue;
+					}
+				}
+
 				return ((IPropertyConverterForBrowser)type).fromJSON(newValue, oldValue, pd, dataConversionContext, returnValueAdjustedIncommingValue);
 			}
 		}
@@ -455,7 +464,8 @@ public class JSONUtils
 					}
 					catch (Exception ex)
 					{
-						log.error("Error while converting value: " + value + " of key: " + key + " to type: " + type + " current json: " + writer.toString(), ex);
+						log.error("Error while converting value: " + value + " of key: " + key + " to type: " + type + " current json: " + writer.toString(),
+							ex);
 						return writer;
 					}
 				}

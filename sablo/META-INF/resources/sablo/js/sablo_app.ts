@@ -989,6 +989,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 			},
 
 			fromClientToServer: function(newClientData, oldClientData) {
+				if (newClientData === 0) return newClientData;
 				if (!newClientData) return null;
 
 				var r = newClientData;
