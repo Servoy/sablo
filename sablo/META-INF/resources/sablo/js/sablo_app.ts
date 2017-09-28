@@ -982,7 +982,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 
 		};
 	}]).run(function($sabloConverters: sablo.ISabloConverters) {
-		// Date type -----------------------------------------------
+		// configure Date type but don't overwrite it when there is already a registered object.
 		$sabloConverters.registerCustomPropertyHandler('Date', {
 			fromServerToClient: function(serverJSONValue, currentClientValue, scope, modelGetter) {
 				return typeof (serverJSONValue) === "number" ? new Date(serverJSONValue) : serverJSONValue;
@@ -1002,6 +1002,6 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 			updateAngularScope: function(clientValue, componentScope) {
 				// nothing to do here
 			}
-		});
+		}, false);
 		// other small types can be added here
 	});
