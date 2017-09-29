@@ -950,12 +950,13 @@ webSocketModule.factory('$webSocket',
 		 * 
 		 * }
 		 */
-		registerCustomPropertyHandler : function(propertyTypeID, customHandler) {
+		registerCustomPropertyHandler : function(propertyTypeID, customHandler, overwrite) {
+			if (overwrite == false && customPropertyConverters[propertyTypeID] ) return; 
 			customPropertyConverters[propertyTypeID] = customHandler;
 		}
 
 	};
-}).factory("$sabloUtils", function($log, $sabloConverters,$swingModifiers) {
+}).factory("$sabloUtils", function($log, $sabloConverters:sablo.ISabloConverters,$swingModifiers) {
 	// define a global custom 'hash set' based on a configurable hash function received in constructor
 	window.CustomHashSet = function(hashCodeFunc) {
 		Object.defineProperty(this, "hashCode", {
@@ -1052,7 +1053,7 @@ webSocketModule.factory('$webSocket',
 
 			convertClientObject : function(value) {
 				if (value instanceof Date) {
-					value = value.getTime();
+					value  = $sabloConverters.convertFromClientToServer(value, "Date", null);
 				}
 				return value;
 			},
