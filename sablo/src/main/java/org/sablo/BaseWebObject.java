@@ -257,7 +257,10 @@ public abstract class BaseWebObject implements IWebObjectContext
 							continue;
 						}
 					}
-
+					else if (config == null)
+					{
+						break;
+					}
 					// general protected property or specific for this property
 					throw new IllegalComponentAccessException(prop.getType().getName(), getName(), property);
 				}

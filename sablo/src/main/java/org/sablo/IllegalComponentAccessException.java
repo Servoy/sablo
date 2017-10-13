@@ -72,8 +72,8 @@ public class IllegalComponentAccessException extends RuntimeException
 	@Override
 	public String getMessage()
 	{
-		String result = new StringBuilder("Access to component ").append(getComponentName()).append(" property ").append(getProperty()).append(
-			" denied (").append(getAccessType()).append(")").toString();
+		String result = new StringBuilder("Access to property '").append(getProperty()).append("' from component '").append(getComponentName()).append(
+			"' denied (blocked by value of property: '").append(getAccessType()).append("')").toString();
 		if (e != null)
 		{
 			result += ". Warning was caused by: " + e.getMessage();
