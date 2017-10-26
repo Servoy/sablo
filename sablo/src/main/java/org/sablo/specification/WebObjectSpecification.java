@@ -60,6 +60,8 @@ public class WebObjectSpecification extends PropertyDescription
 
 	public final static String PUSH_TO_SERVER_KEY = "pushToServer";
 
+	public final static String ALLOW_ACCESS = "allowaccess";
+
 	public enum PushToServerEnum
 	{
 

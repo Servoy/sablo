@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -29,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONWriter;
@@ -256,10 +258,6 @@ public abstract class BaseWebObject implements IWebObjectContext
 							// specific enable-property, not for this property
 							continue;
 						}
-					}
-					else if (config == null)
-					{
-						break;
 					}
 					// general protected property or specific for this property
 					throw new IllegalComponentAccessException(prop.getType().getName(), getName(), property);
@@ -679,9 +677,47 @@ public abstract class BaseWebObject implements IWebObjectContext
 	 */
 	public final void putBrowserProperty(String propertyName, Object propertyValue) throws JSONException
 	{
-		checkPropertyProtection(propertyName);
+		try
+		{
+			checkPropertyProtection(propertyName);
+		}
+		catch (IllegalComponentAccessException e)
+		{
+			checkIfAccessIsAllowed(propertyName, e);
+		}
 
 		doPutBrowserProperty(propertyName, propertyValue);
+	}
+
+	/**
+	 * @param propertyName
+	 * @param e
+	 * @return
+	 */
+	private void checkIfAccessIsAllowed(String propertyName, IllegalComponentAccessException e)
+	{
+		boolean rethrow = true;
+		Object allowEditTag = getPropertyDescription(propertyName).getTag(WebObjectSpecification.ALLOW_ACCESS);
+		if (allowEditTag instanceof JSONArray)
+		{
+			Iterator<Object> iterator = ((JSONArray)allowEditTag).iterator();
+			while (iterator.hasNext())
+			{
+				if (iterator.next().equals(e.getAccessType()))
+				{
+					rethrow = false;
+					break;
+				}
+			}
+		}
+		else if (allowEditTag instanceof String && e.getAccessType().equals(allowEditTag))
+		{
+			rethrow = false;
+		}
+		if (rethrow)
+		{
+			throw e;
+		}
 	}
 
 	protected void doPutBrowserProperty(String propertyName, Object propertyValue) throws JSONException

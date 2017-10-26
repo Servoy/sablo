@@ -23,6 +23,8 @@ import static org.junit.Assert.fail;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Test;
 import org.sablo.specification.Package.IPackageReader;
@@ -30,6 +32,7 @@ import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.WebComponentSpecProvider;
 import org.sablo.specification.WebObjectSpecification;
 import org.sablo.specification.property.types.DimensionPropertyType;
+import org.sablo.specification.property.types.EnabledPropertyType;
 import org.sablo.specification.property.types.ProtectedConfig;
 import org.sablo.specification.property.types.ProtectedPropertyType;
 import org.sablo.specification.property.types.VisiblePropertyType;
@@ -907,7 +910,8 @@ public class WebComponentSecurityPropertiesTest
 			"\n\"libraries\": []," + //
 			"\n\"model\":" + //
 			"\n{" + //
-			"\n   \"aint\": { \"type\": \"int\", \"pushToServer\": \"allow\" }" + //
+			"\n   \"aint\": { \"type\": \"int\", \"pushToServer\": \"allow\", \"tags\":{\"" + WebObjectSpecification.ALLOW_ACCESS + "\":\"visible\"} }," + //
+			"\n  \"dataProviderID\" : { \"type\":\"dataprovider\", \"pushToServer\": \"allow\"}" + //
 			"\n}," + //
 			"\n\"handlers\":" + //
 			"\n{" + //
@@ -918,9 +922,12 @@ public class WebComponentSecurityPropertiesTest
 		WebComponentSpecProvider.init(
 			new IPackageReader[] { new InMemPackageReader(MANIFEST, Collections.singletonMap(TESTCOMPONENT_SPEC, testcomponentspec)) });
 
+		JSONObject tags = new JSONObject();
+		tags.put(WebObjectSpecification.ALLOW_ACCESS, new JSONArray(new Object[] { "visible", "enabled" }));
 		WebObjectSpecification formSpec = new WebObjectSpecification("form_spec", "", IPackageReader.WEB_COMPONENT, "", null, null, null, "", null);
-		formSpec.putProperty("size", new PropertyDescription("size", DimensionPropertyType.INSTANCE));
+		formSpec.putProperty("size", new PropertyDescription("size", DimensionPropertyType.INSTANCE, null, null, null, false, null, null, tags, false));
 		formSpec.putProperty("visible", new PropertyDescription("visible", VisiblePropertyType.INSTANCE));
+		formSpec.putProperty("enabled", new PropertyDescription("enabled", EnabledPropertyType.INSTANCE));
 
 		Container form = new Container("form", formSpec)
 		{
@@ -952,6 +959,8 @@ public class WebComponentSecurityPropertiesTest
 		// set form invisible
 		form.setVisible(false);
 
+		form.putBrowserProperty("size", new JSONObject("{\"width\":10,\"height\":10}"));
+
 		// call function
 		assertEquals(1, called.intValue());
 		try
@@ -964,23 +973,41 @@ public class WebComponentSecurityPropertiesTest
 			// expected
 			assertEquals("callme", e.getProperty());
 		}
-		assertEquals(1, called.intValue());
 
-		// set a property
 		try
 		{
-			testcomponent.putBrowserProperty("aint", new Integer(11));
-			fail("can set property on invisble form on from client!");
+			testcomponent.putBrowserProperty("dataProviderID", "someillegavalue");
+			fail("can call function on invisble form on from client!");
+		}
+		catch (IllegalComponentAccessException e)
+		{
+			// expected
+			assertEquals("dataProviderID", e.getProperty());
+		}
+		assertEquals(1, called.intValue());
+
+		// set a property that is allowed in visible
+		testcomponent.putBrowserProperty("aint", new Integer(11));
+		assertEquals(new Integer(11), testcomponent.getProperty("aint"));
+
+		// make form visible again
+		form.setVisible(true);
+
+		// test enabled,
+		form.setEnabled(false);
+		try
+		{
+			// this property can only be set when visible is false not when enabled is false
+			testcomponent.putBrowserProperty("aint", new Integer(12));
+			fail("can call function on enabled  form on from client!");
 		}
 		catch (IllegalComponentAccessException e)
 		{
 			// expected
 			assertEquals("aint", e.getProperty());
 		}
-		assertEquals(new Integer(1), testcomponent.getProperty("aint"));
-
-		// make form visible again
-		form.setVisible(true);
+		assertEquals(new Integer(11), testcomponent.getProperty("aint"));
+		form.setEnabled(true);
 
 		// call function
 		assertEquals(1, called.intValue());
