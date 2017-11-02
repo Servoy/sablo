@@ -76,6 +76,7 @@ public class BaseWindow implements IWindow
 	private static final String API_KEY_FUNCTION_NAME = "api"; //$NON-NLS-1$
 	private static final String API_KEY_COMPONENT_NAME = "bean"; //$NON-NLS-1$
 	private static final String API_KEY_FORM_NAME = "form"; //$NON-NLS-1$
+	private static final String API_PRE_DATA_SERVICE_CALL = "pre_data_service_call"; //$NON-NLS-1$
 
 	private static final Logger log = LoggerFactory.getLogger(BaseWindow.class.getCanonicalName());
 
@@ -668,6 +669,8 @@ public class BaseWindow implements IWindow
 		serviceCall.put(API_SERVER_ONLY_KEY_SERVICE, clientService);
 		serviceCall.put(API_KEY_NAME, clientService.getScriptingName());
 		serviceCall.put(API_KEY_CALL, functionName);
+		WebObjectFunctionDefinition handler = clientService.getSpecification().getApiFunction(functionName);
+		if (handler != null && handler.isPreDataServiceCall()) serviceCall.put(API_PRE_DATA_SERVICE_CALL, Boolean.TRUE);
 		if (argumentTypes != null && argumentTypes.getProperties().size() > 0)
 		{
 			int typesNumber = argumentTypes.getProperties().size();

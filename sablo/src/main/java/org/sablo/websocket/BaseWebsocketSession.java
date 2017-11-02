@@ -382,6 +382,15 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 		return serverServices.get(name);
 	}
 
+	protected void registerClientService(IClientService clientService)
+	{
+		if (clientService != null)
+		{
+			servicesByName.put(clientService.getName(), clientService);
+			servicesByScriptingName.put(clientService.getScriptingName(), clientService);
+		}
+	}
+
 	@Override
 	public IClientService getClientService(String name)
 	{

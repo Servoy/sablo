@@ -203,6 +203,25 @@ webSocketModule.factory('$webSocket',
 			// else message has no seq-no
 			
 			obj = JSON.parse(message_data);
+			
+			if (obj.services) {
+				// services call, first process the once with the flag 'apply_first'
+				if (obj[$sabloConverters.TYPES_KEY] && obj[$sabloConverters.TYPES_KEY].services) {
+					obj.services = $sabloConverters.convertFromServerToClient(obj.services, obj[$sabloConverters.TYPES_KEY].services, undefined, undefined, undefined)
+				}
+				for (var index in obj.services) {
+					var service = obj.services[index];
+					if (service['pre_data_service_call']) {
+						var serviceInstance = $injector.get(service.name);
+						if (serviceInstance
+								&& serviceInstance[service.call]) {
+							// responseValue keeps last services call return value
+							responseValue = serviceInstance[service.call].apply(serviceInstance, service.args);
+							$services.digest(service.name);
+						}
+					}
+				}
+			}
 
 			// if the indicator is showing and this object wants a return message then hide the indicator until we send the response
 			var hideIndicator = obj && obj.smsgid && $sabloLoadingIndicator.isShowing();
@@ -268,18 +287,17 @@ webSocketModule.factory('$webSocket',
 			}
 
 			if (obj.services) {
-				// services call
-				if (obj[$sabloConverters.TYPES_KEY] && obj[$sabloConverters.TYPES_KEY].services) {
-					obj.services = $sabloConverters.convertFromServerToClient(obj.services, obj[$sabloConverters.TYPES_KEY].services, undefined, undefined, undefined)
-				}
+				// normal services call
 				for (var index in obj.services) {
 					var service = obj.services[index];
-					var serviceInstance = $injector.get(service.name);
-					if (serviceInstance
-							&& serviceInstance[service.call]) {
-						// responseValue keeps last services call return value
-						responseValue = serviceInstance[service.call].apply(serviceInstance, service.args);
-						$services.digest(service.name);
+					if (!service['pre_data_service_call']) {
+						var serviceInstance = $injector.get(service.name);
+						if (serviceInstance
+								&& serviceInstance[service.call]) {
+							// responseValue keeps last services call return value
+							responseValue = serviceInstance[service.call].apply(serviceInstance, service.args);
+							$services.digest(service.name);
+						}
 					}
 				}
 			}
