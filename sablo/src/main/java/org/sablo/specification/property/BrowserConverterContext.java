@@ -96,5 +96,4 @@ public class BrowserConverterContext extends WrappingContext implements IBrowser
 
 		return v;
 	}
-
 }

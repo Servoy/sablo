@@ -52,8 +52,8 @@ public interface IPropertyType<T>
 	public T defaultValue(PropertyDescription pd);
 
 	/**
-	 * Defines whether this property can only be set the server, updates from client will be ignored.
-	 * Used for protected and visible properties.
+	 * Defines whether this property can only be changed/set from the server; updates sent from client to it will be ignored.
+	 * Used for protected, enabled and visible properties.
 	 */
 	boolean isProtecting();
 

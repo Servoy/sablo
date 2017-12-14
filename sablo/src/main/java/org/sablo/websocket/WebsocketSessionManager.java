@@ -40,6 +40,49 @@ public class WebsocketSessionManager
 
 	private final static Map<String, IWebsocketSessionFactory> websocketSessionFactories = new HashMap<>();
 
+	private static volatile boolean stop = false;
+	private final static Thread pingEndpointsThread = new Thread(new Runnable()
+	{
+		@Override
+		public void run()
+		{
+			while (!stop)
+			{
+				for (IWebsocketSession session : wsSessions.values())
+				{
+					if (session != null)
+					{
+						for (IWindow window : session.getWindows())
+						{
+							try
+							{
+								window.getEndpoint().sendText("P");
+							}
+							catch (Exception e)
+							{
+								// ignore not much we can do here.
+							}
+						}
+					}
+				}
+				try
+				{
+					Thread.sleep(4000);
+				}
+				catch (InterruptedException e)
+				{
+					// ignore
+				}
+			}
+		}
+	}, "Endpoint pinger");
+
+	static
+	{
+		pingEndpointsThread.setDaemon(true);
+		pingEndpointsThread.start();
+	}
+
 	//maps form uuid to session
 	private final static ConcurrentMap<String, IWebsocketSession> wsSessions = new ConcurrentHashMap<>();
 
@@ -141,6 +184,13 @@ public class WebsocketSessionManager
 	public static void closeAllSessions()
 	{
 		closeSessions(false);
+	}
+
+	public static void destroy()
+	{
+		stop = true;
+		closeAllSessions();
+		pingEndpointsThread.interrupt();
 	}
 
 	private static void closeSessions(boolean checkForWindowActivity)

@@ -185,9 +185,8 @@ public class WebComponentTest
 		data.put("msg", properties);
 
 		String msg = JSONUtils.writeDataWithConversions(data, null, null);
-		assertEquals(
-			new JSONObject(
-				"{\"msg\":{\"font\":{\"fontWeight\":\"bold\",\"fontStyle\":\"normal\",\"fontSize\":\"12px\",\"fontFamily\":\"SansSerif, Verdana, Arial\"},\"name\":\"test\"}}").toString(),
+		assertEquals(new JSONObject(
+			"{\"msg\":{\"font\":{\"fontWeight\":\"bold\",\"fontStyle\":\"normal\",\"fontSize\":\"12px\",\"fontFamily\":\"SansSerif, Verdana, Arial\"},\"name\":\"test\"}}").toString(),
 			new JSONObject(msg).toString());
 
 		component.putBrowserProperty("font", new JSONObject("{\"fontStyle\":\"italic\",\"fontSize\":\"10px\",\"fontFamily\":\"SansSerif, Verdana, Arial\"}"));
@@ -328,15 +327,13 @@ public class WebComponentTest
 		messageTypes.putProperty("msg", properties.contentType);
 
 		String msg = JSONUtils.writeDataWithConversions(data, messageTypes, allowDataConverterContext);
-		assertEquals(
-			new JSONObject(
-				"{\"msg\":{\"name\":\"test\",\"types\":{\"vEr\":2,\"v\":[{\"vEr\":2,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},{\"vEr\":2,\"v\":{\"name\":\"myname2\",\"active\":false,\"foreground\":\"#ffffff\"}}],\"svy_types\":{\"1\":\"JSON_obj\",\"0\":\"JSON_obj\"}}},\"svy_types\":{\"msg\":{\"types\":\"JSON_arr\"}}}").toString(),
+		assertEquals(new JSONObject(
+			"{\"msg\":{\"name\":\"test\",\"types\":{\"vEr\":2,\"v\":[{\"vEr\":2,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},{\"vEr\":2,\"v\":{\"name\":\"myname2\",\"active\":false,\"foreground\":\"#ffffff\"}}],\"svy_types\":{\"1\":\"JSON_obj\",\"0\":\"JSON_obj\"}}},\"svy_types\":{\"msg\":{\"types\":\"JSON_arr\"}}}").toString(),
 			new JSONObject(msg).toString());
 
 		msg = JSONUtils.writeDataWithConversions(data, messageTypes, shallowDataConverterContext);
-		assertEquals(
-			new JSONObject(
-				"{\"msg\":{\"name\":\"test\",\"types\":{\"vEr\":3,\"w\":false,\"v\":[{\"vEr\":3,\"w\":false,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},{\"vEr\":3,\"w\":false,\"v\":{\"name\":\"myname2\",\"active\":false,\"foreground\":\"#ffffff\"}}],\"svy_types\":{\"1\":\"JSON_obj\",\"0\":\"JSON_obj\"}}},\"svy_types\":{\"msg\":{\"types\":\"JSON_arr\"}}}").toString(),
+		assertEquals(new JSONObject(
+			"{\"msg\":{\"name\":\"test\",\"types\":{\"vEr\":3,\"w\":false,\"v\":[{\"vEr\":3,\"w\":false,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},{\"vEr\":3,\"w\":false,\"v\":{\"name\":\"myname2\",\"active\":false,\"foreground\":\"#ffffff\"}}],\"svy_types\":{\"1\":\"JSON_obj\",\"0\":\"JSON_obj\"}}},\"svy_types\":{\"msg\":{\"types\":\"JSON_arr\"}}}").toString(),
 			new JSONObject(msg).toString());
 
 		component.putBrowserProperty("types",
@@ -501,19 +498,19 @@ public class WebComponentTest
 		});
 	}
 
-	@Test(expected = IllegalComponentAccessException.class)
+	@Test(expected = IllegalChangeFromClientException.class)
 	public void shouldNotAllowSetValueByDefault() throws Exception
 	{
 		new WebComponent("mycomponent", "test").putBrowserProperty("nochangeint1", Integer.valueOf(42));
 	}
 
-	@Test(expected = IllegalComponentAccessException.class)
+	@Test(expected = IllegalChangeFromClientException.class)
 	public void shouldNotAllowSetValueByDefaultType() throws Exception
 	{
 		new WebComponent("mycomponent", "test").putBrowserProperty("nochangeint2", Integer.valueOf(42));
 	}
 
-	@Test(expected = IllegalComponentAccessException.class)
+	@Test(expected = IllegalChangeFromClientException.class)
 	public void shouldNotAllowSetValueWhenReject() throws Exception
 	{
 		new WebComponent("mycomponent", "test").putBrowserProperty("nochangeint3", Integer.valueOf(42));

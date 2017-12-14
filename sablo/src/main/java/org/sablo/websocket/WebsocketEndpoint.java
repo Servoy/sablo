@@ -33,7 +33,7 @@ import javax.websocket.Session;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.sablo.IllegalComponentAccessException;
+import org.sablo.IllegalChangeFromClientException;
 import org.sablo.eventthread.EventDispatcher;
 import org.sablo.eventthread.IEventDispatcher;
 import org.sablo.specification.PropertyDescription;
@@ -247,7 +247,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 	{
 		if (t instanceof IOException)
 		{
-			log.warn("IOException happened", t.getMessage()); // TODO if it has no message but has a 'cause' it will not print anything useful
+			log.info("IOException happened", t.getMessage()); // TODO if it has no message but has a 'cause' it will not print anything useful
 		}
 		else
 		{
@@ -284,6 +284,10 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 			{
 				log.warn("could not reply to ping message for window " + window, e);
 			}
+			return;
+		}
+		else if ("p".equals(message)) // pong
+		{
 			return;
 		}
 		if (window == null)
@@ -351,7 +355,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 							{
 								log.warn("Warning: " + pe.getMessage(), pe);
 							}
-							catch (IllegalComponentAccessException ilcae)
+							catch (IllegalChangeFromClientException ilcae)
 							{
 								log.warn("Warning: " + ilcae.getMessage());
 							}

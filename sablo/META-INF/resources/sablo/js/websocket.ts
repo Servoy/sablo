@@ -476,13 +476,15 @@ webSocketModule.factory('$webSocket',
 			lastHeartbeat = new Date().getTime();
 			heartbeatMonitor = $interval(function() {
 				if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Sending heartbeat... (" + new Date().getTime() + ")");
-				websocket.send("P"); // ping
-				if (isConnected() && new Date().getTime() - lastHeartbeat > 8000) {
-					// no response within 8 seconds
-					if (connected !== 'RECONNECTING') {
-						if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode (Heartbeat timed out; connection lost; waiting to reconnect): ... RECONNECTING (" + new Date().getTime() + ")");
-						connected = 'RECONNECTING';
-						$rootScope.$apply();
+				if (new Date().getTime() - lastHeartbeat >= 4000){
+					websocket.send("P"); // ping
+					if (isConnected() && new Date().getTime() - lastHeartbeat > 8000) {
+						// no response within 8 seconds
+						if (connected !== 'RECONNECTING') {
+							if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode (Heartbeat timed out; connection lost; waiting to reconnect): ... RECONNECTING (" + new Date().getTime() + ")");
+							connected = 'RECONNECTING';
+							$rootScope.$apply();
+						}
 					}
 				}
 			}, 4000, 0, false);
@@ -517,7 +519,10 @@ webSocketModule.factory('$webSocket',
 			if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Heartbeat received, connection re-established...");
 			$rootScope.$apply(setConnected);
 		}
-		return message.data == "p"; // pong
+		if (message.data == "P") {
+			websocket.send("p"); 
+		}
+		return message.data == "p" ||  message.data == "P"; // pong or ping
 	}
 	
 	function isConnected() {

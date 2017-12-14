@@ -189,10 +189,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("vis", Boolean.FALSE);
 			fail("visibility property is not protected!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("vis", e.getProperty());
+			assertEquals("vis", e.getBlockedProperty());
 		}
 
 		assertTrue(testcomponent.isVisible());
@@ -220,10 +220,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("astr", "noot");
 			fail("can set protected property from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("astr", e.getProperty());
+			assertEquals("astr", e.getBlockedProperty());
 		}
 
 		assertEquals("aap", testcomponent.getProperty("astr"));
@@ -235,10 +235,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.executeEvent("callme", null);
 			fail("can call function on invisible component from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("callme", e.getProperty());
+			assertEquals("callme", e.getBlockedProperty());
 		}
 		assertEquals(1, called.intValue());
 
@@ -313,10 +313,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("visforastr2", Boolean.FALSE);
 			fail("visibility property is not protected!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("visforastr2", e.getProperty());
+			assertEquals("visforastr2", e.getBlockedProperty());
 		}
 
 		testcomponent.putBrowserProperty("astr1", "the");
@@ -334,10 +334,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("astr2", "fox");
 			fail("can set protected property from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("astr2", e.getProperty());
+			assertEquals("astr2", e.getBlockedProperty());
 		}
 
 		assertEquals("brown", testcomponent.getProperty("astr1")); // modified
@@ -352,10 +352,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("astr2", "over");
 			fail("can set protected property from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("astr2", e.getProperty());
+			assertEquals("astr2", e.getBlockedProperty());
 		}
 
 		assertEquals("jumps", testcomponent.getProperty("astr1")); // not modified
@@ -444,10 +444,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("prot", Boolean.TRUE);
 			fail("can set protected property from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("prot", e.getProperty());
+			assertEquals("prot", e.getBlockedProperty());
 		}
 
 		assertEquals(Boolean.FALSE, testcomponent.getProperty("prot"));
@@ -465,10 +465,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("aint", new Integer(2));
 			fail("can set protected property from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("aint", e.getProperty());
+			assertEquals("aint", e.getBlockedProperty());
 		}
 
 		assertEquals(new Integer(1), testcomponent.getProperty("aint"));
@@ -537,10 +537,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("prot", Boolean.FALSE);
 			fail("can set protected property from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("prot", e.getProperty());
+			assertEquals("prot", e.getBlockedProperty());
 		}
 
 		// call function
@@ -574,10 +574,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("aint", new Integer(2));
 			fail("can set protected property from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("aint", e.getProperty());
+			assertEquals("aint", e.getBlockedProperty());
 		}
 
 		assertEquals(new Integer(1), testcomponent.getProperty("aint"));
@@ -592,10 +592,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.executeEvent("callme", null);
 			fail("can call function on invisible component from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("callme", e.getProperty());
+			assertEquals("callme", e.getBlockedProperty());
 		}
 		assertEquals(1, called.intValue());
 
@@ -648,10 +648,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("aint1", new Integer(12));
 			fail("can set protected property from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("aint1", e.getProperty());
+			assertEquals("aint1", e.getBlockedProperty());
 		}
 
 		// can still set other properties
@@ -662,10 +662,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("aint3", new Integer(32));
 			fail("can set protected property from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("aint3", e.getProperty());
+			assertEquals("aint3", e.getBlockedProperty());
 		}
 
 		assertEquals(new Integer(11), testcomponent.getProperty("aint1")); // not modified
@@ -781,10 +781,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.executeEvent("callme1", null);
 			fail("can call protected function on from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("callme1", e.getProperty());
+			assertEquals("callme1", e.getBlockedProperty());
 		}
 		assertEquals(1, called1.intValue());
 
@@ -867,10 +867,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.executeEvent("callme", null);
 			fail("can call function on invisble form on from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("callme", e.getProperty());
+			assertEquals("callme", e.getBlockedProperty());
 		}
 		assertEquals(1, called.intValue());
 
@@ -880,10 +880,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("aint", new Integer(11));
 			fail("can set property on invisble form on from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("aint", e.getProperty());
+			assertEquals("aint", e.getBlockedProperty());
 		}
 		assertEquals(new Integer(1), testcomponent.getProperty("aint"));
 
@@ -968,10 +968,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.executeEvent("callme", null);
 			fail("can call function on invisble form on from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("callme", e.getProperty());
+			assertEquals("callme", e.getBlockedProperty());
 		}
 
 		try
@@ -979,10 +979,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("dataProviderID", "someillegavalue");
 			fail("can call function on invisble form on from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("dataProviderID", e.getProperty());
+			assertEquals("dataProviderID", e.getBlockedProperty());
 		}
 		assertEquals(1, called.intValue());
 
@@ -1001,10 +1001,10 @@ public class WebComponentSecurityPropertiesTest
 			testcomponent.putBrowserProperty("aint", new Integer(12));
 			fail("can call function on enabled  form on from client!");
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
 			// expected
-			assertEquals("aint", e.getProperty());
+			assertEquals("aint", e.getBlockedProperty());
 		}
 		assertEquals(new Integer(11), testcomponent.getProperty("aint"));
 		form.setEnabled(true);

@@ -484,6 +484,10 @@ public class WebObjectSpecification extends PropertyDescription
 				{
 					def.setDocumentation(jsonDef.getString("description"));
 				}
+				else if ("private".equals(key))
+				{
+					def.setPrivate(jsonDef.getBoolean("private"));
+				}
 				else
 				{
 					if (customConfiguration == null) customConfiguration = new JSONObject();

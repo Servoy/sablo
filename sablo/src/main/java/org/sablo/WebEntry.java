@@ -150,6 +150,8 @@ public abstract class WebEntry implements Filter, IContributionFilter, IContribu
 	@Override
 	public void destroy()
 	{
+		WebsocketSessionManager.destroy();
+
 		WebComponentSpecProvider.disposeInstance();
 
 		WebServiceSpecProvider.disposeInstance();

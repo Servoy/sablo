@@ -42,6 +42,7 @@ public class WebObjectFunctionDefinition
 	private boolean discardPreviouslyQueuedSimilarCalls = false;
 	private PropertyDescription asPropertyDescription;
 	private boolean preDataServiceCall;
+	private boolean priv;
 
 	public WebObjectFunctionDefinition(String name)
 	{
@@ -196,6 +197,22 @@ public class WebObjectFunctionDefinition
 	public boolean isPreDataServiceCall()
 	{
 		return preDataServiceCall;
+	}
+
+	/**
+	 * @param boolean1
+	 */
+	public void setPrivate(boolean priv)
+	{
+		this.priv = priv;
+	}
+
+	/**
+	 * @return the priv
+	 */
+	public boolean isPrivate()
+	{
+		return priv;
 	}
 
 }

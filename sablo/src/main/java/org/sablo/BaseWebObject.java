@@ -145,6 +145,11 @@ public abstract class BaseWebObject implements IWebObjectContext
 	{
 		checkProtection(eventType);
 
+		// test if this is a private handler, should not be callable from a client
+		WebObjectFunctionDefinition handler = getSpecification().getHandler(eventType);
+		if (handler != null && handler.isPrivate()) throw new IllegalAccessException(
+			"Event " + eventType + " is called from the client, but it is a private event of " + this + " with spec " + specification);
+
 		return doExecuteEvent(eventType, args);
 	}
 
@@ -230,7 +235,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 	 * Check protection of property.
 	 * Validate if component or not visible or protected by another property.
 	 *
-	 * @throws IllegalComponentAccessException when property is protected
+	 * @throws IllegalChangeFromClientException when property is protected
 	 */
 	protected void checkProtection(String property)
 	{
@@ -260,7 +265,8 @@ public abstract class BaseWebObject implements IWebObjectContext
 						}
 					}
 					// general protected property or specific for this property
-					throw new IllegalComponentAccessException(prop.getType().getName(), getName(), property);
+					throw new IllegalChangeFromClientException(prop.getName(), "Changes from client for property '" + property +
+						"' are not allowed when the value of property '" + prop.getName() + "' is " + blockingOn, getName(), property);
 				}
 			}
 		}
@@ -272,7 +278,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 	 * Check if the property is protected, i.e. it cannot be set from the client.
 	 *
 	 * @param propName
-	 * @throws IllegalComponentAccessException when property is protected
+	 * @throws IllegalChangeFromClientException when property is protected
 	 */
 	protected void checkForProtectedProperty(String propName)
 	{
@@ -286,7 +292,8 @@ public abstract class BaseWebObject implements IWebObjectContext
 				if (property.getType().isProtecting())
 				{
 					// property is protected, i.e. it cannot be set from the client
-					throw new IllegalComponentAccessException("protecting", getName(), propName);
+					throw new IllegalChangeFromClientException(null,
+						"Property '" + property + "' is a 'protecting' property itself so it can never be changed from client.", getName(), propName);
 				}
 
 				if (isLastInPath)
@@ -294,12 +301,14 @@ public abstract class BaseWebObject implements IWebObjectContext
 					if (PushToServerEnum.allow.compareTo(property.getPushToServer()) > 0 && (!(property.getType() instanceof IPushToServerSpecialType) ||
 						!((IPushToServerSpecialType)property.getType()).shouldAlwaysAllowIncommingJSON()))
 					{
-						// pushToServer not set to allowed, it should not be set from the client
-						throw new IllegalComponentAccessException("pushToServer-reject", getName(), propName);
+						// pushToServer not set to allowed on the prop. itself (isLastInPath), it should not be changed from the client
+						throw new IllegalChangeFromClientException(null,
+							"Property '" + propName + "' has 'pushToServer' set to 'reject' so it cannot be changed from client.", getName(), propName);
 					}
 				}
 				else
 				{
+					// TODO hmm isn't elementConfig already checked with code above? (as it should affect pushToServer of the PropertyDescription of elements when we really will do pushToServer at more then root property level)
 					if (property.getConfig() instanceof JSONObject)
 					{
 						JSONObject config = (JSONObject)property.getConfig();
@@ -312,7 +321,9 @@ public abstract class BaseWebObject implements IWebObjectContext
 							PushToServerEnum configPushToServer = PushToServerEnum.fromString(config.optString(WebObjectSpecification.PUSH_TO_SERVER_KEY));
 							if (PushToServerEnum.allow.compareTo(configPushToServer) > 0)
 							{
-								throw new IllegalComponentAccessException("pushToServer-reject", getName(), propName);
+								throw new IllegalChangeFromClientException(null, "Property '" + propName +
+									"' has 'pushToServer' set to 'reject' (on an array element config in it's property path) so it cannot be changed from client.",
+									getName(), propName);
 							}
 						}
 					}
@@ -658,7 +669,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 	 *
 	 * @param propertyName
 	 *
-	 * @throws IllegalComponentAccessException when modification is denied.
+	 * @throws IllegalChangeFromClientException when modification is denied.
 	 */
 	public final void checkPropertyProtection(String propertyName)
 	{
@@ -681,36 +692,32 @@ public abstract class BaseWebObject implements IWebObjectContext
 		{
 			checkPropertyProtection(propertyName);
 		}
-		catch (IllegalComponentAccessException e)
+		catch (IllegalChangeFromClientException e)
 		{
-			checkIfAccessIsAllowed(propertyName, e);
+			checkIfAccessIsAllowedDisregardingProtection(propertyName, e);
 		}
 
 		doPutBrowserProperty(propertyName, propertyValue);
 	}
 
-	/**
-	 * @param propertyName
-	 * @param e
-	 * @return
-	 */
-	private void checkIfAccessIsAllowed(String propertyName, IllegalComponentAccessException e)
+	private void checkIfAccessIsAllowedDisregardingProtection(String propertyName, IllegalChangeFromClientException e)
 	{
 		boolean rethrow = true;
 		Object allowEditTag = getPropertyDescription(propertyName).getTag(WebObjectSpecification.ALLOW_ACCESS);
+		// allowEditTag is either a String or an array of Strings representing 'blocked by' property name(s) that should not block the given property (the spec makes specific exceptions in the property itself for the other props. that should not block it)
 		if (allowEditTag instanceof JSONArray)
 		{
 			Iterator<Object> iterator = ((JSONArray)allowEditTag).iterator();
 			while (iterator.hasNext())
 			{
-				if (iterator.next().equals(e.getAccessType()))
+				if (iterator.next().equals(e.getBlockedByProperty()))
 				{
 					rethrow = false;
 					break;
 				}
 			}
 		}
-		else if (allowEditTag instanceof String && e.getAccessType().equals(allowEditTag))
+		else if (allowEditTag instanceof String && allowEditTag.equals(e.getBlockedByProperty()))
 		{
 			rethrow = false;
 		}
