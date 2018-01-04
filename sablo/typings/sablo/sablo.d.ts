@@ -89,6 +89,7 @@ declare namespace sablo {
 	
 	interface ISabloUtils {
 			EVENT_LEVEL_SYNC_API_CALL: number,
+			DEFAULT_CONVERSION_TO_SERVER_FUNC: string,
 			setCurrentEventLevelForServer(eventLevelValue:number): void,
 			getCurrentEventLevelForServer():number,
 			isChanged(now, prev, conversionInfo):boolean,
@@ -97,6 +98,7 @@ declare namespace sablo {
 			getEventArgs(args,eventName:string):any,
 			getOrCreateInDepthProperty(formStatesConversionInfo, formname:string, beanname:string):any,
 			getInDepthProperty(formStatesConversionInfo, formname:string, beanname:string):any,
+			cloneWithDifferentPrototype(obj:Object, newPrototype:Object):Object
 	}
 	
 	interface IWebSocket {

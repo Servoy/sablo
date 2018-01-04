@@ -1061,6 +1061,10 @@ webSocketModule.factory('$webSocket',
 			// execution priority on server value used when for example a blocking API call from server needs to request more data from the server through this change
 			// or whenever during a (blocking) API call to client we want some messages sent to the server to still be processed.
 			EVENT_LEVEL_SYNC_API_CALL: 500,
+			
+			// objects that have a function named like this in them will send to server the result of that function call when no conversion type is available (in case of
+			// usage as handler arg. for example where we don't know the arg. types on client)
+			DEFAULT_CONVERSION_TO_SERVER_FUNC: "_dctsf",
 
 			// eventLevelValue can be undefined for DEFAULT
 			setCurrentEventLevelForServer: function(eventLevelValue) {
@@ -1077,6 +1081,8 @@ webSocketModule.factory('$webSocket',
 			convertClientObject : function(value) {
 				if (value instanceof Date) {
 					value  = $sabloConverters.convertFromClientToServer(value, "Date", null);
+				} else if (value && typeof value[this.DEFAULT_CONVERSION_TO_SERVER_FUNC] == 'function') {
+					return value[this.DEFAULT_CONVERSION_TO_SERVER_FUNC]();
 				}
 				return value;
 			},
@@ -1112,6 +1118,8 @@ webSocketModule.factory('$webSocket',
 						eventObj['timestamp'] = new Date().getTime();
 						arg = eventObj
 					}
+					else arg = this.convertClientObject(arg); // TODO should be $sabloConverters.convertFromClientToServer(now, beanConversionInfo[property] ?, undefined);, but as we do not know handler arg types, we just do default conversion (for dates & types that use $sabloUtils.DEFAULT_CONVERSION_TO_SERVER_FUNC)
+
 					newargs.push(arg)
 				}
 				return newargs;
@@ -1158,7 +1166,24 @@ webSocketModule.factory('$webSocket',
 				}
 
 				return ret;
+			},
+			
+			/**
+			 * Makes a clone of "obj" (new object + iterates on properties and copies them over (so shallow clone)) that will have it's [[Prototype]] set to "newPrototype".
+			 * It is not aware of property descriptors. It uses plain property assignment when cloning.
+			 */
+			cloneWithDifferentPrototype: function(obj, newPrototype) {
+				// instead of using this impl., we could use Object.setPrototypeOf(), but that is slower in the long run due to missing JS engine optimizations for accessing props.
+				// accorging to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/setPrototypeOf
+				var clone = Object.create(newPrototype);
+
+				Object.keys(obj).forEach(function (prop) {  
+					clone[prop] = obj[prop];
+				});
+
+				return clone;
 			}
+
 	}
 
 	return sabloUtils;

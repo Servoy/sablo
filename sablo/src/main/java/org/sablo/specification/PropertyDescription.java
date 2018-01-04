@@ -143,6 +143,11 @@ public class PropertyDescription
 
 	public Collection<PropertyDescription> getTaggedProperties(String tag)
 	{
+		return getTaggedProperties(tag, null);
+	}
+
+	public Collection<PropertyDescription> getTaggedProperties(String tag, IPropertyType< ? > pt)
+	{
 		if (properties == null)
 		{
 			return Collections.emptyList();
@@ -153,7 +158,10 @@ public class PropertyDescription
 		{
 			if (pd.hasTag(tag))
 			{
-				filtered.add(pd);
+				if (pt == null || pt.getClass().isAssignableFrom(pd.getType().getClass()))
+				{
+					filtered.add(pd);
+				}
 			}
 		}
 		return filtered;
