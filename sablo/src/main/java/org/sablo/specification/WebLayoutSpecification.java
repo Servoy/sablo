@@ -83,7 +83,7 @@ public class WebLayoutSpecification extends WebObjectSpecification
 		}
 		WebLayoutSpecification spec = new WebLayoutSpecification(json.getString("name"), packageName, json.optString("displayName", null),
 			json.optString("categoryName", null), json.optString("icon", null), json.optString("preview", null), json.getString("definition"), jsonConfig,
-			topContainer, children, excludes, json.optString("designStyleClass"));
+			topContainer, children, excludes, json.optString("designStyleClass"), json.optBoolean("absoluteLayout", false));
 
 		// properties
 		spec.putAll(spec.parseProperties("model", json));
@@ -127,18 +127,20 @@ public class WebLayoutSpecification extends WebObjectSpecification
 	}
 
 	private final boolean topContainer;
+	private final boolean absoluteLayout;
 	private final List<String> allowedChildren;
 	private final String designStyleClass;
 	private final List<String> excludedChildren;
 
 	public WebLayoutSpecification(String name, String packageName, String displayName, String categoryName, String icon, String preview, String definition,
-		Object configObject, boolean topContainer, List<String> allowedChildren, List<String> excludedChildren, String designStyleClass)
+		Object configObject, boolean topContainer, List<String> allowedChildren, List<String> excludedChildren, String designStyleClass, boolean absoluteLayout)
 	{
 		super(name, packageName, IPackageReader.WEB_LAYOUT, displayName, categoryName, icon, preview, definition, null, configObject);
 		this.topContainer = topContainer;
 		this.allowedChildren = allowedChildren;
 		this.excludedChildren = excludedChildren;
 		this.designStyleClass = designStyleClass;
+		this.absoluteLayout = absoluteLayout;
 	}
 
 	/**
@@ -147,6 +149,14 @@ public class WebLayoutSpecification extends WebObjectSpecification
 	public boolean isTopContainer()
 	{
 		return topContainer;
+	}
+
+	/**
+	 * @return the absoluteLayout
+	 */
+	public boolean isAbsoluteLayout()
+	{
+		return absoluteLayout;
 	}
 
 	/**
