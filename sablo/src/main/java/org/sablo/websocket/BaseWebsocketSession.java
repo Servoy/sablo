@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.json.JSONObject;
@@ -58,7 +59,7 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	private final Map<String, IServerService> serverServices = new HashMap<>();
 	private final Map<String, IClientService> servicesByName = new HashMap<>();
 	private final Map<String, IClientService> servicesByScriptingName = new HashMap<>();
-	private final List<ObjectReference<IWindow>> windows = new ArrayList<>();
+	private final List<ObjectReference<IWindow>> windows = new CopyOnWriteArrayList<>();
 
 	private final String uuid;
 	private volatile IEventDispatcher executor;
@@ -83,26 +84,20 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	@Override
 	public Collection< ? extends IWindow> getWindows()
 	{
-		synchronized (windows)
+		List<IWindow> wins = new ArrayList<>(windows.size());
+		for (ObjectReference<IWindow> ref : windows)
 		{
-			List<IWindow> wins = new ArrayList<>(windows.size());
-			for (ObjectReference<IWindow> ref : windows)
-			{
-				if (ref.getObject().hasEndpoint()) wins.add(ref.getObject());
-			}
-			return wins;
+			if (ref.getObject().hasEndpoint()) wins.add(ref.getObject());
 		}
+		return wins;
 	}
 
 	public long getLastAccessed()
 	{
 		long lastAccessed = Long.MIN_VALUE;
-		synchronized (windows)
+		for (ObjectReference<IWindow> ref : windows)
 		{
-			for (ObjectReference<IWindow> ref : windows)
-			{
-				lastAccessed = Math.max(lastAccessed, ref.getLastAccessed());
-			}
+			lastAccessed = Math.max(lastAccessed, ref.getLastAccessed());
 		}
 		return lastAccessed;
 	}
@@ -115,10 +110,7 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 		long lastPingTime = 0;
 		for (ObjectReference<IWindow> ref : windows)
 		{
-			if (ref.getObject().hasEndpoint())
-			{
-				lastPingTime = Math.max(lastPingTime, ref.getObject().getLastPingTime());
-			}
+			lastPingTime = Math.max(lastPingTime, ref.getObject().getLastPingTime());
 		}
 		return lastPingTime;
 	}
@@ -126,47 +118,41 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	@Override
 	public IWindow getOrCreateWindow(String windowId, String windowName)
 	{
-		synchronized (windows)
+		if (windowId != null)
 		{
-			if (windowId != null)
+			for (ObjectReference<IWindow> ref : windows)
 			{
-				for (ObjectReference<IWindow> ref : windows)
+				IWindow window = ref.getObject();
+				if (windowId.equals(window.getUuid()))
 				{
-					IWindow window = ref.getObject();
-					if (windowId.equals(window.getUuid()))
+					if ((windowName == null && window.getName() == null) || (windowName != null && windowName.equals(window.getName())))
 					{
-						if ((windowName == null && window.getName() == null) || (windowName != null && windowName.equals(window.getName())))
-						{
-							// window matches on name and uuid
-							return window;
-						}
-						// else:
-						// window with this uuid exists, but windowname is different, this can happen when a new tab is opened
-						// and sessionstorage (containing windowid) is copied to the new tab.
+						// window matches on name and uuid
+						return window;
 					}
+					// else:
+					// window with this uuid exists, but windowname is different, this can happen when a new tab is opened
+					// and sessionstorage (containing windowid) is copied to the new tab.
 				}
 			}
-
-			// not found, create a new one
-			IWindow window = createWindow(UUID.randomUUID().toString(), windowName);
-			windows.add(new ObjectReference<IWindow>(window));
-			return window;
 		}
+
+		// not found, create a new one
+		IWindow window = createWindow(UUID.randomUUID().toString(), windowName);
+		windows.add(new ObjectReference<IWindow>(window));
+		return window;
 	}
 
 	@Override
 	public IWindow getActiveWindow(String windowName)
 	{
-		synchronized (windows)
+		for (ObjectReference<IWindow> ref : windows)
 		{
-			for (ObjectReference<IWindow> ref : windows)
+			IWindow window = ref.getObject();
+			if (ref.getObject().hasEndpoint() &&
+				((windowName == null && window.getName() == null) || (windowName != null && windowName.equals(window.getName()))))
 			{
-				IWindow window = ref.getObject();
-				if (ref.getObject().hasEndpoint() &&
-					((windowName == null && window.getName() == null) || (windowName != null && windowName.equals(window.getName()))))
-				{
-					return window;
-				}
+				return window;
 			}
 		}
 
@@ -181,14 +167,11 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 
 	public void updateLastAccessed(IWindow window)
 	{
-		synchronized (windows)
+		for (ObjectReference<IWindow> ref : windows)
 		{
-			for (ObjectReference<IWindow> ref : windows)
+			if (window == ref.getObject())
 			{
-				if (window == ref.getObject())
-				{
-					ref.updateLastAccessed();
-				}
+				ref.updateLastAccessed();
 			}
 		}
 	}
@@ -200,25 +183,23 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	public boolean checkForWindowActivity()
 	{
 		List<IWindow> inactiveWindows = new ArrayList<>();
-		synchronized (windows)
+		//do global non active cleanup
+		long currentTime = System.currentTimeMillis();
+		Iterator<ObjectReference<IWindow>> iterator = windows.iterator();
+		while (iterator.hasNext())
 		{
-			//do global non active cleanup
-			long currentTime = System.currentTimeMillis();
-			Iterator<ObjectReference<IWindow>> iterator = windows.iterator();
-			while (iterator.hasNext())
+			ObjectReference<IWindow> ref = iterator.next();
+			long timeout = getWindowTimeout() * 1000;
+			long lastTime = ref.getObject().getLastPingTime();
+			if (lastTime == 0)
 			{
-				ObjectReference<IWindow> ref = iterator.next();
-				long timeout = getWindowTimeout() * 1000;
-				long lastTime = ref.getObject().getLastPingTime();
-				if (lastTime == 0)
-				{
-					lastTime = ref.getLastAccessed();
-				}
-				if ((currentTime - lastTime) > timeout)
-				{
-					iterator.remove();
-					inactiveWindows.add(ref.getObject());
-				}
+				lastTime = ref.getLastAccessed();
+			}
+			if ((currentTime - lastTime) > timeout)
+			{
+				// this can't be an iterator.remove() CopyOnWrite doesn't support this, but we can just call remove because it is a CopyOnWrite
+				windows.remove(ref);
+				inactiveWindows.add(ref.getObject());
 			}
 		}
 
@@ -234,10 +215,7 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 			}
 		}
 
-		synchronized (windows)
-		{
-			return windows.size() == 0;
-		}
+		return windows.size() == 0;
 	}
 
 	@Override
@@ -322,12 +300,8 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	{
 		onDispose();
 
-		Collection< ? extends IWindow> allWindows;
-		synchronized (windows)
-		{
-			allWindows = getWindows();
-			windows.clear();
-		}
+		Collection< ? extends IWindow> allWindows = getWindows();
+		windows.clear();
 
 		for (IWindow window : allWindows)
 		{
