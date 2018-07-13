@@ -17,6 +17,7 @@ Export-Package: org.sablo,
  org.sablo.websocket.utils,
  org.sablo.util
 Require-Bundle: org.junit,
+ org.apache.commons.io,
  slf4j.api
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ClassPath: .
