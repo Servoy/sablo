@@ -126,7 +126,6 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 				public void run()
 				{
 					win.setEndpoint(WebsocketEndpoint.this);
-
 					if (CurrentWindow.safeGet() == win && session != null) // window or session my already be closed
 					{
 						win.onOpen(session.getRequestParameterMap());
@@ -134,6 +133,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 						{
 							wsSession.onOpen(session.getRequestParameterMap());
 						}
+						onStart();
 					}
 				}
 			});
@@ -149,6 +149,13 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		}
 
 		WebsocketSessionManager.closeInactiveSessions();
+	}
+
+	/**
+	 *  Called after from start(), called after the init of the session object.
+	 */
+	protected void onStart()
+	{
 	}
 
 	/**
@@ -355,9 +362,9 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 							{
 								log.warn("Warning: " + pe.getMessage(), pe);
 							}
-							catch (IllegalChangeFromClientException ilcae)
+							catch (IllegalChangeFromClientException | IllegalAccessException e)
 							{
-								log.warn("Warning: " + ilcae.getMessage());
+								log.warn("Warning: " + e.getMessage());
 							}
 							catch (Exception e)
 							{

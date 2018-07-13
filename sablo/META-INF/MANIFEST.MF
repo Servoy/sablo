@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Sablo core library
 Bundle-SymbolicName: sablo;singleton:=true
-Bundle-Version: 8.3.0.3200_b1
+Bundle-Version: 8.4.0.3400_b1
 Export-Package: org.sablo,
  org.sablo.eventthread,
  org.sablo.services.client,
@@ -17,10 +17,8 @@ Export-Package: org.sablo,
  org.sablo.websocket.utils,
  org.sablo.util
 Require-Bundle: org.junit,
- org.apache.commons.io,
- slf4j.api,
- jabsorb
-Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+ slf4j.api
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ClassPath: .
 Bundle-Vendor: Servoy
 Bundle-Activator: org.sablo.startup.Activator

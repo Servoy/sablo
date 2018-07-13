@@ -213,7 +213,7 @@ public class CustomObjectContext<SabloT, SabloWT> implements IWebObjectContext
 		else
 		{
 			PropertyDescription customPD = customJSONTypeDefinition.getProperty(propertyName);
-			if (customPD == null) parentWebObjectContext.removePropertyChangeListener(null, listener);
+			if (customPD == null) parentWebObjectContext.removePropertyChangeListener(propertyName, listener);
 			else if (propertyChangeSupport != null) propertyChangeSupport.removePropertyChangeListener(propertyName, listener);
 		}
 	}

@@ -175,7 +175,8 @@ public class BaseWindow implements IWindow
 	@Override
 	public long getLastPingTime()
 	{
-		if (endpoint != null) return endpoint.getLastPingTime();
+		IWebsocketEndpoint ep = getEndpoint();
+		if (ep != null) return ep.getLastPingTime();
 		return 0;
 	}
 
@@ -299,9 +300,10 @@ public class BaseWindow implements IWindow
 	public final void dispose()
 	{
 		onDispose();
-		if (endpoint != null)
+		IWebsocketEndpoint ep = getEndpoint();
+		if (ep != null)
 		{
-			endpoint.closeSession(new CloseReason(CloseReason.CloseCodes.SERVICE_RESTART, "Window disposed because of ping timeout"));
+			ep.closeSession(new CloseReason(CloseReason.CloseCodes.SERVICE_RESTART, "Window disposed because of ping timeout"));
 		}
 	}
 
@@ -342,18 +344,20 @@ public class BaseWindow implements IWindow
 	@Override
 	public void cancelSession(String reason)
 	{
-		if (endpoint != null)
+		IWebsocketEndpoint ep = getEndpoint();
+		if (ep != null)
 		{
-			endpoint.cancelSession(reason);
+			ep.cancelSession(reason);
 		}
 	}
 
 	@Override
 	public void closeSession()
 	{
-		if (endpoint != null)
+		IWebsocketEndpoint ep = getEndpoint();
+		if (ep != null)
 		{
-			endpoint.closeSession();
+			ep.closeSession();
 		}
 	}
 
@@ -449,7 +453,12 @@ public class BaseWindow implements IWindow
 	{
 		Integer messageId = new Integer(nextMessageId.incrementAndGet());
 		String sentText = sendMessageInternal(dataWriter, converter, messageId);
-		return sentText != null ? endpoint.waitResponse(messageId, sentText, blockEventProcessing) : null;
+		IWebsocketEndpoint ep = getEndpoint();
+		if (ep == null)
+		{
+			throw new IOException("Endpoint was closed when trying to wait for a sync message"); //$NON-NLS-1$
+		}
+		return sentText != null ? ep.waitResponse(messageId, sentText, blockEventProcessing) : null;
 	}
 
 	/**
@@ -474,7 +483,7 @@ public class BaseWindow implements IWindow
 	{
 		if (dataWriter == null && serviceCalls.size() == 0 && delayedOrAsyncApiCalls.size() == 0) return null;
 
-		if (endpoint == null)
+		if (getEndpoint() == null)
 		{
 			throw new IOException("Endpoint was closed"); //$NON-NLS-1$
 		}
@@ -596,7 +605,12 @@ public class BaseWindow implements IWindow
 	 */
 	private void sendMessageText(String text) throws IOException
 	{
-		endpoint.sendText(getNextMessageNumber(), text);
+		IWebsocketEndpoint ep = getEndpoint();
+		if (ep == null)
+		{
+			throw new IOException("Endpoint was closed"); //$NON-NLS-1$
+		}
+		ep.sendText(getNextMessageNumber(), text);
 	}
 
 	public void sendChanges() throws IOException

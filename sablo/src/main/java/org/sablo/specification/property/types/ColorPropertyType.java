@@ -33,7 +33,7 @@ import org.sablo.websocket.utils.JSONUtils;
  * @author jcompagner
  *
  */
-public class ColorPropertyType extends DefaultPropertyType<Color>implements IClassPropertyType<Color>
+public class ColorPropertyType extends DefaultPropertyType<Color> implements IClassPropertyType<Color>
 {
 
 	private static final Map<String, String> basicCssColors = new HashMap<String, String>();

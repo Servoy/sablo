@@ -44,6 +44,11 @@ public abstract class Container extends WebComponent
 		super(name, spec);
 	}
 
+	public Container(String name, WebObjectSpecification spec, boolean waitForPropertyInitBeforeAttach)
+	{
+		super(name, spec, waitForPropertyInitBeforeAttach);
+	}
+
 	/**
 	 * Called when it changes or any of it's children change.
 	 */

@@ -5,7 +5,7 @@
 		<maven>3.3.3</maven>
 	</prerequisites>
 	<groupId>org.sablo</groupId>
-	<version>8.3.0.3200_b1</version>
+	<version>8.4.0.3400_b1</version>
 	<artifactId>sablo</artifactId>
 	<packaging>eclipse-plugin</packaging>
 	<name>Sablo Core</name>
@@ -16,13 +16,13 @@
 
 	<url>http://maven.apache.org</url>
 	<properties>
-		<tycho.version>1.1.0</tycho.version>
-		<tycho.extra.version>1.1.0</tycho.extra.version>
-		<maven.compiler.source>1.7</maven.compiler.source>
-		<maven.compiler.target>1.7</maven.compiler.target>
+		<tycho.version>1.2.0</tycho.version>
+		<tycho.extra.version>1.2.0</tycho.extra.version>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
 		<jenkins.javascript_tests.reportsDirectory>target/protractor-reports</jenkins.javascript_tests.reportsDirectory>
-		<servoy-repo.url>http://download.eclipse.org/eclipse/updates/4.7/R-4.7.2-201711300510/</servoy-repo.url>
-		<servoy-shiplibs.url>http://developer.servoy.com/p2_repository/ship_plugins/</servoy-shiplibs.url>
+		<servoy-repo.url> http://download.eclipse.org/eclipse/updates/4.8/</servoy-repo.url>
+		<servoy-shiplibs.url>http://developer.servoy.com/p2_repository/ship_plugins84/</servoy-shiplibs.url>
 	</properties>
 
 	<repositories>

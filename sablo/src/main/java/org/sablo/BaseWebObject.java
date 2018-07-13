@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -108,8 +110,21 @@ public abstract class BaseWebObject implements IWebObjectContext
 
 	protected final String name;
 
+	private boolean propertiesInitialized; // we want to be able to convert all initial property values from sablo to web component before 'attaching' them if they are instances of ISmartPropertyValue; so we wait for all to be set and then trigger onPropertyChanged on all of them
+
 	public BaseWebObject(String name, WebObjectSpecification specification)
 	{
+		this(name, specification, false);
+	}
+
+	/**
+	 * @param waitForPropertyInitBeforeAttach if true it will block property change propagation and smart property values attaching initially - until
+	 * {@link #propertiesInitialized()} is called. Do not forget to call {@link #propertiesInitialized()} after setting initial props. if you set this to true.
+	 */
+	public BaseWebObject(String name, WebObjectSpecification specification, boolean waitForPropertyInitBeforeAttach)
+	{
+		propertiesInitialized = !waitForPropertyInitBeforeAttach;
+
 		this.name = name;
 		this.specification = specification;
 		if (specification == null) throw new IllegalStateException("Cannot work without specification");
@@ -758,6 +773,8 @@ public abstract class BaseWebObject implements IWebObjectContext
 	 */
 	protected void onPropertyChange(String propertyName, final Object oldWrappedValue, final Object newWrappedValue)
 	{
+		if (!propertiesInitialized) return; // wait for all properties to be set before triggering changes and calling "attach" on ISmartPropertyValues
+
 		if ((newWrappedValue instanceof ISmartPropertyValue || oldWrappedValue instanceof ISmartPropertyValue) && newWrappedValue != oldWrappedValue)
 		{
 			final String complexPropertyRoot = propertyName;
@@ -1131,6 +1148,27 @@ public abstract class BaseWebObject implements IWebObjectContext
 		{
 			if (propertyName == null) propertyChangeSupport.removePropertyChangeListener(listener);
 			else propertyChangeSupport.removePropertyChangeListener(propertyName, listener);
+		}
+	}
+
+	/**
+	 * Call this after all initial (form element - to - sablo) properties have been set (either in defaults map or in properties map)
+	 * if you instantiated this object with 'waitForPropertyInitBeforeAttach' = true
+	 */
+	public void propertiesInitialized()
+	{
+		// so after all of them are converted from form element to sablo and set, attach them to the webComponent (so that when attach is called on any ISmartPropertyValue at least all the other properties are converted
+		// this could help initialize smart properties that depend on each other faster then if we would convert and then attach right away each value)
+		propertiesInitialized = true;
+
+		SortedSet<String> availableInitialKeys = new TreeSet<>();
+		availableInitialKeys.addAll(defaultPropertiesUnwrapped.keySet());
+		availableInitialKeys.addAll(properties.keySet());
+
+		// notify and attach initial values
+		for (String propName : availableInitialKeys)
+		{
+			onPropertyChange(propName, null, getRawPropertyValue(propName));
 		}
 	}
 

@@ -1,12 +1,14 @@
 /// <reference path="../angularjs/angular.d.ts" />
 
-declare namespace sablo { 
+declare namespace sablo {
+	
 	interface ILogService extends angular.ILogService {
 		debugEnabled: boolean;
 		debugLevel: number;
 		DEBUG: number;
 		SPAM: number;
 	}
+	
 	interface FormState {
 		model:any;
 		api:any;
@@ -21,6 +23,7 @@ declare namespace sablo {
 		getScope?(): angular.IScope;
 		addWatches?():void			
 	}
+	
 	interface WSSession {
 		callService<T>(serviceName:string, methodName:string, argsObject, async:boolean):angular.IPromise<T>;
 		sendMessageObject:()=>void;
@@ -29,14 +32,17 @@ declare namespace sablo {
 		onclose:()=>void;
 		onMessageObject(handler:(msg, conversionInfo, scopesToDigest)=>void): void; 
 	}
+	
 	interface Locale {
 		language:string;
 		country:string;
 		full: string;
 	}
+	
 	interface SabloConstants {
 		modelChangeNotifier:string	
 	}
+	
 	interface ISabloApplication {
         connect(context, queryArgs, websocketUri): WSSession;
         contributeFormResolver(contributedFormResolver:{prepareUnresolvedFormForUse(form:string)}): void;
@@ -88,17 +94,17 @@ declare namespace sablo {
 	}
 	
 	interface ISabloUtils {
-			EVENT_LEVEL_SYNC_API_CALL: number,
-			DEFAULT_CONVERSION_TO_SERVER_FUNC: string,
-			setCurrentEventLevelForServer(eventLevelValue:number): void,
-			getCurrentEventLevelForServer():number,
-			isChanged(now, prev, conversionInfo):boolean,
-			getCombinedPropertyNames(now,prev): any,
-			convertClientObject(value):any,
-			getEventArgs(args,eventName:string):any,
-			getOrCreateInDepthProperty(formStatesConversionInfo, formname:string, beanname:string):any,
-			getInDepthProperty(formStatesConversionInfo, formname:string, beanname:string):any,
-			cloneWithDifferentPrototype(obj:Object, newPrototype:Object):Object
+		EVENT_LEVEL_SYNC_API_CALL: number,
+		DEFAULT_CONVERSION_TO_SERVER_FUNC: string,
+		setCurrentEventLevelForServer(eventLevelValue:number): void,
+		getCurrentEventLevelForServer():number,
+		isChanged(now, prev, conversionInfo):boolean,
+		getCombinedPropertyNames(now,prev): any,
+		convertClientObject(value):any,
+		getEventArgs(args,eventName:string):any,
+		getOrCreateInDepthProperty(formStatesConversionInfo, formname:string, beanname:string):any,
+		getInDepthProperty(formStatesConversionInfo, formname:string, beanname:string):any,
+		cloneWithDifferentPrototype(obj:Object, newPrototype:Object):Object
 	}
 	
 	interface IWebSocket {
@@ -115,6 +121,14 @@ declare namespace sablo {
         getPathname(): string,
         setQueryString(queryString: string): void,
         getQueryString(): string
+	}
+	
+	interface ISabloDeferHelper {
+		initInternalStateForDeferring(internalState, timeoutRejectLogPrefix?: string): void
+		initInternalStateForDeferringFromOldInternalState(internalState, oldInternalState): void
+		getNewDeferId(internalState): number
+		retrieveDeferForHandling(msgId: number, internalState):angular.IDeferred<any>
+		cancelAll(internalState):void
 	}
 
 }

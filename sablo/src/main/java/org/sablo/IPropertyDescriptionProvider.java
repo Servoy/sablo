@@ -24,7 +24,7 @@ import org.sablo.specification.property.IPropertyType;
 
 /**
  * Classes implementing this interface are able to provide PropertyDescription s by type, name, ...
- * 
+ *
  * @author acostescu
  */
 public interface IPropertyDescriptionProvider

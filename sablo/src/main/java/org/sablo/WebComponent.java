@@ -35,13 +35,23 @@ public class WebComponent extends BaseWebObject
 
 	public WebComponent(String componentType, String name)
 	{
-		this(name, WebComponentSpecProvider.getSpecProviderState().getWebComponentSpecification(componentType));
-		properties.put("name", name);
+		this(componentType, name, false);
 	}
 
 	public WebComponent(String name, WebObjectSpecification spec)
 	{
-		super(name, spec);
+		this(name, spec, false);
+	}
+
+	public WebComponent(String componentType, String name, boolean waitForPropertyInitBeforeAttach)
+	{
+		this(name, WebComponentSpecProvider.getSpecProviderState().getWebComponentSpecification(componentType), waitForPropertyInitBeforeAttach);
+		properties.put("name", name);
+	}
+
+	public WebComponent(String name, WebObjectSpecification spec, boolean waitForPropertyInitBeforeAttach)
+	{
+		super(name, spec, waitForPropertyInitBeforeAttach);
 	}
 
 	/**

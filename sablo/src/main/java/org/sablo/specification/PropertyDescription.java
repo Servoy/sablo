@@ -123,7 +123,23 @@ public class PropertyDescription
 		}
 	}
 
+	/**
+	 * Returns all properties in thie property description that are of given type.<br/>
+	 * Includes all yielding types that can yield to given type.
+	 * @see #getProperties(IPropertyType, boolean)
+	 */
 	public Collection<PropertyDescription> getProperties(IPropertyType< ? > pt)
+	{
+		return getProperties(pt, true);
+	}
+
+	/**
+	 * Returns all properties in this property description that are of given type or, if includingYieldingTypes is true, that can yield to given type.<br/>
+	 *
+	 * @param includingYieldingTypes if you have for example a DataproviderPropertyType that is configured with forFoundset -> it will actually be of type FoundsetLinkedPropertyType which is a yielding
+	 * type that yields to DataproviderPropertyType; if this arg is true then types that yield to the given type will also be included
+	 */
+	public Collection<PropertyDescription> getProperties(IPropertyType< ? > typeOfProperty, boolean includingYieldingTypes)
 	{
 		if (properties == null)
 		{
@@ -133,7 +149,10 @@ public class PropertyDescription
 		List<PropertyDescription> filtered = new ArrayList<>(4);
 		for (PropertyDescription pd : properties.values())
 		{
-			if (pt.getClass().isAssignableFrom(pd.getType().getClass()))
+			IPropertyType< ? > propType = pd.getType();
+
+			if (typeOfProperty.getClass().isAssignableFrom(propType.getClass()) || (includingYieldingTypes && propType instanceof IYieldingType &&
+				typeOfProperty.getClass().isAssignableFrom(((IYieldingType< ? , ? >)propType).getPossibleYieldType().getClass())))
 			{
 				filtered.add(pd);
 			}

@@ -53,6 +53,11 @@ public class ClientService extends BaseWebObject implements IClientService
 		super(serviceName, spec);
 	}
 
+	public ClientService(String serviceName, WebObjectSpecification spec, boolean waitForPropertyInitBeforeAttach)
+	{
+		super(serviceName, spec, waitForPropertyInitBeforeAttach);
+	}
+
 	@Override
 	public String getScriptingName()
 	{
