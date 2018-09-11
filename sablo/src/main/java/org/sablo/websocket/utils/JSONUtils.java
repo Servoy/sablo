@@ -351,6 +351,15 @@ public class JSONUtils
 			IPropertyType< ? > type = pd.getType();
 			if (type instanceof IPropertyConverterForBrowser< ? >)
 			{
+				if (type instanceof IClassPropertyType)
+				{
+					//check if already the desired type, can happen when calling the handler from the serverside script
+					if (((IClassPropertyType)type).getTypeClass().isInstance(newValue))
+					{
+						return newValue;
+					}
+				}
+
 				return ((IPropertyConverterForBrowser)type).fromJSON(newValue, oldValue, pd, dataConversionContext, returnValueAdjustedIncommingValue);
 			}
 		}
