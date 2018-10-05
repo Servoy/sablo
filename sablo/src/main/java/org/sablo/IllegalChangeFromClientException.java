@@ -32,6 +32,7 @@ public class IllegalChangeFromClientException extends RuntimeException
 	private final String componentName;
 	private final String property;
 	private IllegalChangeFromClientException e;
+	private Object data;
 
 	/**
 	 * @param blockedByProperty can be null if the blockedProperty is itself 'protecting' (so it can never be changed from client anyway) or has 'pushToServer' set to 'reject'. {@link IPropertyType#isProtecting()}
@@ -82,15 +83,27 @@ public class IllegalChangeFromClientException extends RuntimeException
 	@Override
 	public String getMessage()
 	{
-		String result = new StringBuilder("Change sent from client to server for property '").append(getBlockedProperty()).append("' of component '").append(
-			getComponentName()).append("' was denied ").append(
-				getBlockedByProperty() != null ? " (blocked by property named '" + getBlockedByProperty() + "')" : "").append(
-					".Block reason: " + getBlockReason()).toString();
+		StringBuilder sb = new StringBuilder("Change sent from client to server for property '").append(getBlockedProperty());
+		if (data != null)
+		{
+			sb.append(" with data '").append(data).append("'");
+		}
+		String result = sb.append("' of component '").append(getComponentName()).append("' was denied ").append(
+			getBlockedByProperty() != null ? " (blocked by property named '" + getBlockedByProperty() + "')" : "").append(
+				".Block reason: " + getBlockReason()).toString();
 		if (e != null)
 		{
 			result += ". Caused by: " + e.getMessage();
 		}
 		return result;
+	}
+
+	/**
+	 * @param propertyValue
+	 */
+	public void setData(Object data)
+	{
+		this.data = data;
 	}
 
 }

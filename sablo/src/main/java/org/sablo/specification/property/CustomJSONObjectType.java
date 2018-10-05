@@ -355,9 +355,11 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 			newBaseMap = (Map<String, ET>)map; // in this case ET == WT
 		}
 
-		// TODO how to handle previous null value here; do we need to re-send to client or not (for example initially both client and server had values, at the same time server==null client sends full update); how do we kno case server version is unknown then
+		// TODO how to handle previous null value here; do we need to re-send to client or not (for example initially both client and server had values, at the same time server==null client sends full update); how do we know in case server version is unknown then
 		ChangeAwareMap<ET, WT> retVal = new ChangeAwareMap<ET, WT>(newBaseMap,
-			previousChangeAwareMap != null ? previousChangeAwareMap.increaseContentVersion() : 1, null, getCustomJSONTypeDefinition());
+			previousChangeAwareMap != null ? previousChangeAwareMap.increaseContentVersion() : 1,
+			/* TODO we should have here access to webObjectContext ... and give ChangeAwareMap.getOrCreateComponentOrServiceExtension(webObjectContext); */null,
+			getCustomJSONTypeDefinition());
 
 		for (String key : adjustedNewValueKeys)
 			retVal.markElementChangedByRef(key);

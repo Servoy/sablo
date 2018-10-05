@@ -131,7 +131,7 @@ angular.module('pushToServer', []).factory('$propertyWatchesRegistry', function 
  * Setup the $webSocket service.
  */
 webSocketModule.factory('$webSocket',
-		function($rootScope, $injector, $window, $log, $q, $services, $sabloConverters, $sabloUtils, $swingModifiers, $interval, wsCloseCodes,$sabloLoadingIndicator, $timeout, $sabloTestability) {
+		function($rootScope, $injector, $window, $log, $q, $services, $sabloConverters, $sabloUtils, $swingModifiers, $interval, wsCloseCodes,$sabloLoadingIndicator, $timeout, $sabloTestability,$websocketConstants) {
 
 	var pathname = null;
 	
@@ -182,13 +182,17 @@ webSocketModule.factory('$webSocket',
 	}
 	
 	var getURLParameter = function getURLParameter(name) {
-		return decodeURIComponent((new RegExp('[&]?' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(getQueryString())||[,""])[1].replace(/\+/g, '%20'))||null
+		return decodeURIComponent((new RegExp('[&]?\\b' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(getQueryString())||[,""])[1].replace(/\+/g, '%20'))||null
 	};
 
 	var handleMessage = function(message) {
-		var obj
-		var responseValue
+		let obj
+		let responseValue
 		functionsToExecuteAfterIncommingMessageWasHandled = [];
+
+		const scopesToDigest = new window.CustomHashSet(function(s) {
+			return s.$id; // hash them by angular scope id to avoid calling digest on the same scope twice
+		});
 
 		try {
 			if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Received message from server: " + JSON.stringify(message, function(key, value) {
@@ -264,30 +268,15 @@ webSocketModule.factory('$webSocket',
 				$sabloLoadingIndicator.hideLoading();
 			}
 
-			function optimizeAndCallFormScopeDigest(scopesToDigest) {
-				for (var scopeId in scopesToDigest) {
-					var s = scopesToDigest[scopeId];
-					var p = s.$parent;
-					while (p && !scopesToDigest[p.$id]) p = p.$parent;
-					if (!p) { // if no parent form scope is going to do digest
-						if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Will call digest for scope: " + (s && s.formname ? s.formname : scopeId));
-						s.$digest();
-					} else if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Will NOT call digest for scope: " + (s && s.formname ? s.formname : scopeId) + " because a parent form scope " + (p.formname ? p.formname : p.$id) + " is in the list...");
-				}
-			}
-
 			// message
 			if (obj.msg) {
-				var scopesToDigest = new window.CustomHashSet(function(s) {
-					return s.$id; // hash them by angular scope id to avoid calling digest on the same scope twice
-				});
+			
 				for (var handler in onMessageObjectHandlers) {
 					var ret = onMessageObjectHandlers[handler](obj.msg, obj[$sabloConverters.TYPES_KEY] ? obj[$sabloConverters.TYPES_KEY].msg : undefined, scopesToDigest)
 					if (ret) responseValue = ret;
 					
 					if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Checking if any form scope changes need to be digested (obj.msg).");
 				}
-				optimizeAndCallFormScopeDigest(scopesToDigest);
 			}
 
 			if (obj.msg && obj.msg.services) {
@@ -313,9 +302,6 @@ webSocketModule.factory('$webSocket',
 			// delayed calls
 			if (obj.calls)
 			{
-				var scopesToDigest = new window.CustomHashSet(function(s) {
-					return s.$id; // hash them by angular scope id to avoid calling digest on the same scope twice
-				});
 				for(var i = 0;i < obj.calls.length;i++) 
 				{
 					for (var handler in onMessageObjectHandlers) {
@@ -324,7 +310,6 @@ webSocketModule.factory('$webSocket',
 					
 					if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Checking if any (obj.calls) form scopes changes need to be digested (obj.calls).");
 				}
-				optimizeAndCallFormScopeDigest(scopesToDigest);
 			}	
 			if (obj && obj.smsgid) {
 				if (isPromiseLike(responseValue)) {
@@ -394,6 +379,16 @@ webSocketModule.factory('$webSocket',
 				}
 			}
 			functionsToExecuteAfterIncommingMessageWasHandled = undefined;
+			for (var scopeId in scopesToDigest) {
+				var s = scopesToDigest[scopeId];
+				var p = s.$parent;
+				while (p && !scopesToDigest[p.$id]) p = p.$parent;
+				if (!p) { // if no parent form scope is going to do digest
+					if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Will call digest for scope: " + (s && s.formname ? s.formname : scopeId));
+					s.$digest();
+				} else if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Will NOT call digest for scope: " + (s && s.formname ? s.formname : scopeId) + " because a parent form scope " + (p.formname ? p.formname : p.$id) + " is in the list...");
+			}
+
 			if (err) throw err;
 		}
 	}
@@ -584,7 +579,7 @@ webSocketModule.factory('$webSocket',
 		var queryString = getQueryString();
 		if (queryString)
 		{
-			new_uri += queryString; 
+			new_uri += queryString.replace(queryString.substring(queryString.indexOf($websocketConstants.CLEAR_SESSION_PARAM)-1,queryString.indexOf($websocketConstants.CLEAR_SESSION_PARAM)+$websocketConstants.CLEAR_SESSION_PARAM.length+5),"");
 		}
 		else
 		{
@@ -793,7 +788,7 @@ webSocketModule.factory('$webSocket',
 					// so no previous service state; set it now
 					if (conversionInfo && conversionInfo[servicename]) {
 						// convert all properties, remember type for when a client-server conversion will be needed
-						services[servicename] = $sabloConverters.convertFromServerToClient(services[servicename], conversionInfo[servicename], undefined, serviceScope, function() { return serviceScope.model })
+						services[servicename] = $sabloConverters.convertFromServerToClient(services[servicename], conversionInfo[servicename], undefined, serviceScope, function(propertyName: string) { return serviceScope.model ? serviceScope.model[propertyName] : serviceScope.model })
 						
 						for (var pn in conversionInfo[servicename]) {
 							if (services[servicename][pn] && services[servicename][pn][$sabloConverters.INTERNAL_IMPL]
@@ -817,7 +812,7 @@ webSocketModule.factory('$webSocket',
 						if (conversionInfo && conversionInfo[servicename] && conversionInfo[servicename][key]) {
 							// convert property, remember type for when a client-server conversion will be needed
 							if (!serviceScopesConversionInfo[servicename]) serviceScopesConversionInfo[servicename] = {};
-							serviceData[key] = $sabloConverters.convertFromServerToClient(serviceData[key], conversionInfo[servicename][key], serviceScope.model[key], serviceScope, function() { return serviceScope.model })
+							serviceData[key] = $sabloConverters.convertFromServerToClient(serviceData[key], conversionInfo[servicename][key], serviceScope.model[key], serviceScope, function(propertyName: string) { return serviceScope.model ? serviceScope.model[propertyName] : serviceScope.model })
 
 							if ((serviceData[key] !== serviceScope.model[key] || serviceScopesConversionInfo[servicename][key] !== conversionInfo[servicename][key]) && serviceData[key]
 							&& serviceData[key][$sabloConverters.INTERNAL_IMPL] && serviceData[key][$sabloConverters.INTERNAL_IMPL].setChangeNotifier) {
@@ -860,16 +855,17 @@ webSocketModule.factory('$webSocket',
 	 */
 	var customPropertyConverters = {};
 
-	var convertFromServerToClient = function(serverSentData, conversionInfo, currentClientData, scope, modelGetter) {
+	var convertFromServerToClient = function(serverSentData, conversionInfo, currentClientData, scope, propertyContext) {
 		if (typeof conversionInfo === 'string' || typeof conversionInfo === 'number') {
 			var customConverter = customPropertyConverters[conversionInfo];
-			if (customConverter) serverSentData = customConverter.fromServerToClient(serverSentData, currentClientData, scope, modelGetter);
+			if (customConverter) serverSentData = customConverter.fromServerToClient(serverSentData, currentClientData, scope, propertyContext);
 			else { //converter not found - will not convert
 				$log.error("cannot find type converter (s->c) for: '" + conversionInfo + "'.");
 			}
 		} else if (conversionInfo) {
+			// typed custom objects will no go here but on the if branch above; this is for untyped arrays/objects that need to be converted
 			for (var conKey in conversionInfo) {
-				serverSentData[conKey] = convertFromServerToClient(serverSentData[conKey], conversionInfo[conKey], currentClientData ? currentClientData[conKey] : undefined, scope, modelGetter); // TODO should componentScope really stay the same here? 
+				serverSentData[conKey] = convertFromServerToClient(serverSentData[conKey], conversionInfo[conKey], currentClientData ? currentClientData[conKey] : undefined, scope, propertyContext); 
 			}
 		}
 		return serverSentData;
@@ -954,8 +950,9 @@ webSocketModule.factory('$webSocket',
 		 *				//        conversion happens for service API call parameters for example...
 		 *				// @param scope scope that can be used to add component/service and property related watches; can be null/undefined if
 		 *				//        conversion happens for service/component API call parameters for example...
-		 *				// @param modelGetter a function that returns the model that can be used to find other properties of the service/component if needed (if the
-		 *              //        property is 'linked' to another one); can be null/undefined if conversion happens for service/component API call parameters for example...
+		 *				// @param propertyContext a function that can be used to find other properties (by name) of the same service/component/custom object (if property is
+		 *              //        not found it also searches upwards in case of object nesting) if needed (if the property is 'linked' to another one); can be
+		 *              //        null/undefined if conversion happens for service/component API call parameters for example...
 		 *				// @return the new/updated client side property value; if this returned value is interested in triggering
 		 *				//         updates to server when something changes client side it must have these member functions in this[$sabloConverters.INTERNAL_IMPL]:
 		 *				//				setChangeNotifier: function(changeNotifier) - where changeNotifier is a function that can be called when
@@ -963,7 +960,7 @@ webSocketModule.factory('$webSocket',
 		 *				//                                                          not be called when value is a call parameter for example, but will
 		 *				//                                                          be called when set into a component's/service's property/model
 		 *				//              isChanged: function() - should return true if the value needs to send updates to server // TODO this could be kept track of internally
-		 * 				fromServerToClient: function (serverSentJSONValue, currentClientValue, scope, modelGetter) { (...); return newClientValue; },
+		 * 				fromServerToClient: function (serverSentJSONValue, currentClientValue, scope, propertyContext) { (...); return newClientValue; },
 		 * 
 		 *				// Converts from a client property JS value to a JSON that will be sent to the server.
 		 *				// @param newClientData the new JS client side property value
@@ -1195,6 +1192,8 @@ webSocketModule.factory('$webSocket',
 	}
 
 	return sabloUtils;
+}).value("$websocketConstants", {
+	CLEAR_SESSION_PARAM:"sabloClearSession"
 }).value("wsCloseCodes", {
 	NORMAL_CLOSURE: 1000, // indicates a normal closure, meaning that the purpose for which the connection was established has been fulfilled.
 	GOING_AWAY: 1001, // indicates that an endpoint is "going away", such as a server going down or a browser having navigated away from a page.

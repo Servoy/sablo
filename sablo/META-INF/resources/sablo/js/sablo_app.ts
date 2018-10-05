@@ -6,7 +6,7 @@ namespace sablo_app { export class Model{}}
 
 angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabloConstants", {
 	modelChangeNotifier: "$modelChangeNotifier"
-}).factory('$sabloApplication', function($rootScope: angular.IRootScopeService, $window: angular.IWindowService, $timeout: angular.ITimeoutService, $q: angular.IQService, $log: sablo.ILogService, $webSocket: sablo.IWebSocket, $sabloConverters: sablo.ISabloConverters, $sabloUtils: sablo.ISabloUtils, $sabloConstants: sablo.SabloConstants, webStorage) {
+}).factory('$sabloApplication', function($rootScope: angular.IRootScopeService, $window: angular.IWindowService, $timeout: angular.ITimeoutService, $q: angular.IQService, $log: sablo.ILogService, $webSocket: sablo.IWebSocket, $sabloConverters: sablo.ISabloConverters, $sabloUtils: sablo.ISabloUtils, $sabloConstants: sablo.SabloConstants, webStorage,$websocketConstants) {
 
 	// close the connection to the server when application is unloaded
 	$window.addEventListener('unload', function(event) {
@@ -118,7 +118,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 		if (newConversionInfo) { // then means beanConversionInfo should also be defined - we assume that
 			// beanConversionInfo will be granularly updated in the loop below
 			// (to not drop other property conversion info when only one property is being applied granularly to the bean)
-			beanData = $sabloConverters.convertFromServerToClient(beanData, newConversionInfo, beanModel, componentScope, function() { return beanModel });
+			beanData = $sabloConverters.convertFromServerToClient(beanData, newConversionInfo, beanModel, componentScope, function(propertyName: string) { return beanModel ? beanModel[propertyName] : beanModel });
 		}
 
 		for (var key in beanData) {
@@ -260,6 +260,9 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 				queryArgs: queryArgs,
 				websocketUri: websocketUri
 			};
+		   if($webSocket.getURLParameter($websocketConstants.CLEAR_SESSION_PARAM) == 'true'){
+	            this.clearSabloSession();
+	       }
 			wsSession = $webSocket.connect(wsSessionArgs.context, [getSessionId(), getWindowName(), getWindowId()], wsSessionArgs.queryArgs, wsSessionArgs.websocketUri);
 
 			wsSession.onMessageObject(function(msg, conversionInfo, scopesToDigest) {
@@ -413,7 +416,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 					var newFormConversionInfo = (conversionInfo && conversionInfo.forms && conversionInfo.forms[formname]) ? conversionInfo.forms[formname] : undefined;
 
 					if (newFormProperties) {
-						if (newFormConversionInfo && newFormConversionInfo['']) newFormProperties = $sabloConverters.convertFromServerToClient(newFormProperties, newFormConversionInfo[''], formModel[''], formState.getScope(), function() { return formModel[''] });
+						if (newFormConversionInfo && newFormConversionInfo['']) newFormProperties = $sabloConverters.convertFromServerToClient(newFormProperties, newFormConversionInfo[''], formModel[''], formState.getScope(), function(propertyName: string) { return formModel[''] ? formModel[''][propertyName] : formModel[''] });
 						if (!formModel['']) formModel[''] = {};
 						for (var p in newFormProperties) {
 							formModel[''][p] = newFormProperties[p];
@@ -478,6 +481,11 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 		clearFormState: function(formName) {
 			delete formStates[formName];
 			delete formStatesConversionInfo[formName];
+		},
+		
+		clearSabloSession:function (){
+	        webStorage.session.remove('windowid');
+			webStorage.session.remove('sessionid');
 		},
 
 		initFormState: function(formName, beanDatas, formProperties, formScope, resolve) {
@@ -563,7 +571,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 						var formModel = formState.model;
 						var initialFormProperties = initialFormData['']; // form properties
 						if (initialFormProperties) {
-							if (conversionInfo && conversionInfo['']) initialFormProperties = $sabloConverters.convertFromServerToClient(initialFormProperties, conversionInfo[''], formModel[''], formState.getScope(), function() { return formModel[''] });
+							if (conversionInfo && conversionInfo['']) initialFormProperties = $sabloConverters.convertFromServerToClient(initialFormProperties, conversionInfo[''], formModel[''], formState.getScope(), function(propertyName: string) { return formModel[''] ? formModel[''][propertyName] : formModel[''] });
 							if (!formModel['']) formModel[''] = {};
 							for (var p in initialFormProperties) {
 								formModel[''][p] = initialFormProperties[p];
@@ -984,7 +992,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 	}]).run(function($sabloConverters: sablo.ISabloConverters) {
 		// configure Date type but don't overwrite it when there is already a registered object.
 		$sabloConverters.registerCustomPropertyHandler('Date', {
-			fromServerToClient: function(serverJSONValue, currentClientValue, scope, modelGetter) {
+			fromServerToClient: function(serverJSONValue, currentClientValue, scope, propertyContext) {
 				return typeof (serverJSONValue) === "number" ? new Date(serverJSONValue) : serverJSONValue;
 			},
 

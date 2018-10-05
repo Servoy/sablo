@@ -27,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.websocket.CloseReason;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,13 +52,23 @@ public class WebsocketSessionManager
 			{
 				for (IWebsocketSession session : wsSessions.values())
 				{
-					if (session != null)
+					if (session != null && session.shouldTest())
 					{
+						long timeout = session.getWindowTimeout() * 1000;
+						long wantedLastPingTime = System.currentTimeMillis() - timeout;
 						for (IWindow window : session.getWindows())
 						{
 							try
 							{
-								window.getEndpoint().sendText("P");
+								if (window.getLastPingTime() > 0 && window.getLastPingTime() < wantedLastPingTime)
+								{
+									window.getEndpoint().closeSession(
+										new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, "WebSocket didn't ping for " + timeout + "ms"));
+								}
+								else
+								{
+									window.getEndpoint().sendText("P");
+								}
 							}
 							catch (Exception e)
 							{

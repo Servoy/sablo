@@ -77,7 +77,7 @@ public abstract class WebEntry implements Filter, IContributionFilter, IContribu
 	@Override
 	public void init(final FilterConfig fc) throws ServletException
 	{
-		//register the session factory at the manager
+		// register the session factory at the manager
 		WebsocketSessionManager.setWebsocketSessionFactory(getEndpointType(), createSessionFactory());
 
 		WebComponentSpecProvider.init(fc.getServletContext(), getWebComponentBundleNames());

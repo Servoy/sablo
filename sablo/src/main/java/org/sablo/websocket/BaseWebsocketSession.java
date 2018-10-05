@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
 public abstract class BaseWebsocketSession implements IWebsocketSession, IChangeListener
 {
 	private static final String PROPERTY_WINDOW_TIMEOUT = "sablo.window.timeout.secs";
-	private static final String DEFAULT_WINDOW_TIMEOUT = "60";
+	public static final String DEFAULT_WINDOW_TIMEOUT = "60";
 	private static Long windowTimeout;
 	private Long sessionWindowTimeout;
 
@@ -449,6 +449,12 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	public void handleMessage(JSONObject obj)
 	{
 		log.info("Unknown message from client ignored: " + obj.toString());
+	}
+
+	@Override
+	public boolean shouldTest()
+	{
+		return true;
 	}
 
 }

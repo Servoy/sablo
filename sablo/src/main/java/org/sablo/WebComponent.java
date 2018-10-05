@@ -117,7 +117,9 @@ public class WebComponent extends BaseWebObject
 			catch (IllegalChangeFromClientException e)
 			{
 				throw new IllegalChangeFromClientException(e.getBlockedByProperty(),
-					"Parent container of this component currently blocks incoming client changes.", this.getName(), eventType, e);
+					"Parent container '" + parent.getName() + "' of this component '" + getName() +
+						"' currently blocks incoming client changes because of parent container property: " + e.getBlockedByProperty(),
+					this.getName(), eventType);
 			}
 
 		}

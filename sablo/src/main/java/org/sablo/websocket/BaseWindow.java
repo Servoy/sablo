@@ -453,12 +453,17 @@ public class BaseWindow implements IWindow
 	{
 		Integer messageId = new Integer(nextMessageId.incrementAndGet());
 		String sentText = sendMessageInternal(dataWriter, converter, messageId);
-		IWebsocketEndpoint ep = getEndpoint();
-		if (ep == null)
+		if (sentText != null)
 		{
-			throw new IOException("Endpoint was closed when trying to wait for a sync message"); //$NON-NLS-1$
+			IWebsocketEndpoint ep = getEndpoint();
+			if (ep == null)
+			{
+				throw new IOException("Endpoint was closed when trying to wait for a sync message"); //$NON-NLS-1$
+			}
+			return ep.waitResponse(messageId, sentText, blockEventProcessing);
+
 		}
-		return sentText != null ? ep.waitResponse(messageId, sentText, blockEventProcessing) : null;
+		return null;
 	}
 
 	/**

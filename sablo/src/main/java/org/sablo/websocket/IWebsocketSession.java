@@ -141,4 +141,12 @@ public interface IWebsocketSession
 	 * @return
 	 */
 	public long getLastPingTime();
+
+	/**
+	 * should return false if the session manager should test by sending Pongs to the client
+	 * and test the last ping time to close a client if not get a ping time
+	 *
+	 * @return boolean To test the session or not
+	 */
+	public boolean shouldTest();
 }
