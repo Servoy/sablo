@@ -164,7 +164,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 	@Override
 	public void closeSession()
 	{
-		closeSession(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, "Application Server shutdown!!!!!!!"));
+		closeSession(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, "CLIENT-SHUTDOWN"));
 	}
 
 	@Override
