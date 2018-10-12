@@ -83,7 +83,7 @@ public class WebLayoutSpecification extends WebObjectSpecification
 		}
 		WebLayoutSpecification spec = new WebLayoutSpecification(json.getString("name"), packageName, json.optString("displayName", null),
 			json.optString("categoryName", null), json.optString("icon", null), json.optString("preview", null), json.getString("definition"), jsonConfig,
-			topContainer, children, excludes, json.optString("designStyleClass"), json.optBoolean("absoluteLayout", false));
+			topContainer, children, excludes, json.optString("designStyleClass"), json.optString("layout", null));
 
 		// properties
 		spec.putAll(spec.parseProperties("model", json));
@@ -127,20 +127,20 @@ public class WebLayoutSpecification extends WebObjectSpecification
 	}
 
 	private final boolean topContainer;
-	private final boolean absoluteLayout;
+	private final String layout;
 	private final List<String> allowedChildren;
 	private final String designStyleClass;
 	private final List<String> excludedChildren;
 
 	public WebLayoutSpecification(String name, String packageName, String displayName, String categoryName, String icon, String preview, String definition,
-		Object configObject, boolean topContainer, List<String> allowedChildren, List<String> excludedChildren, String designStyleClass, boolean absoluteLayout)
+		Object configObject, boolean topContainer, List<String> allowedChildren, List<String> excludedChildren, String designStyleClass, String layout)
 	{
 		super(name, packageName, IPackageReader.WEB_LAYOUT, displayName, categoryName, icon, preview, definition, null, configObject);
 		this.topContainer = topContainer;
 		this.allowedChildren = allowedChildren;
 		this.excludedChildren = excludedChildren;
 		this.designStyleClass = designStyleClass;
-		this.absoluteLayout = absoluteLayout;
+		this.layout = layout;
 	}
 
 	/**
@@ -151,12 +151,9 @@ public class WebLayoutSpecification extends WebObjectSpecification
 		return topContainer;
 	}
 
-	/**
-	 * @return the absoluteLayout
-	 */
-	public boolean isAbsoluteLayout()
+	public boolean isCSSPosition()
 	{
-		return absoluteLayout;
+		return "css".equals(layout);
 	}
 
 	/**

@@ -635,16 +635,15 @@ webSocketModule.factory('$webSocket',
 				}
 			}
 			websocket.onconnecting = function(evt) {
-				// this event indicates we are trying to reconnect, the event has the close code and reason from the disconnect.
-				if (evt.code && evt.code != wsCloseCodes.CLOSED_ABNORMALLY && evt.code != wsCloseCodes.SERVICE_RESTART) {
+				// if the reason out of sync then it is always a reload.
+				if (evt.reason == 'CLIENT-OUT-OF-SYNC') {
+					// Server detected that we are out-of-sync, reload completely
+					$window.location.reload();
+				}
+				// client is shutdown just force close the websocket and set the connected state toe CLOSED so no reconnecting is shown
+				else if (evt.reason == 'CLIENT-SHUTDOWN') {
 					
 					websocket.close();
-					
-					if (evt.reason == 'CLIENT-OUT-OF-SYNC') {
-						// Server detected that we are out-of-sync, reload completely
-						$window.location.reload();
-						return;
-					}
 					
 					// server disconnected, do not try to reconnect
 					$rootScope.$apply(function() {

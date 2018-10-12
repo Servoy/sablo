@@ -303,7 +303,7 @@ public class BaseWindow implements IWindow
 		IWebsocketEndpoint ep = getEndpoint();
 		if (ep != null)
 		{
-			ep.closeSession(new CloseReason(CloseReason.CloseCodes.SERVICE_RESTART, "Window disposed because of ping timeout"));
+			ep.closeSession(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, "Window disposed"));
 		}
 	}
 
