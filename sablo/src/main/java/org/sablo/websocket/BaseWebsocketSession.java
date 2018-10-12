@@ -457,4 +457,13 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 		return true;
 	}
 
+	/**
+	 * Default this is not enabled, sub classes can override it to get all events (start,stop, message send and receive)
+	 */
+	@Override
+	public IMessageLogger getMessageLogger(IWindow window)
+	{
+		return null;
+	}
+
 }

@@ -149,4 +149,10 @@ public interface IWebsocketSession
 	 * @return boolean To test the session or not
 	 */
 	public boolean shouldTest();
+
+	/**
+	 * @param window
+	 * @return
+	 */
+	public abstract IMessageLogger getMessageLogger(IWindow window);
 }

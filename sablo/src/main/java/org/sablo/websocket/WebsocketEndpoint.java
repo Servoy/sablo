@@ -60,6 +60,8 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 {
 	public static final Logger log = LoggerFactory.getLogger(WebsocketEndpoint.class.getCanonicalName());
 
+	public IMessageLogger messageLogger;
+
 	/*
 	 * connection with browser
 	 */
@@ -113,6 +115,8 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 
 		CurrentWindow.set(window = wsSession.getOrCreateWindow(windowId, windowName));
 
+		messageLogger = wsSession.getMessageLogger(window);
+
 		try
 		{
 			final IWindow win = window;
@@ -128,6 +132,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 					win.setEndpoint(WebsocketEndpoint.this);
 					if (CurrentWindow.safeGet() == win && session != null) // window or session my already be closed
 					{
+						if (messageLogger != null) messageLogger.endPointStarted(session);
 						win.onOpen(session.getRequestParameterMap());
 						if (session != null && session.isOpen())
 						{
@@ -245,6 +250,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 	{
 		if (window != null)
 		{
+			if (messageLogger != null) messageLogger.endPointClosed();
 			window.setEndpoint(null);
 			window = null;
 		}
@@ -306,6 +312,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		CurrentWindow.set(window);
 		try
 		{
+			if (messageLogger != null) messageLogger.messageReceived(message);
 			final JSONObject obj = new JSONObject(message);
 
 			if (obj.has("smsgid"))
@@ -497,6 +504,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 
 	public void sendText(int messageNumber, String text) throws IOException
 	{
+		if (messageLogger != null) messageLogger.messageSend(text);
 		sendText(messageNumber + "#" + text);
 	}
 
