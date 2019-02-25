@@ -563,7 +563,7 @@ webSocketModule.factory('$webSocket',
 			}
 		}
 
-		new_uri += "?";
+		new_uri += "?connectNr="+Math.floor((Math.random() * 10000000000000))+"&";
 
 		for (var a in queryArgs)
 		{
@@ -575,6 +575,7 @@ webSocketModule.factory('$webSocket',
 		if (lastServerMessageNumber != null) {
 			new_uri += "lastServerMessageNumber="+lastServerMessageNumber+"&";
 		}
+		
 
 		var queryString = getQueryString();
 		if (queryString)

@@ -27,6 +27,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.servlet.http.HttpSession;
 import javax.websocket.CloseReason;
 import javax.websocket.CloseReason.CloseCodes;
 import javax.websocket.Session;
@@ -110,6 +111,10 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		String uuid = "null".equalsIgnoreCase(sessionid) ? null : sessionid;
 		String windowId = "null".equalsIgnoreCase(winid) ? null : winid;
 		String windowName = "null".equalsIgnoreCase(winname) ? null : winname;
+
+		HttpSession htpSession = GetHttpSessionConfigurator.getHttpSession(newSession);
+		System.err.println("RAGTEST " + htpSession.getId());
+		// RAGTEST TODO: tel aantal clients, invalidate httpsession bij sluit laatste
 
 		final IWebsocketSession wsSession = WebsocketSessionManager.getOrCreateSession(endpointType, uuid, true);
 
