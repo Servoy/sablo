@@ -15,6 +15,7 @@
  */
 package org.sablo.specification;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -300,11 +301,33 @@ class WebSpecReader
 			IPackageReader oldPackage = list.get(0);
 			if (oldPackage != null)
 			{
-				log.error("Conflict found! Duplicate web component / web service / web layout package name: " + oldPackage.getPackageName());
-				log.error("Location 1 : " + oldPackage.getPackageURL());
-				log.error("Location 2 : " + p.getReader().getPackageURL());
-				log.error("Will discard location 1 and load location 2... But this should be adressed by the solution.");
-				p.getReader().reportError("", new DuplicateEntityException("Duplicate package found: " + oldPackage.getPackageName()));
+				File pResource = p.getReader().getResource();
+				File oldPackageResource = oldPackage.getResource();
+
+				// if we have duplicate packages, and one is a project (its resource is a folder)
+				// and the other one is a file (zip), then just use the project, and skip the error
+				boolean isPackageConflict = true;
+				if (pResource != null && oldPackageResource != null)
+				{
+					if (oldPackageResource.isFile() && pResource.isDirectory())
+					{
+						list.remove(oldPackage);
+						isPackageConflict = false;
+					}
+					else if (oldPackageResource.isDirectory() && pResource.isFile())
+					{
+						isPackageConflict = false;
+					}
+				}
+
+				if (isPackageConflict)
+				{
+					log.error("Conflict found! Duplicate web component / web service / web layout package name: " + oldPackage.getPackageName());
+					log.error("Location 1 : " + oldPackage.getPackageURL());
+					log.error("Location 2 : " + p.getReader().getPackageURL());
+					log.error("Will discard location 1 and load location 2... But this should be adressed by the solution.");
+					p.getReader().reportError("", new DuplicateEntityException("Duplicate package found: " + oldPackage.getPackageName()));
+				}
 			}
 		}
 		list.add(p.getReader());

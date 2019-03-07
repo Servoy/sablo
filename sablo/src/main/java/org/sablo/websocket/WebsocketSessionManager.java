@@ -229,7 +229,7 @@ public class WebsocketSessionManager
 		{
 			log.warn("Waiting for the expired session thread pool to terminate", e);
 		}
-		log.warn("Expired threadpool waiting for :  " + (System.currentTimeMillis() - time));
+		log.info("Expired threadpool waiting for :  " + (System.currentTimeMillis() - time));
 	}
 
 	private static void closeSessions(boolean checkForWindowActivity)
