@@ -104,11 +104,10 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		return session;
 	}
 
-	public void start(Session newSession, String sessionid, String winname, final String winid) throws Exception
+	public void start(Session newSession, String winname, final String winid) throws Exception
 	{
 		this.session = newSession;
 
-		String uuid = "null".equalsIgnoreCase(sessionid) ? null : sessionid;
 		String windowId = "null".equalsIgnoreCase(winid) ? null : winid;
 		String windowName = "null".equalsIgnoreCase(winname) ? null : winname;
 

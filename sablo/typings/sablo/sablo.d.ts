@@ -46,7 +46,6 @@ declare namespace sablo {
 	interface ISabloApplication {
         connect(context, queryArgs, websocketUri): WSSession;
         contributeFormResolver(contributedFormResolver:{prepareUnresolvedFormForUse(form:string)}): void;
-        getSessionId(): string;
         getWindowName(): string;
         getWindowId(): string;
         getWindowUrl(name:string): string;
