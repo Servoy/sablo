@@ -24,8 +24,10 @@ public interface IWebsocketSessionFactory
 {
 	/**
 	 * Session create call
-	 * @param endpointType
+	 *
+	 * @param sessionKey
 	 * @return
+	 * @throws Exception
 	 */
-	IWebsocketSession createSession(String uuid) throws Exception;
+	IWebsocketSession createSession(WebsocketSessionKey sessionKey) throws Exception;
 }

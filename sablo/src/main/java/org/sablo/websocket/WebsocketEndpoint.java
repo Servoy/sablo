@@ -104,18 +104,17 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		return session;
 	}
 
-	public void start(Session newSession, String winname, final String winid) throws Exception
+	public void start(Session newSession, String clntnr, String winname, String winid) throws Exception
 	{
 		this.session = newSession;
 
+		String clientnr = "null".equalsIgnoreCase(clntnr) ? null : clntnr;
 		String windowId = "null".equalsIgnoreCase(winid) ? null : winid;
 		String windowName = "null".equalsIgnoreCase(winname) ? null : winname;
 
-		HttpSession htpSession = GetHttpSessionConfigurator.getHttpSession(newSession);
-		System.err.println("RAGTEST " + htpSession.getId());
-		// RAGTEST TODO: tel aantal clients, invalidate httpsession bij sluit laatste
-
-		final IWebsocketSession wsSession = WebsocketSessionManager.getOrCreateSession(endpointType, uuid, true);
+		HttpSession httpSession = GetHttpSessionConfigurator.getHttpSession(newSession);
+		IWebsocketSession wsSession = WebsocketSessionManager.getOrCreateSession(endpointType, httpSession, clientnr,
+			true);
 
 		CurrentWindow.set(window = wsSession.getOrCreateWindow(windowId, windowName));
 

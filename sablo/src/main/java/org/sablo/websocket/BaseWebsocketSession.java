@@ -62,7 +62,7 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	private final Map<String, IClientService> servicesByScriptingName = new ConcurrentHashMap<>();
 	private final List<ObjectReference<IWindow>> windows = new CopyOnWriteArrayList<>();
 
-	private final String uuid;
+	private final WebsocketSessionKey sessionKey;
 	private volatile IEventDispatcher executor;
 
 	private final AtomicInteger handlingEvent = new AtomicInteger(0);
@@ -70,10 +70,12 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	private boolean proccessChanges;
 	private final WebsocketSessionWindows allWindowsProxy = new WebsocketSessionWindows(this);
 
+	private final DisposeHandlersSubject disposeHandlersSubject = new DisposeHandlersSubject();
 
-	public BaseWebsocketSession(String uuid)
+
+	public BaseWebsocketSession(WebsocketSessionKey sessionKey)
 	{
-		this.uuid = uuid;
+		this.sessionKey = sessionKey;
 		registerServerService("formService", createFormService());
 		registerServerService("consoleLogger", createConsoleLoggerService());
 	}
@@ -276,7 +278,7 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 			{
 				if (executor == null)
 				{
-					Thread thread = new Thread(executor = createEventDispatcher(), "Executor,uuid:" + uuid);
+					Thread thread = new Thread(executor = createEventDispatcher(), "Executor,uuid:" + sessionKey);
 					thread.setDaemon(true);
 					thread.start();
 				}
@@ -303,9 +305,25 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	}
 
 	@Override
+	public void addDisposehandler(Disposehandler handler)
+	{
+		disposeHandlersSubject.addDisposehandler(handler);
+	}
+
+	@Override
+	public void removeDisposehandler(Disposehandler handler)
+	{
+		disposeHandlersSubject.addDisposehandler(handler);
+	}
+
+
+	@Override
 	public final void dispose()
 	{
 		onDispose();
+
+		disposeHandlersSubject.callHandlers();
+		disposeHandlersSubject.clear();
 
 		Collection< ? extends IWindow> allWindows = getWindows();
 		windows.clear();
@@ -343,11 +361,11 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	}
 
 	/**
-	 * @return the uuid
+	 * @return the sessionKey
 	 */
-	public String getUuid()
+	public WebsocketSessionKey getSessionKey()
 	{
-		return uuid;
+		return sessionKey;
 	}
 
 	public void registerServerService(String name, IServerService service)

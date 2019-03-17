@@ -43,6 +43,7 @@ import org.sablo.specification.property.types.TypesRegistry;
 import org.sablo.websocket.BaseWebsocketSession;
 import org.sablo.websocket.BaseWindow;
 import org.sablo.websocket.CurrentWindow;
+import org.sablo.websocket.WebsocketSessionKey;
 
 /**
  * @author jcompagner
@@ -55,9 +56,9 @@ public class TypesTest
 	{
 		private Locale locale = Locale.getDefault();
 
-		public TestBaseWebsocketSession(String uuid)
+		public TestBaseWebsocketSession(WebsocketSessionKey getSessionKey)
 		{
-			super(uuid);
+			super(getSessionKey);
 		}
 
 		@Override
@@ -75,7 +76,7 @@ public class TypesTest
 	@Before
 	public void setUp() throws Exception
 	{
-		TestBaseWebsocketSession wsSession = new TestBaseWebsocketSession("1");
+		TestBaseWebsocketSession wsSession = new TestBaseWebsocketSession(new WebsocketSessionKey("1", 42));
 		CurrentWindow.set(new BaseWindow(wsSession, "11", "Test"));
 		Assert.assertNotNull("no window", CurrentWindow.get());
 		Assert.assertNotNull("no wsSession", CurrentWindow.get().getSession());

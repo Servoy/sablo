@@ -58,7 +58,7 @@ public interface IWebsocketSession
 	 */
 	public void onOpen(Map<String, List<String>> requestParams);
 
-	String getUuid();
+	WebsocketSessionKey getSessionKey();
 
 	void startHandlingEvent();
 
@@ -140,7 +140,7 @@ public interface IWebsocketSession
 	 * gets the last ping time of all active windows.
 	 * @return
 	 */
-	public long getLastPingTime();
+	long getLastPingTime();
 
 	/**
 	 * should return false if the session manager should test by sending Pongs to the client
@@ -148,11 +148,18 @@ public interface IWebsocketSession
 	 *
 	 * @return boolean To test the session or not
 	 */
-	public boolean shouldTest();
+	boolean shouldTest();
 
 	/**
 	 * @param window
 	 * @return
 	 */
-	public abstract IMessageLogger getMessageLogger(IWindow window);
+	IMessageLogger getMessageLogger(IWindow window);
+
+	/**
+	 *
+	 */
+	void addDisposehandler(Disposehandler handler);
+
+	void removeDisposehandler(Disposehandler handler);
 }

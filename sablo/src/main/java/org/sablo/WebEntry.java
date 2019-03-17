@@ -98,8 +98,9 @@ public abstract class WebEntry implements Filter, IContributionFilter, IContribu
 		HttpServletRequest request = (HttpServletRequest)servletRequest;
 
 		// make sure a session is created. when a sablo client is created, that one should set the timeout to 0
-		HttpSession httpSession = request.getSession(true);
-		httpSession.setMaxInactiveInterval(0);
+		HttpSession httpSession = request.getSession();
+		// the session should be picked up in a websocket request very soon, set timeout low so it won't stay in case of robots
+		httpSession.setMaxInactiveInterval(60);
 
 		String uri = request.getRequestURI();
 		if (uri.endsWith("spec/" + ModifiablePropertiesGenerator.PUSH_TO_SERVER_BINDINGS_LIST + ".js"))

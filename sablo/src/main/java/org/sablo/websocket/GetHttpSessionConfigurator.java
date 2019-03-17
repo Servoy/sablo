@@ -1,8 +1,8 @@
 package org.sablo.websocket;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.http.HttpSession;
 import javax.websocket.HandshakeResponse;
@@ -17,10 +17,10 @@ import javax.websocket.server.ServerEndpointConfig.Configurator;
 public class GetHttpSessionConfigurator extends Configurator
 {
 	/**
-	 *
+	 * Connect nr parameter, used to link http call with http session to websocket session.
 	 */
 	private static final String CONNECT_NR = "connectNr";
-	private static final Map<String, HttpSession> SESSIONMAP = new HashMap<>();
+	private static final Map<String, HttpSession> SESSIONMAP = new ConcurrentHashMap<>();
 
 	@Override
 	public void modifyHandshake(ServerEndpointConfig config, HandshakeRequest request, HandshakeResponse response)
@@ -46,18 +46,7 @@ public class GetHttpSessionConfigurator extends Configurator
 		{
 			throw new IllegalArgumentException("no http session?");
 		}
+		httpSession.setMaxInactiveInterval(0); // make sure it never expires
 		return httpSession;
 	}
-
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see javax.websocket.server.ServerEndpointConfig.Configurator#checkOrigin(java.lang.String)
-	 */
-//	@Override
-//	public boolean checkOrigin(String originHeaderValue)
-//	{
-//		// TODO Auto-generated method stub
-//		return super.checkOrigin(originHeaderValue);
-//	}
 }

@@ -16,8 +16,6 @@
 
 package org.sablo.websocket;
 
-import static java.util.Collections.singletonMap;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -316,7 +314,10 @@ public class BaseWindow implements IWindow
 			throw new IllegalStateException("window uuid not set");
 		}
 
-		sendAsyncMessage(singletonMap("windowid", uuid), null, FullValueToJSONConverter.INSTANCE);
+		Map<String, String> msg = new HashMap<>();
+		msg.put("clientnr", String.valueOf(getSession().getSessionKey().getClientnr()));
+		msg.put("windowid", uuid);
+		sendAsyncMessage(msg, null, FullValueToJSONConverter.INSTANCE);
 	}
 
 	@Override
