@@ -6,7 +6,7 @@
 /// <reference path="../../../../typings/window/window.d.ts" />
 /// <reference path="../../../../typings/sablo/sablo.d.ts" />
 
-var webSocketModule = angular.module('webSocketModule', ['pushToServerData']).config(function($provide, $logProvider,$rootScopeProvider) {
+let webSocketModule = angular.module('webSocketModule', ['pushToServerData']).config(function($provide, $logProvider,$rootScopeProvider) {
 	window.____logProvider = $logProvider; // just in case someone wants to alter debug at runtime from browser console for example
 	
 	// log levels for when debugEnabled(true) is called - if that is false, these levels are irrelevant
@@ -53,7 +53,7 @@ var webSocketModule = angular.module('webSocketModule', ['pushToServerData']).co
 
 // declare module pushToServer that generated module "pushToServerData" depends on - so that all pushToServer information is already present when starting 'webSocketModule'
 angular.module('pushToServer', []).factory('$propertyWatchesRegistry', function () {
-	var propertiesThatShouldBeAutoPushedToServer = {}; // key == ("components" or "services"), value is something like {
+	let propertiesThatShouldBeAutoPushedToServer = {}; // key == ("components" or "services"), value is something like {
 	//                                                           "pck1Component1" : { "myDeepWatchedProperty" : true, "myShallowWatchedProperty" : false }
 	//                                                       }
 	
@@ -68,9 +68,9 @@ angular.module('pushToServer', []).factory('$propertyWatchesRegistry', function 
 	// returns an array of watch unregister functions
 	// propertiesToAutoWatch is meant to be the return value of getPropertiesToAutoWatchForComponent or getPropertiesToAutoWatchForService
 	function watchDumbProperties(scope, model, propertiesToAutoWatch, changedCallbackFunction) {
-		var unwatchF = [];
+		let unwatchF = [];
 		function getChangeFunction(property, initialV) {
-			var firstTime = true;
+			let firstTime = true;
 			return function(newValue, oldValue) {
 				if (firstTime) {
 					// value from server should not be sent back; but as directives in their controller methods can already change the values or properties
@@ -89,8 +89,8 @@ angular.module('pushToServer', []).factory('$propertyWatchesRegistry', function 
 				return model[property];
 			}
 		}
-		for (var p in propertiesToAutoWatch) {
-			var wf = getWatchFunction(p);
+		for (let p in propertiesToAutoWatch) {
+			let wf = getWatchFunction(p);
 			unwatchF.push(scope.$watch(wf, getChangeFunction(p, wf()), propertiesToAutoWatch[p]));
 		}
 		
@@ -133,25 +133,25 @@ angular.module('pushToServer', []).factory('$propertyWatchesRegistry', function 
 webSocketModule.factory('$webSocket',
 		function($rootScope, $injector, $window, $log, $q, $services, $sabloConverters, $sabloUtils, $swingModifiers, $interval, wsCloseCodes,$sabloLoadingIndicator, $timeout, $sabloTestability,$websocketConstants) {
 
-	var pathname = null;
+	let pathname = null;
 	
-	var queryString = null;
+	let queryString = null;
 	
-	var websocket = null;
+	let websocket = null;
 	
-	var connectionArguments = {};
+	let connectionArguments = {};
 	
-	var lastServerMessageNumber = null;
+	let lastServerMessageNumber = null;
 
-	var nextMessageId = 1;
+	let nextMessageId = 1;
 	
-	var functionsToExecuteAfterIncommingMessageWasHandled = undefined;
+	let functionsToExecuteAfterIncommingMessageWasHandled: Array<{scopeHint: angular.IScope, task: () => Array<angular.IScope>}> = undefined;
 
-	var getNextMessageId = function() {
+	let getNextMessageId = function() {
 		return nextMessageId++;
 	};
 
-	var deferredEvents = {};
+	let deferredEvents = {};
 	function isPromiseLike(obj) {
 		  return obj && angular.isFunction(obj.then);
 	}
@@ -173,7 +173,7 @@ webSocketModule.factory('$webSocket',
 			return queryString;
 		}
 		
-		var search = $window.location.search;
+		let search = $window.location.search;
 		if (search && search.indexOf('?') == 0) {
 			return search.substring(1);
 		}
@@ -181,18 +181,39 @@ webSocketModule.factory('$webSocket',
 		return search;
 	}
 	
-	var getURLParameter = function getURLParameter(name) {
+	let getURLParameter = function getURLParameter(name) {
 		return decodeURIComponent((new RegExp('[&]?\\b' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(getQueryString())||[,""])[1].replace(/\+/g, '%20'))||null
 	};
+	
+	let optimizeAndCallFormScopeDigest = function(scopesToDigest: ScopeSet, digestAsync?: boolean) {
+		let scopesArray = scopesToDigest.getItems();
+		for (let idx in scopesArray) {
+			let s = scopesArray[idx];
+			let scopeId = s.$id;
+			let p = s.$parent;
+			while (p && !scopesToDigest.hasItem(p)) p = p.$parent;
+			if (!p) { // if no parent form scope is going to do digest
+				if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Will call digest for scope: " + (s && s["formname"] ? s["formname"] : scopeId));
 
-	var handleMessage = function(message) {
+                if (digestAsync) {
+                    if ($log.debugLevel === $log.SPAM)
+                        $log.debug("sbl * digestAsync == true ?! Will call $evalAsync for scope: " + (s && s["formname"] ? s["formname"] : scopeId));
+                    // should normally never happen - but for example unit tests could do this
+                	s.$evalAsync(function() { /* just to trigger a digest on that scope */ });
+                } else {
+                	setIMHDTScopeHintInternal(s);
+                	s.$digest();
+                	setIMHDTScopeHintInternal(undefined);
+                }
+			} else if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Will NOT call digest for scope: " + (s && s["formname"] ? s["formname"] : scopeId) + " because a parent form scope " + (p["formname"] ? p["formname"] : p.$id) + " is in the list...");
+		}
+	}
+
+	let handleMessage = function(message) {
 		let obj
 		let responseValue
 		functionsToExecuteAfterIncommingMessageWasHandled = [];
-
-		const scopesToDigest = new window.CustomHashSet(function(s) {
-			return s.$id; // hash them by angular scope id to avoid calling digest on the same scope twice
-		});
+		let hideIndicator = false;
 
 		try {
 			if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Received message from server: " + JSON.stringify(message, function(key, value) {
@@ -202,8 +223,8 @@ webSocketModule.factory('$webSocket',
 				  return value;
 				}, "  "));
 
-			var message_data = message.data;
-			var separator = message_data.indexOf('#');
+			let message_data = message.data;
+			let separator = message_data.indexOf('#');
 			if (separator >= 0 && separator < 5) {
 				// the json is prefixed with a message number: 123#{bla: "hello"}
 				lastServerMessageNumber = message_data.substring(0, separator);
@@ -221,10 +242,10 @@ webSocketModule.factory('$webSocket',
 				if (obj[$sabloConverters.TYPES_KEY] && obj[$sabloConverters.TYPES_KEY].services) {
 					obj.services = $sabloConverters.convertFromServerToClient(obj.services, obj[$sabloConverters.TYPES_KEY].services, undefined, undefined, undefined)
 				}
-				for (var index in obj.services) {
-					var service = obj.services[index];
+				for (let index in obj.services) {
+					let service = obj.services[index];
 					if (service['pre_data_service_call']) {
-						var serviceInstance = $injector.get(service.name);
+						let serviceInstance = $injector.get(service.name);
 						if (serviceInstance
 								&& serviceInstance[service.call]) {
 							// responseValue keeps last services call return value
@@ -236,7 +257,7 @@ webSocketModule.factory('$webSocket',
 			}
 
 			// if the indicator is showing and this object wants a return message then hide the indicator until we send the response
-			var hideIndicator = obj && obj.smsgid && $sabloLoadingIndicator.isShowing();
+			let hideIndicator = obj && obj.smsgid && $sabloLoadingIndicator.isShowing();
 			// if a request to a service is being done then this could be a blocking 
 			if (hideIndicator) {
 				$sabloLoadingIndicator.hideLoading();
@@ -244,7 +265,7 @@ webSocketModule.factory('$webSocket',
 			
 			// data got back from the server
 			if (obj.cmsgid) { // response to event
-				var deferredEvent = deferredEvents[obj.cmsgid];
+				let deferredEvent = deferredEvents[obj.cmsgid];
 				if (deferredEvent != null && angular.isDefined(deferredEvent)) {
 					if (obj.exception) {
 						// something went wrong
@@ -270,13 +291,14 @@ webSocketModule.factory('$webSocket',
 
 			// message
 			if (obj.msg) {
-			
-				for (var handler in onMessageObjectHandlers) {
-					var ret = onMessageObjectHandlers[handler](obj.msg, obj[$sabloConverters.TYPES_KEY] ? obj[$sabloConverters.TYPES_KEY].msg : undefined, scopesToDigest)
+				let scopesToDigest = new ScopeSet();
+				for (let handler in onMessageObjectHandlers) {
+					let ret = onMessageObjectHandlers[handler](obj.msg, obj[$sabloConverters.TYPES_KEY] ? obj[$sabloConverters.TYPES_KEY].msg : undefined, scopesToDigest)
 					if (ret) responseValue = ret;
 					
 					if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Checking if any form scope changes need to be digested (obj.msg).");
 				}
+				optimizeAndCallFormScopeDigest(scopesToDigest); // as we are currently not inside a digest cycle, digest the affected scopes
 			}
 
 			if (obj.msg && obj.msg.services) {
@@ -285,10 +307,10 @@ webSocketModule.factory('$webSocket',
 
 			if (obj.services) {
 				// normal services call
-				for (var index in obj.services) {
-					var service = obj.services[index];
+				for (let index in obj.services) {
+					let service = obj.services[index];
 					if (!service['pre_data_service_call']) {
-						var serviceInstance = $injector.get(service.name);
+						let serviceInstance = $injector.get(service.name);
 						if (serviceInstance
 								&& serviceInstance[service.call]) {
 							// responseValue keeps last services call return value
@@ -302,14 +324,16 @@ webSocketModule.factory('$webSocket',
 			// delayed calls
 			if (obj.calls)
 			{
-				for(var i = 0;i < obj.calls.length;i++) 
+				let scopesToDigest = new ScopeSet();
+				for(let i = 0;i < obj.calls.length;i++) 
 				{
-					for (var handler in onMessageObjectHandlers) {
+					for (let handler in onMessageObjectHandlers) {
 						onMessageObjectHandlers[handler](obj.calls[i], (obj[$sabloConverters.TYPES_KEY] && obj[$sabloConverters.TYPES_KEY].calls) ? obj[$sabloConverters.TYPES_KEY].calls[i] : undefined, scopesToDigest);
 					}
 					
 					if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Checking if any (obj.calls) form scopes changes need to be digested (obj.calls).");
 				}
+				optimizeAndCallFormScopeDigest(scopesToDigest); // as we are currently not inside a digest cycle, digest the affected scopes
 			}	
 			if (obj && obj.smsgid) {
 				if (isPromiseLike(responseValue)) {
@@ -327,13 +351,14 @@ webSocketModule.factory('$webSocket',
 					} else if ($log.debugEnabled) $log.debug("sbl * Call from server with smsgid '" + obj.smsgid + "' returned: -" + ret + "-. Sending value back to server...");
 					
 					// success
-					var response = {
+					let response = {
 							smsgid : obj.smsgid
 					}
 					if (ret != undefined) {
 						response['ret'] = $sabloUtils.convertClientObject(ret);
 					}
 					if (hideIndicator) {
+						hideIndicator = false;
 						$sabloLoadingIndicator.showLoading();
 					}
 					sendMessageObject(response);
@@ -343,66 +368,99 @@ webSocketModule.factory('$webSocket',
 					$log.error("Error (follows below) in parsing/processing this message with smsgid '" + obj.smsgid + "' (async): " + message_data);
 					$log.error(reason);
 					// server wants a response; send failure so that browser side script doesn't hang
-					var response = {
+					let response = {
 							smsgid : obj.smsgid,
 							err: "Error while executing ($q deferred) client side code. Please see browser console for more info. Error: " + reason
 					}
 					if (hideIndicator) {
+						hideIndicator = false;
 						$sabloLoadingIndicator.showLoading();
 					}
 					sendMessageObject(response);
 				});
 			}
 		} catch (e) {
-			$log.error("Error (follows below) in parsing/processing this message: " + message_data);
+			$log.error("Error (follows below) in parsing/processing this message: " + message.data);
 			$log.error(e);
 			if (obj && obj.smsgid) {
 				// server wants a response; send failure so that browser side script doesn't hang
-				var response = {
+				let response = {
 						smsgid : obj.smsgid,
 						err: "Error while executing client side code. Please see browser console for more info. Error: " + e
 				}
 				if (hideIndicator) {
+					hideIndicator = false;
 					$sabloLoadingIndicator.showLoading();
 				}
 				sendMessageObject(response);
 			}
 		} finally {
-			var err;
-			for (var i = 0; i < functionsToExecuteAfterIncommingMessageWasHandled.length; i++) {
+			let err;
+			let scopesToDigest = new ScopeSet();
+
+			let toExecuteAfterIncommingMessageWasHandled = functionsToExecuteAfterIncommingMessageWasHandled;
+			functionsToExecuteAfterIncommingMessageWasHandled = undefined; // clear this before calling just in the unlikely case that some handlers want to add more such tasks (and we don't want to loose those but rather execute them right away)
+			
+			for (let i = 0; i < toExecuteAfterIncommingMessageWasHandled.length; i++) {
 				try {
-					functionsToExecuteAfterIncommingMessageWasHandled[i]();
+					let touchedScopes = toExecuteAfterIncommingMessageWasHandled[i].task();
+					if (touchedScopes) {
+						touchedScopes.forEach((value) => {scopesToDigest.putItem(value)});
+					} else if (toExecuteAfterIncommingMessageWasHandled[i].scopeHint) {
+						scopesToDigest.putItem(toExecuteAfterIncommingMessageWasHandled[i].scopeHint);
+					}
 				} catch (e) {
-					$log.error("Error (follows below) in executing PostIncommingMessageHandlingTask: " + functionsToExecuteAfterIncommingMessageWasHandled[i]);
+					$log.error("Error (follows below) in executing PostIncommingMessageHandlingTask: " + toExecuteAfterIncommingMessageWasHandled[i]);
 					$log.error(e);
 					err = e;
 				}
 			}
-			functionsToExecuteAfterIncommingMessageWasHandled = undefined;
-			for (var scopeId in scopesToDigest) {
-				var s = scopesToDigest[scopeId];
-				var p = s.$parent;
-				while (p && !scopesToDigest[p.$id]) p = p.$parent;
-				if (!p) { // if no parent form scope is going to do digest
-					if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Will call digest for scope: " + (s && s.formname ? s.formname : scopeId));
-					s.$digest();
-				} else if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Will NOT call digest for scope: " + (s && s.formname ? s.formname : scopeId) + " because a parent form scope " + (p.formname ? p.formname : p.$id) + " is in the list...");
-			}
-
+			
+			optimizeAndCallFormScopeDigest(scopesToDigest); // as we are currently not inside a digest cycle, digest the affected scopes
+			
 			if (err) throw err;
 		}
 	}
 	
-	var addIncomingMessageHandlingDoneTask = function(func) {
-		if (functionsToExecuteAfterIncommingMessageWasHandled) functionsToExecuteAfterIncommingMessageWasHandled.push(func);
-		else func(); // will not addPostIncommingMessageHandlingTask while not handling an incoming message; the task can execute right away then (maybe it was called due to a change detected in a watch instead of property listener)
+	let currentIMHDTScopeHint: angular.IScope;
+	
+	/**
+	 * For internal use. Only used in order to implement backwards compatibility with addIncomingMessageHandlingDoneTask tasks that do not return the touched/modified scopes.
+	 * In that case we try to guess those scopes via this method that should be called whenever we know code executing on a specific scope might call addIncomingMessageHandlingDoneTask(...).
+	 */
+	let setIMHDTScopeHintInternal = function(scope: angular.IScope) {
+		currentIMHDTScopeHint = scope;
 	}
 
-	var sendMessageObject = function(obj) {
+	/**
+	 * Wait for all incoming changes to be applied to properties first (if a message from server is currently being processed) before executing given function
+	 * 
+	 * @param func will be called once the incoming message from server has been processed; can return an array of angular scopes that were touched/changed by this function; those scopes will be
+	 * digested after all "incomingMessageHandlingDoneTask"s are executed. If the function returns nothing then sablo tries to detect situations when the task is added while some property value change
+	 * from server is being processed and to digest the appropriate scope afterwards...
+	 */
+	let addIncomingMessageHandlingDoneTask = function(func: () => Array<angular.IScope>) {
+		if (functionsToExecuteAfterIncommingMessageWasHandled) functionsToExecuteAfterIncommingMessageWasHandled.push({scopeHint: currentIMHDTScopeHint, task: func});
+		else {
+            // should normally not happen (as this is meant to be called by code running while a server message is being handled) - but for example unit tests could do this
+			// will not addPostIncommingMessageHandlingTask while not handling an incoming message; the task can execute right away then (maybe it was called due to a change detected in a watch instead of property listener)
+            let touchedScopes = func();
+            let scopesSet = null;
+            if (touchedScopes)
+            	scopesSet = new ScopeSet(touchedScopes);
+            else if (currentIMHDTScopeHint)
+            	scopesSet = new ScopeSet([currentIMHDTScopeHint]);
+
+			// here we don't know where it's called from (might already be in a digest cycle so in order to avoid an exception trying to call digest again, better use $scope.evalAsync(), so async = true)
+            if (scopesSet) optimizeAndCallFormScopeDigest(scopesSet, true);
+		}
+	}
+
+	let sendMessageObject = function(obj) {
 		if ($sabloUtils.getCurrentEventLevelForServer()) {
 			obj.prio = $sabloUtils.getCurrentEventLevelForServer();
 		}
-		var msg = JSON.stringify(obj)
+		let msg = JSON.stringify(obj)
 		if (isConnected()) {
 			if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Sending message to server: " + JSON.stringify(obj, null, "  "));
 			websocket.send(msg)
@@ -415,8 +473,8 @@ webSocketModule.factory('$webSocket',
 		}
 	}
 
-	var callService = function(serviceName, methodName, argsObject,async) {
-		var cmd = {
+	let callService = function(serviceName, methodName, argsObject,async) {
+		let cmd = {
 				service : serviceName,
 				methodname : methodName,
 				args : argsObject
@@ -427,8 +485,8 @@ webSocketModule.factory('$webSocket',
 		}
 		else
 		{
-			var deferred = $q.defer();
-			var cmsgid = getNextMessageId()
+			let deferred = $q.defer();
+			let cmsgid = getNextMessageId()
 			deferredEvents[cmsgid] = deferred
 			$sabloLoadingIndicator.showLoading();
 			cmd['cmsgid'] = cmsgid
@@ -438,12 +496,12 @@ webSocketModule.factory('$webSocket',
 	}
 	$sabloTestability.setEventList(deferredEvents);
 
-	var onOpenHandlers = [];
-	var onErrorHandlers = [];
-	var onCloseHandlers = [];
-	var onMessageObjectHandlers = [];
+	let onOpenHandlers = [];
+	let onErrorHandlers = [];
+	let onCloseHandlers = [];
+	let onMessageObjectHandlers = [];
 
-	var WebsocketSession = function() {
+	let WebsocketSession = function() {
 
 		// api
 		this.callService = callService;
@@ -463,15 +521,15 @@ webSocketModule.factory('$webSocket',
 			onMessageObjectHandlers.push(handler)
 		};
 	};
-	var wsSession = new WebsocketSession();
+	let wsSession = new WebsocketSession();
 
-	var connected = 'INITIAL'; // INITIAL/CONNECTED/RECONNECTING/CLOSED
+	let connected = 'INITIAL'; // INITIAL/CONNECTED/RECONNECTING/CLOSED
 	if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode: ... INITIAL (" + new Date().getTime() + ")");
-	var pendingMessages = undefined
+	let pendingMessages = undefined
 
 	// heartbeat, detect disconnects before websocket gives us connection-closed.
-	var heartbeatMonitor = undefined;
-	var lastHeartbeat = undefined;
+	let heartbeatMonitor = undefined;
+	let lastHeartbeat = undefined;
 	function startHeartbeat() {
 		if (!angular.isDefined(heartbeatMonitor)) {
 			if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Starting heartbeat... (" + new Date().getTime() + ")");
@@ -507,7 +565,7 @@ webSocketModule.factory('$webSocket',
 		if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode: ... CONNECTED (" + new Date().getTime() + ")");
 
 		if (pendingMessages) {
-			for (var i in pendingMessages) {
+			for (let i in pendingMessages) {
 				if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connected; sending pending message to server: " + pendingMessages[i]);
 				websocket.send(pendingMessages[i])
 			}
@@ -537,27 +595,27 @@ webSocketModule.factory('$webSocket',
 	}
 
 	function generateURL(context, args, queryArgs, websocketUri) {
-		var new_uri;
+		let new_uri;
 		if ($window.location.protocol === "https:") {
 			new_uri = "wss:";
 		} else {
 			new_uri = "ws:";
 		}
 		new_uri += "//" + $window.location.host;
-		var pathname = getPathname();
-		var lastIndex = pathname.lastIndexOf("/");
+		let pathname = getPathname();
+		let lastIndex = pathname.lastIndexOf("/");
 		if (lastIndex > 0) {
 			pathname = pathname.substring(0, lastIndex);
 		}
 		if (context && context.length > 0)
 		{
-			var lastIndex = pathname.lastIndexOf(context);
+			let lastIndex = pathname.lastIndexOf(context);
 			if (lastIndex >= 0) {
 				pathname = pathname.substring(0, lastIndex) + pathname.substring(lastIndex + context.length)
 			}
 		}
 		new_uri += pathname + (websocketUri?websocketUri:'/websocket');
-		for (var a in args) {
+		for (let a in args) {
 			if (args.hasOwnProperty(a)) {
 				new_uri += '/' + args[a]
 			}
@@ -565,7 +623,7 @@ webSocketModule.factory('$webSocket',
 
 		new_uri += "?connectNr="+Math.floor((Math.random() * 10000000000000))+"&";
 
-		for (var a in queryArgs)
+		for (let a in queryArgs)
 		{
 			if (queryArgs.hasOwnProperty(a)) {
 				new_uri += a+"="+queryArgs[a]+"&";
@@ -577,14 +635,14 @@ webSocketModule.factory('$webSocket',
 		}
 		
 
-		var queryString = getQueryString();
+		let queryString = getQueryString();
 		if (queryString)
 		{
-			var index = queryString.indexOf($websocketConstants.CLEAR_SESSION_PARAM);
+			let index = queryString.indexOf($websocketConstants.CLEAR_SESSION_PARAM);
 			if (index >= 0) 
 			{
-				var params_arr = queryString.split("&");
-				for (var i = params_arr.length - 1; i >= 0; i -= 1)
+				let params_arr = queryString.split("&");
+				for (let i = params_arr.length - 1; i >= 0; i -= 1)
 				{
 					if (params_arr[i].indexOf($websocketConstants.CLEAR_SESSION_PARAM) == 0)
 					{
@@ -626,13 +684,13 @@ webSocketModule.factory('$webSocket',
 					setConnected();
 				});
 				startHeartbeat();
-				for (var handler in onOpenHandlers) {
+				for (let handler in onOpenHandlers) {
 					onOpenHandlers[handler](evt);
 				}
 			}
 			websocket.onerror = function(evt) {
 				stopHeartbeat();
-				for (var handler in onErrorHandlers) {
+				for (let handler in onErrorHandlers) {
 					onErrorHandlers[handler](evt);
 				}
 			}
@@ -644,7 +702,7 @@ webSocketModule.factory('$webSocket',
 						if ($log.debugLevel === $log.SPAM) $log.debug("sbl * Connection mode (onclose receidev while not CLOSED): ... RECONNECTING (" + new Date().getTime() + ")");
 					}
 				});
-				for (var handler in onCloseHandlers) {
+				for (let handler in onCloseHandlers) {
 					onCloseHandlers[handler](evt);
 				}
 			}
@@ -699,6 +757,8 @@ webSocketModule.factory('$webSocket',
 
 		isReconnecting: isReconnecting,
 		
+		setIMHDTScopeHintInternal: setIMHDTScopeHintInternal,
+		
 		addIncomingMessageHandlingDoneTask: addIncomingMessageHandlingDoneTask,
 		
 		disconnect: function() {
@@ -719,24 +779,24 @@ webSocketModule.factory('$webSocket',
 	};
 }).factory("$services", function($rootScope, $sabloConverters, $sabloUtils, $propertyWatchesRegistry, $log){
 	// serviceName:{} service model
-	var serviceScopes = $rootScope.$new(true);
-	var serviceScopesConversionInfo = {};
-	var watches = {}
-	var wsSession = null;
-	var sendServiceChanges = function(now, prev, servicename, property) {
-		var changes = {}
-		var conversionInfo = serviceScopesConversionInfo[servicename];
+	let serviceScopes = $rootScope.$new(true);
+	let serviceScopesConversionInfo = {};
+	let watches = {}
+	let wsSession = null;
+	let sendServiceChanges = function(now, prev, servicename, property) {
+		let changes = {}
+		let conversionInfo = serviceScopesConversionInfo[servicename];
 		if (property) {
 			if (conversionInfo && conversionInfo[property]) changes[property] = $sabloConverters.convertFromClientToServer(now, conversionInfo[property], prev);
 			else changes[property] = $sabloUtils.convertClientObject(now);
 		} else {
 			// TODO hmm I think it will never go through here anymore; remove this else code
 			// first build up a list of all the properties both have.
-			var fulllist = $sabloUtils.getCombinedPropertyNames(now,prev);
-			var changes = {};
+			let fulllist = $sabloUtils.getCombinedPropertyNames(now,prev);
+			let changes = {};
 			
-			for (var prop in fulllist) {
-				var changed = false;
+			for (let prop in fulllist) {
+				let changed = false;
 				if (!(prev && now)) {
 					changed = true; // true if just one of them is undefined; both cannot be undefined at this point if we are already iterating on combined property names
 				} else {
@@ -749,14 +809,14 @@ webSocketModule.factory('$webSocket',
 				}
 			}
 		}
-		for (var prop in changes) { // weird way to only send it if it has at least one element
+		for (let prop in changes) { // weird way to only send it if it has at least one element
 			wsSession.sendMessageObject({servicedatapush:servicename,changes:changes})
 			return;
 		}
 	};
-	var getChangeNotifier = function(servicename, property) {
+	let getChangeNotifier = function(servicename, property) {
 		return function() {
-			var serviceModel = serviceScopes[servicename].model;
+			let serviceModel = serviceScopes[servicename].model;
 			sendServiceChanges(serviceModel[property], serviceModel[property], servicename, property);
 		}
 	};
@@ -767,10 +827,10 @@ webSocketModule.factory('$webSocket',
 			// but who knows, maybe someone will try the dashed version and wonder why it doesn't work
 			
 			// this should do the same as ClientService.java #convertToJSName()
-			var packageAndName = serviceName.split("-");
+			let packageAndName = serviceName.split("-");
 			if (packageAndName.length > 1) {
 				serviceName = packageAndName[0];
-				for (var i = 1; i < packageAndName.length; i++) {
+				for (let i = 1; i < packageAndName.length; i++) {
 					if (packageAndName[1].length > 0) serviceName += packageAndName[i].charAt(0).toUpperCase() + packageAndName[i].slice(1);
 				}
 			}
@@ -793,9 +853,9 @@ webSocketModule.factory('$webSocket',
 			return serviceScopes[serviceName];
 		},
 		updateServiceScopes: function(services, conversionInfo) {
-			for(var servicename in services) {
+			for(let servicename in services) {
 				// current model
-				var serviceScope = serviceScopes[servicename];
+				let serviceScope = serviceScopes[servicename];
 				if (!serviceScope) {
 					serviceScope = serviceScopes[servicename] = serviceScopes.$new(true);
 					// so no previous service state; set it now
@@ -803,7 +863,7 @@ webSocketModule.factory('$webSocket',
 						// convert all properties, remember type for when a client-server conversion will be needed
 						services[servicename] = $sabloConverters.convertFromServerToClient(services[servicename], conversionInfo[servicename], undefined, serviceScope, function(propertyName: string) { return serviceScope.model ? serviceScope.model[propertyName] : serviceScope.model })
 						
-						for (var pn in conversionInfo[servicename]) {
+						for (let pn in conversionInfo[servicename]) {
 							if (services[servicename][pn] && services[servicename][pn][$sabloConverters.INTERNAL_IMPL]
 							&& services[servicename][pn][$sabloConverters.INTERNAL_IMPL].setChangeNotifier) {
 								services[servicename][pn][$sabloConverters.INTERNAL_IMPL].setChangeNotifier(getChangeNotifier(servicename, pn));
@@ -814,14 +874,14 @@ webSocketModule.factory('$webSocket',
 					serviceScope.model = services[servicename];
 				}
 				else {
-					var serviceData = services[servicename];
+					let serviceData = services[servicename];
 
 					// unregister the watches
 					if (watches[servicename]) watches[servicename].forEach(function (unwatchFunctionElement, index, array) {
 						unwatchFunctionElement();
 					});
 
-					for(var key in serviceData) {
+					for(let key in serviceData) {
 						if (conversionInfo && conversionInfo[servicename] && conversionInfo[servicename][key]) {
 							// convert property, remember type for when a client-server conversion will be needed
 							if (!serviceScopesConversionInfo[servicename]) serviceScopesConversionInfo[servicename] = {};
@@ -866,50 +926,50 @@ webSocketModule.factory('$webSocket',
 	/**
 	 * Custom property converters can be registered via this service method: $webSocket.registerCustomPropertyHandler(...)
 	 */
-	var customPropertyConverters = {};
+	let customPropertyConverters = {};
 
-	var convertFromServerToClient = function(serverSentData, conversionInfo, currentClientData, scope, propertyContext) {
+	let convertFromServerToClient = function(serverSentData, conversionInfo, currentClientData, scope, propertyContext) {
 		if (typeof conversionInfo === 'string' || typeof conversionInfo === 'number') {
-			var customConverter = customPropertyConverters[conversionInfo];
+			let customConverter = customPropertyConverters[conversionInfo];
 			if (customConverter) serverSentData = customConverter.fromServerToClient(serverSentData, currentClientData, scope, propertyContext);
 			else { //converter not found - will not convert
 				$log.error("cannot find type converter (s->c) for: '" + conversionInfo + "'.");
 			}
 		} else if (conversionInfo) {
 			// typed custom objects will no go here but on the if branch above; this is for untyped arrays/objects that need to be converted
-			for (var conKey in conversionInfo) {
+			for (let conKey in conversionInfo) {
 				serverSentData[conKey] = convertFromServerToClient(serverSentData[conKey], conversionInfo[conKey], currentClientData ? currentClientData[conKey] : undefined, scope, propertyContext); 
 			}
 		}
 		return serverSentData;
 	};
 
-	var updateAngularScope = function(value, conversionInfo, scope) {
+	let updateAngularScope = function(value, conversionInfo, scope) {
 		if (typeof conversionInfo === 'string' || typeof conversionInfo === 'number') {
-			var customConverter = customPropertyConverters[conversionInfo];
+			let customConverter = customPropertyConverters[conversionInfo];
 			if (customConverter) customConverter.updateAngularScope(value, scope);
 			else { //converter not found - will not convert
 				$log.error("cannot find type converter (to update scope) for: '" + conversionInfo + "'.");
 			}
 		} else if (conversionInfo) {
-			for (var conKey in conversionInfo) {
+			for (let conKey in conversionInfo) {
 				updateAngularScope(value[conKey], conversionInfo[conKey], scope); // TODO should componentScope really stay the same here? 
 			}
 		}
 	};
 
 	// converts from a client property JS value to a JSON that can be sent to the server using the appropriate registered handler
-	var convertFromClientToServer = function(newClientData, conversionInfo, oldClientData) {
+	let convertFromClientToServer = function(newClientData, conversionInfo, oldClientData) {
 		if (typeof conversionInfo === 'string' || typeof conversionInfo === 'number') {
-			var customConverter = customPropertyConverters[conversionInfo];
+			let customConverter = customPropertyConverters[conversionInfo];
 			if (customConverter) return customConverter.fromClientToServer(newClientData, oldClientData);
 			else { //converter not found - will not convert
 				$log.error("cannot find type converter (c->s) for: '" + conversionInfo + "'.");
 				return newClientData;
 			}
 		} else if (conversionInfo) {
-			var retVal = (Array.isArray ? Array.isArray(newClientData) : $.isArray(newClientData)) ? [] : {};
-			for (var conKey in conversionInfo) {
+			let retVal = (Array.isArray ? Array.isArray(newClientData) : $.isArray(newClientData)) ? [] : {};
+			for (let conKey in conversionInfo) {
 				retVal[conKey] = convertFromClientToServer(newClientData[conKey], conversionInfo[conKey], oldClientData ? oldClientData[conKey] : undefined);
 			}
 			return retVal;
@@ -998,42 +1058,24 @@ webSocketModule.factory('$webSocket',
 
 	};
 }).factory("$sabloUtils", function($log, $sabloConverters:sablo.ISabloConverters,$swingModifiers) {
-	// define a global custom 'hash set' based on a configurable hash function received in constructor
-	window.CustomHashSet = function(hashCodeFunc) {
-		Object.defineProperty(this, "hashCode", {
-			configurable: true,
-			enumerable: false,
-			writable: true,
-			value: hashCodeFunc
-		});
-	};
-	Object.defineProperty(window.CustomHashSet.prototype, "putItem", {
-		configurable: true,
-		enumerable: false,
-		writable: true,
-		value: function(e) {
-			this[this.hashCode(e)] = e; // hash them by angular scope id to avoid calling digest on the same scope twice
-		}
-	});
-	
-	var getCombinedPropertyNames = function(now,prev) {
-		var fulllist = {}
+	let getCombinedPropertyNames = function(now,prev) {
+		let fulllist = {}
 		if (prev) {
-			var prevNames = Object.getOwnPropertyNames(prev);
-			for(var i=0; i < prevNames.length; i++) {
+			let prevNames = Object.getOwnPropertyNames(prev);
+			for(let i=0; i < prevNames.length; i++) {
 				fulllist[prevNames[i]] = true;
 			}
 		}
 		if (now) {
-			var nowNames = Object.getOwnPropertyNames(now);
-			for(var i=0;i < nowNames.length;i++) {
+			let nowNames = Object.getOwnPropertyNames(now);
+			for(let i=0;i < nowNames.length;i++) {
 				fulllist[nowNames[i]] = true;
 			}
 		}
 		return fulllist;
 	}
 
-	var isChanged = function(now, prev, conversionInfo) {
+	let isChanged = function(now, prev, conversionInfo) {
 		if ((typeof conversionInfo === 'string' || typeof conversionInfo === 'number') && now && now[$sabloConverters.INTERNAL_IMPL] && now[$sabloConverters.INTERNAL_IMPL].isChanged) {
 			return now[$sabloConverters.INTERNAL_IMPL].isChanged();
 		}
@@ -1056,8 +1098,8 @@ webSocketModule.factory('$webSocket',
 
 			if ((now instanceof Object) && (prev instanceof Object)) {
 				// first build up a list of all the properties both have.
-				var fulllist = getCombinedPropertyNames(now, prev);
-				for (var prop in fulllist) {
+				let fulllist = getCombinedPropertyNames(now, prev);
+				for (let prop in fulllist) {
 					if(prop == "$$hashKey") continue; // ng repeat creates a child scope for each element in the array any scope has a $$hashKey property which must be ignored since it is not part of the model
 					if (prev[prop] !== now[prop]) {
 						if (typeof now[prop] == "object") {
@@ -1074,8 +1116,8 @@ webSocketModule.factory('$webSocket',
 		}
 		return true;
 	}
-	var currentEventLevelForServer;
-	var sabloUtils:sablo.ISabloUtils = {
+	let currentEventLevelForServer;
+	let sabloUtils:sablo.ISabloUtils = {
 			// execution priority on server value used when for example a blocking API call from server needs to request more data from the server through this change
 			// or whenever during a (blocking) API call to client we want some messages sent to the server to still be processed.
 			EVENT_LEVEL_SYNC_API_CALL: 500,
@@ -1107,14 +1149,14 @@ webSocketModule.factory('$webSocket',
 
 			getEventArgs: function(args,eventName)
 			{
-				var newargs = []
-				for (var i = 0; i < args.length; i++) {
-					var arg = args[i]
+				let newargs = []
+				for (let i = 0; i < args.length; i++) {
+					let arg = args[i]
 					if (arg && arg.originalEvent) arg = arg.originalEvent;
 					if(arg  instanceof MouseEvent ||arg  instanceof KeyboardEvent){
-						var $event = arg;
-						var eventObj = {}
-						var modifiers = 0;
+						let $event = arg;
+						let eventObj = {}
+						let modifiers = 0;
 						if($event.shiftKey) modifiers = modifiers||$swingModifiers.SHIFT_MASK;
 						if($event.metaKey) modifiers = modifiers||$swingModifiers.META_MASK;
 						if($event.altKey) modifiers = modifiers|| $swingModifiers.ALT_MASK;
@@ -1130,7 +1172,7 @@ webSocketModule.factory('$webSocket',
 					}
 					else if (arg instanceof Event || arg instanceof $.Event)
 					{
-						var eventObj = {}
+						let eventObj = {}
 						eventObj['type'] = 'event'; 
 						eventObj['eventName'] = eventName;
 						eventObj['timestamp'] = new Date().getTime();
@@ -1150,10 +1192,10 @@ webSocketModule.factory('$webSocket',
 			getOrCreateInDepthProperty: function() {
 				if (arguments.length == 0) return undefined;
 
-				var ret = arguments[0];
+				let ret = arguments[0];
 				if (ret == undefined || ret === null || arguments.length == 1) return ret;
-				var p;
-				var i;
+				let p;
+				let i;
 				for (i = 1; i < arguments.length; i++) {
 					p = ret;
 					ret = ret[arguments[i]];
@@ -1173,9 +1215,9 @@ webSocketModule.factory('$webSocket',
 			getInDepthProperty: function() {
 				if (arguments.length == 0) return undefined;
 
-				var ret = arguments[0];
+				let ret = arguments[0];
 				if (ret == undefined || ret === null || arguments.length == 1) return ret;
-				var i;
+				let i;
 				for (i = 1; i < arguments.length; i++) {
 					ret = ret[arguments[i]];
 					if (ret === undefined || ret === null) {
@@ -1193,7 +1235,7 @@ webSocketModule.factory('$webSocket',
 			cloneWithDifferentPrototype: function(obj, newPrototype) {
 				// instead of using this impl., we could use Object.setPrototypeOf(), but that is slower in the long run due to missing JS engine optimizations for accessing props.
 				// accorging to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/setPrototypeOf
-				var clone = Object.create(newPrototype);
+				let clone = Object.create(newPrototype);
 
 				Object.keys(obj).forEach(function (prop) {  
 					clone[prop] = obj[prop];
@@ -1257,7 +1299,7 @@ webSocketModule.factory('$webSocket',
 	}
 }).factory("$sabloLoadingIndicator", function($injector, $window,$log,$timeout) {
 	// look for a custom implementation of the indicator
-	var custom = null;
+	let custom = null;
 	if ($injector.has("loadingIndicator")) {
 		custom = $injector.get("loadingIndicator");
 		if (custom && (custom.showLoading == undefined || custom.hideLoading == undefined)){
@@ -1267,15 +1309,15 @@ webSocketModule.factory('$webSocket',
 	}
 	if (custom == null) {
 		// if there is none then use the default, that uses a class to make sure the wait cursor is shown/set on all dom elements.
-		var style = $window.document.createElement('style');
+		let style = $window.document.createElement('style');
 		style.type = 'text/css';
 		style.innerHTML = '.sablowaitcursor, .sablowaitcursor * { cursor: wait !important; }';
 		document.getElementsByTagName('head')[0].appendChild(style);
 	}
-	var showCounter = 0;
-	var timeoutHidePromise = null;
-	var timeoutShowPromise = null;
-	var isDefaultShowing = false;
+	let showCounter = 0;
+	let timeoutHidePromise = null;
+	let timeoutShowPromise = null;
+	let isDefaultShowing = false;
 	return {
 		showLoading: function() {
 			showCounter++;
@@ -1323,8 +1365,8 @@ webSocketModule.factory('$webSocket',
 	};
 }).factory("$sabloDeferHelper", function($timeout, $log, $sabloTestability, $q) {
 	function retrieveDeferForHandling(msgId, internalState) {
-	     var deferred = internalState.deferred[msgId];
-	     var defer;
+	     let deferred = internalState.deferred[msgId];
+	     let defer;
 	     if (deferred) {
 	    	 defer = deferred.defer;
 	    	 $timeout.cancel(deferred.timeoutPromise);
@@ -1352,13 +1394,13 @@ webSocketModule.factory('$webSocket',
 		getNewDeferId: function(internalState) {
 			if (Object.keys(internalState.deferred).length == 0) $sabloTestability.block(true);
 				
-			var d = $q.defer();
-			var newMsgID = ++internalState.currentMsgId;
+			let d = $q.defer();
+			let newMsgID = ++internalState.currentMsgId;
 			internalState.deferred[newMsgID] = { defer: d, timeoutPromise : $timeout(function() {
 				// if nothing comes back for a while do cancel the promise to avoid memory leaks/infinite waiting
-				var defer = retrieveDeferForHandling(newMsgID, internalState);
+				let defer = retrieveDeferForHandling(newMsgID, internalState);
 				if (defer) {
-					var rejMsg = "deferred req. with id " + newMsgID + " was rejected due to timeout...";
+					let rejMsg = "deferred req. with id " + newMsgID + " was rejected due to timeout...";
 					defer.reject(rejMsg);
 					if ($log.debugEnabled && $log.debugLevel === $log.SPAM) $log.debug((internalState.timeoutRejectLogPrefix ? internalState.timeoutRejectLogPrefix : "") + rejMsg);
 				}
@@ -1368,7 +1410,7 @@ webSocketModule.factory('$webSocket',
 		},
 		
 		cancelAll: function(internalState) {
-			for (var id in internalState.deferred) {
+			for (let id in internalState.deferred) {
 				$timeout.cancel(internalState.deferred[id].timeoutPromise);
 				internalState.deferred[id].defer.reject();
 			}
@@ -1381,11 +1423,11 @@ webSocketModule.factory('$webSocket',
 });
 
 angular.module("webSocketModule").factory("$sabloTestability", ["$window","$log",function($window, $log) {
-	var blockEventLoop = 0;
-	var deferredEvents;
-	var deferredLength = 0;
+	let blockEventLoop = 0;
+	let deferredEvents;
+	let deferredLength = 0;
 	// add a special testability method to the window object so that protractor can ask if there are waiting server calls.
-	var callbackForTesting;
+	let callbackForTesting;
 	$window.testForDeferredSabloEvents= function(callback) {
 		if (!blockEventLoop && Object.keys(deferredEvents).length == deferredLength) callback(false); // false means there was no waiting deferred at all.
 		else {
@@ -1424,3 +1466,41 @@ angular.module("webSocketModule").factory("$sabloTestability", ["$window","$log"
 	}
 }]);
 
+interface HashCodeFunc<T> {
+    (T: any): number;
+}
+
+/** A custom 'hash set' based on a configurable hash function received in constructor for now it can only do putItem, hasItem and getItems */
+class CustomHashSet<T> {
+	private items: { [index: number]: T; } = {};
+	
+	constructor(private hashCodeFunc: HashCodeFunc<T>) {}
+	
+	public putItem(item: T) : void {
+		this.items[this.hashCodeFunc(item)] = item;
+	}
+	
+	public hasItem(item: T) : boolean {
+		return !!this.items[this.hashCodeFunc(item)];
+	}
+	
+	public getItems() : Array<T> {
+		let allItems: Array<T> = [];
+		for (let k in this.items) allItems.push(this.items[k]);
+		
+		return allItems;
+	}
+}
+
+/** A CustomHashSet that uses as hashCode for angular scopes their $id. */
+class ScopeSet extends CustomHashSet<angular.IScope> {
+	
+	constructor(initialScopes?: Array<angular.IScope>) {
+		super(function(s : angular.IScope) {
+			return s.$id; // hash them by angular scope id to avoid calling digest on the same scope twice
+		});
+		
+		if (initialScopes) initialScopes.forEach((value) => { this.putItem(value) });
+	}
+	
+}

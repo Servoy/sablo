@@ -126,6 +126,7 @@ public abstract class Container extends WebComponent
 		// if (this.getParentOfType(window) != CurrentWindow.get()) ... // problem is now that containers are not required to have parents so can we really rely on parent hierarchy?
 		CurrentWindow.get().registerContainer(this);
 
+		changed = false; // do this first just in case one of the writeComponentProperties below triggers another change to set the flag again (which should not happen normally but if it does we should not loose that change by just clearing the changed flag afterwards)
 		DataConversion clientDataConversions = new DataConversion();
 		boolean contentHasBeenWritten = writeComponentProperties(w, converter, "", clientDataConversions);
 		for (WebComponent wc : getComponents())
@@ -134,7 +135,6 @@ public abstract class Container extends WebComponent
 		}
 
 		JSONUtils.writeClientConversions(w, clientDataConversions);
-		changed = false;
 		return contentHasBeenWritten;
 	}
 }

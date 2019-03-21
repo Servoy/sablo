@@ -355,11 +355,11 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 				
 				
 				if (msg.clientnr) {
-					webStorage.session.add("clientnr", msg.clientnr);
+					webStorage.session.set("clientnr", msg.clientnr);
 				}
 				// RAGTEST rename, maak volgnr
 				if (msg.windowid) {
-					webStorage.session.add("windowid", msg.windowid);
+					webStorage.session.set("windowid", msg.windowid);
 				}
 				if (msg.clientnr || msg.windowid) {
 					// update the arguments on the reconnection websocket.
