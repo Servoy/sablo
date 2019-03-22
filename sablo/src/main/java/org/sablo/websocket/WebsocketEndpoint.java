@@ -112,9 +112,12 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		String windowId = "null".equalsIgnoreCase(winid) ? null : winid;
 		String windowName = "null".equalsIgnoreCase(winname) ? null : winname;
 
-		HttpSession httpSession = GetHttpSessionConfigurator.getHttpSession(newSession);
-		IWebsocketSession wsSession = WebsocketSessionManager.getOrCreateSession(endpointType, httpSession, clientnr,
-			true);
+		HttpSession httpSession = getHttpSession(newSession);
+		if (httpSession == null)
+		{
+			throw new IllegalStateException("Cannot find httpsession for websocket session");
+		}
+		IWebsocketSession wsSession = WebsocketSessionManager.getOrCreateSession(endpointType, httpSession, clientnr, true);
 
 		CurrentWindow.set(window = wsSession.getOrCreateWindow(windowId, windowName));
 
@@ -158,6 +161,11 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 
 		WebsocketSessionManager.closeInactiveSessions();
 	}
+
+	/**
+	 * @param session
+	 */
+	protected abstract HttpSession getHttpSession(Session session);
 
 	/**
 	 *  Called after from start(), called after the init of the session object.
