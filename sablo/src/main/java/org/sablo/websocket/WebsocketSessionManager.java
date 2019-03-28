@@ -171,37 +171,29 @@ public class WebsocketSessionManager
 	 * @return
 	 * @throws Exception
 	 */
-	static IWebsocketSession getOrCreateSession(String endpointType, HttpSession httpSession, String clientnrStr, boolean create) throws Exception
+	static IWebsocketSession getOrCreateSession(String endpointType, HttpSession httpSession, String clientnr, boolean create) throws Exception
 	{
 		IWebsocketSession wsSession = null;
 		if (create) creatingLock.lock();
 		try
 		{
-			int clientnr;
-			if (clientnrStr == null || clientnrStr.length() == 0)
-			{
-				// new client, generate new number
-				clientnr = getCounter(httpSession, LAST_CLIENT_NUMBER).incrementAndGet();
-			}
-			else
-			{
-				clientnr = Integer.parseInt(clientnrStr);
-			}
-			WebsocketSessionKey key = new WebsocketSessionKey(httpSession.getId(), clientnr);
+			WebsocketSessionKey key = getSessionKey(httpSession, clientnr);
 			wsSession = wsSessions.get(key);
 			if (wsSession == null || !wsSession.isValid())
 			{
 				wsSession = null;
 				if (create && websocketSessionFactories.containsKey(endpointType))
 				{
+					// a new session, make sure it will not clash with an existing clientnr within the same httpsession
+					if (clientnr != null && clientnr.length() > 0)
+					{
+						key = getSessionKey(httpSession, null);
+					}
+
 					wsSession = websocketSessionFactories.get(endpointType).createSession(key);
 					if (wsSession != null)
 					{
-						AtomicInteger sessionCounter;
-						synchronized (httpSession)
-						{
-							sessionCounter = getCounter(httpSession, HTTP_SESSION_COUNTER);
-						}
+						AtomicInteger sessionCounter = getCounter(httpSession, HTTP_SESSION_COUNTER);
 						sessionCounter.incrementAndGet();
 
 						wsSessions.put(key, wsSession);
@@ -231,10 +223,24 @@ public class WebsocketSessionManager
 		return wsSession;
 	}
 
-	private static AtomicInteger getCounter(HttpSession httpSession, String attribute)
+	private static WebsocketSessionKey getSessionKey(HttpSession httpSession, String clientnrStr)
 	{
-		AtomicInteger counter;
-		counter = (AtomicInteger)httpSession.getAttribute(attribute);
+		int clientnr;
+		if (clientnrStr == null || clientnrStr.length() == 0)
+		{
+			// new client, generate new number
+			clientnr = getCounter(httpSession, LAST_CLIENT_NUMBER).incrementAndGet();
+		}
+		else
+		{
+			clientnr = Integer.parseInt(clientnrStr);
+		}
+		return new WebsocketSessionKey(httpSession.getId(), clientnr);
+	}
+
+	private static synchronized AtomicInteger getCounter(HttpSession httpSession, String attribute)
+	{
+		AtomicInteger counter = (AtomicInteger)httpSession.getAttribute(attribute);
 		if (counter == null)
 		{
 			counter = new AtomicInteger();
