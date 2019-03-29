@@ -621,7 +621,7 @@ webSocketModule.factory('$webSocket',
 			}
 		}
 
-		// RAGTEST doc
+		// connectnr is only used in this call
 		new_uri += "?connectNr="+Math.floor((Math.random() * 10000000000000))+"&";
 
 		for (let a in queryArgs)

@@ -328,7 +328,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 				websocketUri: websocketUri
 			};
 		   if($webSocket.getURLParameter($websocketConstants.CLEAR_SESSION_PARAM) == 'true'){
-	            this.clearSabloSession();
+	            this.clearSabloInfo();
 	       }
 			wsSession = $webSocket.connect(wsSessionArgs.context, [getClientnr(), getWindowName(), getWindowNr()], wsSessionArgs.queryArgs, wsSessionArgs.websocketUri);
 
@@ -551,8 +551,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 			delete formStatesConversionInfo[formName];
 		},
 		
-		// RAGTEST rename, niet session
-		clearSabloSession:function (){
+		clearSabloInfo:function (){
 	        webStorage.session.remove('windownr');
 	        webStorage.session.remove('clientnr');
 		},
