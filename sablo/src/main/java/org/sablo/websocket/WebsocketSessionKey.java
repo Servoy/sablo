@@ -62,7 +62,7 @@ public final class WebsocketSessionKey
 	public String toString()
 	{
 		// do  not expose the http session id
-		return (httpSessionid.length() < 6 ? httpSessionid : httpSessionid.substring(0, 5)) + "...:" + clientnr;
+		return (httpSessionid.length() <= 7 ? httpSessionid : httpSessionid.substring(0, 7)) + ":" + clientnr;
 	}
 
 }

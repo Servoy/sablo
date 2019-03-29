@@ -106,13 +106,13 @@ public interface IWebsocketSession
 	Collection<IClientService> getServices();
 
 	/**
-	 * Get the window with give idm, when it does not exist, create a new window based on the widow name.
+	 * Get the window with given nr, when it does not exist, create a new window based on the window name.
 	 *
-	 * @param windowId
+	 * @param windowNr
 	 * @param windowName
 	 * @return
 	 */
-	IWindow getOrCreateWindow(String windowId, String windowName);
+	IWindow getOrCreateWindow(int windowNr, String windowName);
 
 	IWindow getActiveWindow(String windowName);
 

@@ -16,6 +16,8 @@
 
 package org.sablo.websocket;
 
+import static java.util.stream.Collectors.toList;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +25,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -71,6 +72,7 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	private final WebsocketSessionWindows allWindowsProxy = new WebsocketSessionWindows(this);
 
 	private final DisposeHandlersSubject disposeHandlersSubject = new DisposeHandlersSubject();
+	private int windowCounter;
 
 
 	public BaseWebsocketSession(WebsocketSessionKey sessionKey)
@@ -88,22 +90,17 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	@Override
 	public Collection< ? extends IWindow> getWindows()
 	{
-		List<IWindow> wins = new ArrayList<>(windows.size());
-		for (ObjectReference<IWindow> ref : windows)
-		{
-			if (ref.getObject().hasEndpoint()) wins.add(ref.getObject());
-		}
-		return wins;
+		return windows.stream() //
+			.map(ObjectReference::getObject) //
+			.filter(IWindow::hasEndpoint) //
+			.collect(toList());
 	}
 
 	public long getLastAccessed()
 	{
-		long lastAccessed = Long.MIN_VALUE;
-		for (ObjectReference<IWindow> ref : windows)
-		{
-			lastAccessed = Math.max(lastAccessed, ref.getLastAccessed());
-		}
-		return lastAccessed;
+		return windows.stream() //
+			.mapToLong(ObjectReference::getLastAccessed) //
+			.max().orElse(Long.MIN_VALUE);
 	}
 
 	/**
@@ -111,38 +108,36 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	 */
 	public long getLastPingTime()
 	{
-		long lastPingTime = 0;
-		for (ObjectReference<IWindow> ref : windows)
-		{
-			lastPingTime = Math.max(lastPingTime, ref.getObject().getLastPingTime());
-		}
-		return lastPingTime;
+		return windows.stream() //
+			.map(ObjectReference::getObject) //
+			.mapToLong(IWindow::getLastPingTime) //
+			.max().orElse(0);
 	}
 
 	@Override
-	public IWindow getOrCreateWindow(String windowId, String windowName)
+	public IWindow getOrCreateWindow(int windowNr, String windowName)
 	{
-		if (windowId != null)
+		if (windowNr != -1)
 		{
 			for (ObjectReference<IWindow> ref : windows)
 			{
 				IWindow window = ref.getObject();
-				if (windowId.equals(window.getUuid()))
+				if (windowNr == window.getNr())
 				{
 					if ((windowName == null && window.getName() == null) || (windowName != null && windowName.equals(window.getName())))
 					{
-						// window matches on name and uuid
+						// window matches on name and nr
 						return window;
 					}
 					// else:
-					// window with this uuid exists, but windowname is different, this can happen when a new tab is opened
-					// and sessionstorage (containing windowid) is copied to the new tab.
+					// window with this nr exists, but windowname is different, this can happen when a new tab is opened
+					// and sessionstorage (containing windownr) is copied to the new tab.
 				}
 			}
 		}
 
 		// not found, create a new one
-		IWindow window = createWindow(UUID.randomUUID().toString(), windowName);
+		IWindow window = createWindow(++windowCounter, windowName);
 		windows.add(new ObjectReference<IWindow>(window));
 		return window;
 	}
@@ -164,20 +159,16 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 		return null;
 	}
 
-	protected IWindow createWindow(String windowUuid, String windowName)
+	protected IWindow createWindow(int windowNr, String windowName)
 	{
-		return new BaseWindow(this, windowUuid, windowName);
+		return new BaseWindow(this, windowNr, windowName);
 	}
 
 	public void updateLastAccessed(IWindow window)
 	{
-		for (ObjectReference<IWindow> ref : windows)
-		{
-			if (window == ref.getObject())
-			{
-				ref.updateLastAccessed();
-			}
-		}
+		windows.stream() //
+			.filter(ref -> window == ref.getObject()) //
+			.forEach(ObjectReference::updateLastAccessed);
 	}
 
 	/**

@@ -77,7 +77,7 @@ public class TypesTest
 	public void setUp() throws Exception
 	{
 		TestBaseWebsocketSession wsSession = new TestBaseWebsocketSession(new WebsocketSessionKey("1", 42));
-		CurrentWindow.set(new BaseWindow(wsSession, "11", "Test"));
+		CurrentWindow.set(new BaseWindow(wsSession, 11, "Test"));
 		Assert.assertNotNull("no window", CurrentWindow.get());
 		Assert.assertNotNull("no wsSession", CurrentWindow.get().getSession());
 	}

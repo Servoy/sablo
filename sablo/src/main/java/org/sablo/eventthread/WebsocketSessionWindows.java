@@ -118,9 +118,9 @@ public class WebsocketSessionWindows implements IWindow
 	}
 
 	@Override
-	public String getUuid()
+	public int getNr()
 	{
-		return null;
+		return -1;
 	}
 
 	@Override

@@ -295,9 +295,8 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 		return $webSocket.getURLParameter('windowname');
 	}
 
-	// RAGTEST rename, maak volgnr
-	var getWindowId = function() {
-		return webStorage.session.get('windowid');
+	var getWindowNr = function() {
+		return webStorage.session.get('windownr');
 	}
 
 	var getWindowUrl = function(windowname: string) {
@@ -331,7 +330,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 		   if($webSocket.getURLParameter($websocketConstants.CLEAR_SESSION_PARAM) == 'true'){
 	            this.clearSabloSession();
 	       }
-			wsSession = $webSocket.connect(wsSessionArgs.context, [getClientnr(), getWindowName(), getWindowId()], wsSessionArgs.queryArgs, wsSessionArgs.websocketUri);
+			wsSession = $webSocket.connect(wsSessionArgs.context, [getClientnr(), getWindowName(), getWindowNr()], wsSessionArgs.queryArgs, wsSessionArgs.websocketUri);
 
 			wsSession.onMessageObject(function(msg, conversionInfo, scopesToDigest) {
 				// data got back from the server
@@ -357,13 +356,12 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 				if (msg.clientnr) {
 					webStorage.session.set("clientnr", msg.clientnr);
 				}
-				// RAGTEST rename, maak volgnr
-				if (msg.windowid) {
-					webStorage.session.set("windowid", msg.windowid);
+				if (msg.windownr) {
+					webStorage.session.set("windownr", msg.windownr);
 				}
-				if (msg.clientnr || msg.windowid) {
+				if (msg.clientnr || msg.windownr) {
 					// update the arguments on the reconnection websocket.
-					$webSocket.setConnectionPathArguments([getClientnr(), getWindowName(), getWindowId()]);
+					$webSocket.setConnectionPathArguments([getClientnr(), getWindowName(), getWindowNr()]);
 				}
 				
 				if (msg.call) {
@@ -521,7 +519,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 
 		getClientnr: getClientnr,
 		getWindowName: getWindowName,
-		getWindowId: getWindowId,
+		getWindowNr: getWindowNr,
 		getWindowUrl: getWindowUrl,
 
 		// used by custom property component[] to implement nested component logic
@@ -555,7 +553,7 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 		
 		// RAGTEST rename, niet session
 		clearSabloSession:function (){
-	        webStorage.session.remove('windowid');
+	        webStorage.session.remove('windownr');
 	        webStorage.session.remove('clientnr');
 		},
 

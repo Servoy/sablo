@@ -88,7 +88,7 @@ public interface IWindow
 	 */
 	void unregisterContainer(Container container);
 
-	String getUuid();
+	int getNr();
 
 	/**
 	 * @return

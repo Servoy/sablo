@@ -367,7 +367,7 @@ public class WebComponentTest
 		testcomponent.setProperty("background", Color.BLACK);
 		form.add(testcomponent);
 
-		CurrentWindow.runForWindow(new BaseWindow(null, "test", "test")
+		CurrentWindow.runForWindow(new BaseWindow(null, 99, "test")
 		{
 			@Override
 			public Container getForm(String formName)
@@ -436,7 +436,7 @@ public class WebComponentTest
 		testcomponent.setProperty("changeintallow", Integer.valueOf(1));
 		form.add(testcomponent);
 
-		CurrentWindow.runForWindow(new BaseWindow(null, "test", "test")
+		CurrentWindow.runForWindow(new BaseWindow(null, 99, "test")
 		{
 			@Override
 			public Container getForm(String formName)

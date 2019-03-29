@@ -104,22 +104,26 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		return session;
 	}
 
-	public void start(Session newSession, String clntnr, String winname, String winid) throws Exception
+	public void start(Session newSession, String clntnr, String winname, String winnr) throws Exception
 	{
 		this.session = newSession;
 
-		String clientnr = "null".equalsIgnoreCase(clntnr) ? null : clntnr;
-		String windowId = "null".equalsIgnoreCase(winid) ? null : winid;
+		int clientnr = "null".equalsIgnoreCase(clntnr) ? -1 : Integer.parseInt(clntnr);
+		int windowNr = "null".equalsIgnoreCase(winnr) ? -1 : Integer.parseInt(winnr);
 		String windowName = "null".equalsIgnoreCase(winname) ? null : winname;
 
 		HttpSession httpSession = getHttpSession(newSession);
 		if (httpSession == null)
 		{
-			throw new IllegalStateException("Cannot find httpsession for websocket session");
+			// this can happen when the server is restarted and the client reconnects the websocket
+			log.warn("Cannot find httpsession for websocket session, server restarted? clientnr=" + clntnr + ", windowNr=" + windowNr + ", windowName=" +
+				windowName);
+			cancelSession(CLOSE_REASON_CLIENT_OUT_OF_SYNC);
+			return;
 		}
 		IWebsocketSession wsSession = WebsocketSessionManager.getOrCreateSession(endpointType, httpSession, clientnr, true);
 
-		CurrentWindow.set(window = wsSession.getOrCreateWindow(windowId, windowName));
+		CurrentWindow.set(window = wsSession.getOrCreateWindow(windowNr, windowName));
 
 		messageLogger = wsSession.getMessageLogger(window);
 

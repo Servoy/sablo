@@ -42,7 +42,7 @@ public class BaseWindowTest
 	public void shouldSetAndClearEndpoint() throws Exception
 	{
 		Mockito.when(websocketEndpointMock.hasSession()).thenReturn(Boolean.TRUE);
-		BaseWindow window = new BaseWindow(websocketSessionMock, "theuuid", "test");
+		BaseWindow window = new BaseWindow(websocketSessionMock, 42, "test");
 
 		assertFalse(window.hasEndpoint());
 
@@ -59,7 +59,7 @@ public class BaseWindowTest
 	@Test
 	public void shouldKeepLastEndpoint() throws Exception
 	{
-		BaseWindow window = new BaseWindow(websocketSessionMock, "theuuid", "test");
+		BaseWindow window = new BaseWindow(websocketSessionMock, 42, "test");
 
 		IWebsocketEndpoint endpoint2 = Mockito.mock(IWebsocketEndpoint.class);
 		Mockito.when(endpoint2.hasSession()).thenReturn(Boolean.TRUE);

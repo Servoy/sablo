@@ -41,6 +41,8 @@ public interface IWebsocketEndpoint
 	public static final int EVENT_LEVEL_SYNC_API_CALL = 500;
 	public static final String CLEAR_SESSION_PARAM = "sabloClearSession";
 
+	public static final String CLOSE_REASON_CLIENT_OUT_OF_SYNC = "CLIENT-OUT-OF-SYNC";
+
 	String getEndpointType();
 
 	/**

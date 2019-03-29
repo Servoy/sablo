@@ -25,13 +25,17 @@ public class GetHttpSessionConfigurator extends Configurator
 	@Override
 	public void modifyHandshake(ServerEndpointConfig config, HandshakeRequest request, HandshakeResponse response)
 	{
-		List<String> connectNr = request.getParameterMap().get(CONNECT_NR);
-		if (connectNr == null || connectNr.size() != 1)
+		HttpSession httpSession = (HttpSession)request.getHttpSession();
+		if (httpSession != null)
 		{
-			throw new IllegalArgumentException("connectNr request parameter missing");
-		}
+			List<String> connectNr = request.getParameterMap().get(CONNECT_NR);
+			if (connectNr == null || connectNr.size() != 1)
+			{
+				throw new IllegalArgumentException("connectNr request parameter missing");
+			}
 
-		SESSIONMAP.put(connectNr.get(0), (HttpSession)request.getHttpSession());
+			SESSIONMAP.put(connectNr.get(0), httpSession);
+		}
 	}
 
 	public static HttpSession getHttpSession(Session session)
@@ -42,11 +46,11 @@ public class GetHttpSessionConfigurator extends Configurator
 			throw new IllegalArgumentException("connectNr session parameter missing");
 		}
 		HttpSession httpSession = SESSIONMAP.remove(connectNr.get(0));
-		if (httpSession == null)
+		if (httpSession != null)
 		{
-			throw new IllegalArgumentException("no http session?");
+			httpSession.setMaxInactiveInterval(0); // make sure it never expires
 		}
-		httpSession.setMaxInactiveInterval(0); // make sure it never expires
+
 		return httpSession;
 	}
 }

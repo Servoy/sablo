@@ -148,7 +148,7 @@ public class WebsocketSessionManager
 		}
 	}
 
-	public static IWebsocketSession getSession(String endpointType, HttpSession httpSession, String clientnr)
+	public static IWebsocketSession getSession(String endpointType, HttpSession httpSession, int clientnr)
 	{
 		try
 		{
@@ -171,7 +171,7 @@ public class WebsocketSessionManager
 	 * @return
 	 * @throws Exception
 	 */
-	static IWebsocketSession getOrCreateSession(String endpointType, HttpSession httpSession, String clientnr, boolean create) throws Exception
+	static IWebsocketSession getOrCreateSession(String endpointType, HttpSession httpSession, int clientnr, boolean create) throws Exception
 	{
 		IWebsocketSession wsSession = null;
 		if (create) creatingLock.lock();
@@ -185,9 +185,9 @@ public class WebsocketSessionManager
 				if (create && websocketSessionFactories.containsKey(endpointType))
 				{
 					// a new session, make sure it will not clash with an existing clientnr within the same httpsession
-					if (clientnr != null && clientnr.length() > 0)
+					if (clientnr != -1)
 					{
-						key = getSessionKey(httpSession, null);
+						key = getSessionKey(httpSession, -1);
 					}
 
 					wsSession = websocketSessionFactories.get(endpointType).createSession(key);
@@ -223,17 +223,17 @@ public class WebsocketSessionManager
 		return wsSession;
 	}
 
-	private static WebsocketSessionKey getSessionKey(HttpSession httpSession, String clientnrStr)
+	private static WebsocketSessionKey getSessionKey(HttpSession httpSession, int prevClientnr)
 	{
 		int clientnr;
-		if (clientnrStr == null || clientnrStr.length() == 0)
+		if (prevClientnr == -1)
 		{
 			// new client, generate new number
 			clientnr = getCounter(httpSession, LAST_CLIENT_NUMBER).incrementAndGet();
 		}
 		else
 		{
-			clientnr = Integer.parseInt(clientnrStr);
+			clientnr = prevClientnr;
 		}
 		return new WebsocketSessionKey(httpSession.getId(), clientnr);
 	}

@@ -16,6 +16,8 @@
 
 package org.sablo.websocket;
 
+import static org.sablo.websocket.IWebsocketEndpoint.CLOSE_REASON_CLIENT_OUT_OF_SYNC;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -87,7 +89,7 @@ public class BaseWindow implements IWindow
 	private volatile int endpointRefcount = 0;
 
 	private final IWebsocketSession session;
-	private final String uuid;
+	private final int nr;
 	private final String name;
 
 	private final AtomicInteger nextMessageId = new AtomicInteger(0);
@@ -101,17 +103,17 @@ public class BaseWindow implements IWindow
 
 	private String currentFormUrl;
 
-	public BaseWindow(IWebsocketSession session, String uuid, String name)
+	public BaseWindow(IWebsocketSession session, int nr, String name)
 	{
 		this.session = session;
-		this.uuid = uuid;
+		this.nr = nr;
 		this.name = name;
 	}
 
 	@Override
-	public String getUuid()
+	public int getNr()
 	{
-		return uuid;
+		return nr;
 	}
 
 	@Override
@@ -208,7 +210,7 @@ public class BaseWindow implements IWindow
 				if (!String.valueOf(lastSentMessage.get()).equals(clientLastMessageReceived))
 				{
 					// client is out-of-sync
-					cancelSession("CLIENT-OUT-OF-SYNC");
+					cancelSession(CLOSE_REASON_CLIENT_OUT_OF_SYNC);
 				}
 
 				// Client sent a lastServerMessageNumber, so this is a reconnect, no need to send the services etc.
@@ -220,12 +222,12 @@ public class BaseWindow implements IWindow
 		try
 		{
 			sendServices();
-			sendWindowId();
+			sendWindowNr();
 			sendCurrentFormUrl();
 		}
 		catch (IOException e)
 		{
-			log.error("Error sending services/windowid to new endpoint", e);
+			log.error("Error sending services/windownr to new endpoint", e);
 		}
 	}
 
@@ -306,17 +308,16 @@ public class BaseWindow implements IWindow
 		}
 	}
 
-	// RAGTEST rename
-	protected void sendWindowId() throws IOException
+	protected void sendWindowNr() throws IOException
 	{
-		if (uuid == null)
+		if (nr == -1)
 		{
-			throw new IllegalStateException("window uuid not set");
+			throw new IllegalStateException("windowNr not set");
 		}
 
 		Map<String, String> msg = new HashMap<>();
 		msg.put("clientnr", String.valueOf(getSession().getSessionKey().getClientnr()));
-		msg.put("windowid", uuid);
+		msg.put("windownr", String.valueOf(nr));
 		sendAsyncMessage(msg, null, FullValueToJSONConverter.INSTANCE);
 	}
 
