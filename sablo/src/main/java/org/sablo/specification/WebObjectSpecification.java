@@ -19,7 +19,6 @@ package org.sablo.specification;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,7 +26,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -59,19 +57,6 @@ public class WebObjectSpecification extends PropertyDescription
 	private static final Logger log = LoggerFactory.getLogger(WebObjectSpecification.class.getCanonicalName());
 
 	public static final String TYPES_KEY = "types";
-
-	public final static String TAG_PROPERTY_INPUT_FIELD_TYPE = "valuesFieldType";
-
-	public enum TagAllowerdPropertyInputFieldType
-	{
-		typeahead, combobox, multipleTypeahead;
-
-		public static boolean stringValue(String s)
-		{
-			if (s == null) return false;
-			else return Arrays.stream(TagAllowerdPropertyInputFieldType.values()).map(i -> i.toString()).collect(Collectors.toList()).contains(s);
-		}
-	}
 
 	public final static String PUSH_TO_SERVER_KEY = "pushToServer";
 
