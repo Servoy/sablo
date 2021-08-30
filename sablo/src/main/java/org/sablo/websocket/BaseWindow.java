@@ -515,7 +515,9 @@ public class BaseWindow implements IWindow
 	{
 		if (dataWriter == null && serviceCalls.size() == 0 && delayedOrAsyncComponentApiCalls.size() == 0) return false;
 
-		if (getEndpoint() == null)
+		IWebsocketEndpoint ep = getEndpoint();
+
+		if (ep == null)
 		{
 			throw new IOException("Endpoint was closed"); //$NON-NLS-1$
 		}
@@ -607,6 +609,7 @@ public class BaseWindow implements IWindow
 					w.key("smsgid").value(smsgidOptional);
 				}
 				JSONUtils.writeClientConversions(w, clientDataConversions);
+				ep.includePendingResponse(w);
 				w.endObject();
 
 				sendMessageText(w.toString());

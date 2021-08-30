@@ -147,6 +147,8 @@ webSocketModule.factory('$webSocket',
 	
 	let functionsToExecuteAfterIncommingMessageWasHandled: Array<{scopeHint: angular.IScope, task: () => Array<angular.IScope>}> = undefined;
 
+	let currentRequestInfo = undefined;
+
 	let getNextMessageId = function() {
 		return nextMessageId++;
 	};
@@ -260,29 +262,8 @@ webSocketModule.factory('$webSocket',
 				}
 			}
 
-			// data got back from the server
-			if (obj.cmsgid) { // response to event
-				let deferredEvent = deferredEvents[obj.cmsgid];
-				if (deferredEvent != null && angular.isDefined(deferredEvent)) {
-					if (obj.exception) {
-						// something went wrong
-						if (obj[$sabloConverters.TYPES_KEY] && obj[$sabloConverters.TYPES_KEY].exception) {
-							obj.exception = $sabloConverters.convertFromServerToClient(obj.exception, obj[$sabloConverters.TYPES_KEY].exception, undefined, undefined, undefined)
-						}
-						deferredEvent.reject(obj.exception);
-                        $rootScope.$applyAsync(); // not sure that this is needed at all here but it is meant to replace (by making sure a root digest is called) a very old sync $apply that was used here for the reject; it would error out because of that in firefox where an $apply might happen on top of another $apply then in some situations (alerts combined with sync calls to and from server); and that is not allowed by angular 
-					} else {
-						if (obj[$sabloConverters.TYPES_KEY] && obj[$sabloConverters.TYPES_KEY].ret) {
-							obj.ret = $sabloConverters.convertFromServerToClient(obj.ret, obj[$sabloConverters.TYPES_KEY].ret, undefined, undefined, undefined)
-						}
-						deferredEvent.resolve(obj.ret);
-                        $rootScope.$applyAsync(); // not sure that this is needed at all here but it is meant to replace (by making sure a root digest is called) a very old sync $apply that was used here for the resolve; it would error out because of that in firefox where an $apply might happen on top of another $apply then in some situations (alerts combined with sync calls to and from server); and that is not allowed by angular 
-					}
-				} else $log.warn("Response to an unknown handler call dismissed; can happen (normal) if a handler call gets interrupted by a full browser refresh.");
-				delete deferredEvents[obj.cmsgid];
-				$sabloTestability.testEvents();
-				$sabloLoadingIndicator.hideLoading();
-			}
+            // Storing the currentRequestInfo before processing messages, so the message processing code can access it through $webSocket.getCurrentRequestinfo()
+            currentRequestInfo = deferredEvents?.[obj.cmsgid]?.promise?.requestInfo;
 
 			// message
 			if (obj.msg) {
@@ -296,7 +277,7 @@ webSocketModule.factory('$webSocket',
 				optimizeAndCallFormScopeDigest(scopesToDigest); // as we are currently not inside a digest cycle, digest the affected scopes
 			}
 
-			if (obj.msg && obj.msg.services) {
+			if (obj?.msg?.services) {
 				$services.updateServiceScopes(obj.msg.services, (obj[$sabloConverters.TYPES_KEY] && obj[$sabloConverters.TYPES_KEY].msg) ? obj[$sabloConverters.TYPES_KEY].msg.services : undefined);
 			}
 
@@ -387,6 +368,30 @@ webSocketModule.factory('$webSocket',
 					sendMessageObject(response);
 				});
 			}
+
+			// got the return value for a clientside defer back from the server
+            // note: obj.cmsgid must be processed last, so execution order is the same regardless of whether they are bundled together or not, see IWebsocketEndpoint.includePendingResponse(...)
+            if (obj.cmsgid) { // response to event
+                let deferredEvent = deferredEvents[obj.cmsgid];
+                if (deferredEvent != null) {
+                    if (obj.exception) {
+                        // something went wrong
+                        if (obj[$sabloConverters.TYPES_KEY] && obj[$sabloConverters.TYPES_KEY].exception) {
+                            obj.exception = $sabloConverters.convertFromServerToClient(obj.exception, obj[$sabloConverters.TYPES_KEY].exception, undefined, undefined, undefined)
+                        }
+                        deferredEvent.reject(obj.exception);
+                    } else {
+                        if (obj[$sabloConverters.TYPES_KEY] && obj[$sabloConverters.TYPES_KEY].ret) {
+                            obj.ret = $sabloConverters.convertFromServerToClient(obj.ret, obj[$sabloConverters.TYPES_KEY].ret, undefined, undefined, undefined)
+                        }
+                        deferredEvent.resolve(obj.ret);
+                    }
+                    $rootScope.$applyAsync(); // not sure that this is needed at all here but it is meant to replace (by making sure a root digest is called) a very old sync $apply that was used here for the resolve; it would error out because of that in firefox where an $apply might happen on top of another $apply then in some situations (alerts combined with sync calls to and from server); and that is not allowed by angular 
+                } else $log.warn("Response to an unknown handler call dismissed; can happen (normal) if a handler call gets interrupted by a full browser refresh.");
+                delete deferredEvents[obj.cmsgid];
+                $sabloTestability.testEvents();
+                $sabloLoadingIndicator.hideLoading();
+            }
 		} catch (e) {
 			$log.error("Error (follows below) in parsing/processing this message: " + message.data);
 			$log.error(e);
@@ -404,6 +409,8 @@ webSocketModule.factory('$webSocket',
 				sendMessageObject(response);
 			}
 		} finally {
+			currentRequestInfo = undefined;
+
 			let err;
 			let scopesToDigest = new ScopeSet();
 
@@ -781,7 +788,8 @@ webSocketModule.factory('$webSocket',
 		getPathname: getPathname,
 		
 		setQueryString: setQueryString,
-		getQueryString: getQueryString	
+		getQueryString: getQueryString,
+        getCurrentRequestInfo: () => currentRequestInfo,
 	};
 }).factory("$services", function($rootScope, $sabloConverters, $sabloUtils, $propertyWatchesRegistry, $log){
 	// serviceName:{} service model

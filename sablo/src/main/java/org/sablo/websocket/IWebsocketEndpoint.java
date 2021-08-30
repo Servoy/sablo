@@ -23,6 +23,7 @@ import java.util.concurrent.TimeoutException;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
 
+import org.json.JSONStringer;
 import org.sablo.eventthread.IEventDispatcher;
 
 /**
@@ -83,6 +84,8 @@ public interface IWebsocketEndpoint
 	 * @param text
 	 */
 	void sendText(int messageNumber, String text) throws IOException;
+
+	void includePendingResponse(JSONStringer writer) throws IOException;
 
 	/**
 	 * @throws TimeoutException see {@link IEventDispatcher#suspend(Object, int, long)} for more details.

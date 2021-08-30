@@ -280,12 +280,10 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 
 	function markServiceCallDone(arg) {
 		currentServiceCallDone = true;
-		return arg;
 	}
 
 	function markServiceCallFailed(arg) {
 		currentServiceCallDone = true;
-		return $q.reject(arg);
 	}
 
 	function waitForServiceCallbacks(promise, times) {
@@ -297,7 +295,13 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 		currentServiceCallDone = false
 		currentServiceCallWaiting = times.length
 		currentServiceCallTimeouts = times.map(function(t) { return setTimeout(callServiceCallbacksWhenDone, t) })
-		return promise.then(markServiceCallDone, markServiceCallFailed)
+		promise.then(markServiceCallDone, markServiceCallFailed);
+		
+		// returning the provided promise, not the promise returned by the thenable above,
+		// as the provided promise is stored in deferredEvents. Users can add a requestInfo property
+		// to the promise returned below and that must be the one stored on the promise stored in deferredEvents,
+		// so the ws message processing logic can retrieve the requestInfo(s) again
+		return promise
 	}
 
 	function callService(serviceName:string, methodName:string, argsObject, async?:boolean) {

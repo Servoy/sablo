@@ -34,6 +34,7 @@ import javax.websocket.Session;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONStringer;
 import org.sablo.IllegalChangeFromClientException;
 import org.sablo.eventthread.EventDispatcher;
 import org.sablo.eventthread.IEventDispatcher;
@@ -77,6 +78,8 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 	private final Map<Integer, List<Object>> pendingMessages = new HashMap<>();
 
 	private final AtomicLong lastPingTime = new AtomicLong(System.currentTimeMillis());
+
+	ThreadLocal<HashMap<String, Object>> pendingResponse = new ThreadLocal<>();
 
 	public WebsocketEndpoint(String endpointType)
 	{
@@ -442,22 +445,11 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 								{
 									try
 									{
+										preparePendingResponse(msgId, result, error);
+
 										getWindow().sendChanges();
-										if (error == null)
-										{
-											Object resultObject = result;
-											PropertyDescription objectType = null;
-											if (result instanceof TypedData)
-											{
-												resultObject = ((TypedData< ? >)result).content;
-												objectType = ((TypedData< ? >)result).contentType;
-											}
-											sendResponse(msgId, resultObject, objectType, true);
-										}
-										else
-										{
-											sendResponse(msgId, error, null, false);
-										}
+
+										sendPendingResponse();
 									}
 									catch (IOException e)
 									{
@@ -525,25 +517,83 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		{
 			CurrentWindow.set(null);
 		}
-
 	}
 
-	protected void sendResponse(Object msgId, Object object, PropertyDescription objectType, boolean success) throws IOException
+	/**
+	 * Prepares the data for teh response for the msgId
+	 *
+	 * Will either be included in the message resulting from calling getWindow.sendChanges() via {@link #includePendingResponse(JSONStringer)}
+	 * or be send as a separate message via the call to {@link #sendPendingResponse()}
+	 *
+	 * @param msgId
+	 * @param result
+	 * @param error
+	 */
+	private void preparePendingResponse(Object msgId, Object result, String error)
 	{
-		Map<String, Object> data = new HashMap<>();
-		String key = success ? "ret" : "exception";
-		data.put(key, object);
-		data.put("cmsgid", msgId);
-		PropertyDescriptionBuilder dataTypes = null;
-		if (objectType != null)
+		HashMap<String, Object> responseData = new HashMap<String, Object>(3);
+		responseData.put("cmsgid", msgId); //$NON-NLS-1$
+
+		if (error == null)
 		{
-			dataTypes = AggregatedPropertyType.newAggregatedPropertyBuilder().withProperty(key, objectType);
+			Object resultObject = result;
+			PropertyDescription objectType = null;
+			if (resultObject instanceof TypedData)
+			{
+				resultObject = ((TypedData< ? >)resultObject).content;
+				objectType = ((TypedData< ? >)resultObject).contentType;
+
+				if (objectType != null)
+				{
+					PropertyDescriptionBuilder dataTypes = AggregatedPropertyType.newAggregatedPropertyBuilder().withProperty("ret", objectType); //$NON-NLS-1$
+					if (dataTypes != null) responseData.put("dataTypes", dataTypes.build()); //$NON-NLS-1$
+				}
+			}
+			responseData.put("ret", resultObject); //$NON-NLS-1$
 		}
+		else
+		{
+			responseData.put("exception", error); //$NON-NLS-1$
+		}
+
+		pendingResponse.set(responseData);
+	}
+
+	protected void sendPendingResponse() throws IOException
+	{
+		HashMap<String, Object> responseData = pendingResponse.get();
+
+		if (responseData == null) return;
+
+		pendingResponse.remove();
+
+		PropertyDescription dataTypes = (PropertyDescription)responseData.remove("dataTypes"); //$NON-NLS-1$
 
 		try
 		{
-			sendText(window.getNextMessageNumber(), JSONUtils.writeDataWithConversions(FullValueToJSONConverter.INSTANCE, data,
-				dataTypes != null ? dataTypes.build() : null, BrowserConverterContext.NULL_WEB_OBJECT_WITH_NO_PUSH_TO_SERVER));
+			sendText(window.getNextMessageNumber(), JSONUtils.writeDataWithConversions(FullValueToJSONConverter.INSTANCE, responseData,
+				dataTypes, BrowserConverterContext.NULL_WEB_OBJECT_WITH_NO_PUSH_TO_SERVER));
+		}
+		catch (JSONException e)
+		{
+			throw new IOException(e);
+		}
+	}
+
+	public void includePendingResponse(JSONStringer writer) throws IOException
+	{
+		HashMap<String, Object> responseData = pendingResponse.get();
+
+		if (responseData == null) return;
+
+		pendingResponse.remove();
+
+		PropertyDescription dataTypes = (PropertyDescription)responseData.remove("dataTypes"); //$NON-NLS-1$
+
+		try
+		{
+			JSONUtils.writeDataWithConversions(FullValueToJSONConverter.INSTANCE, writer, responseData, dataTypes,
+				BrowserConverterContext.NULL_WEB_OBJECT_WITH_NO_PUSH_TO_SERVER);
 		}
 		catch (JSONException e)
 		{
