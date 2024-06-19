@@ -81,11 +81,17 @@ public abstract class Container extends WebComponent
 		component.parent = null;
 	}
 
+	/**
+	 * Get a direct child component of this container - by name. It will not search inside child containers.
+	 */
 	public WebComponent getComponent(String name)
 	{
 		return components.get(name);
 	}
 
+	/**
+	 * Returns the direct child components of this container; it will not go inside child containers to search for components.
+	 */
 	public Collection<WebComponent> getComponents()
 	{
 		return Collections.unmodifiableCollection(components.values());
