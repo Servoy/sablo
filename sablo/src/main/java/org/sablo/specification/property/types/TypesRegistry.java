@@ -56,6 +56,7 @@ public class TypesRegistry
 		addType(BooleanPropertyType.INSTANCE);
 		addType(ColorPropertyType.INSTANCE);
 		addType(StringPropertyType.INSTANCE);
+		addType(SecureStringPropertyType.INSTANCE);
 		addType(InsetsPropertyType.INSTANCE);
 		addType(DatePropertyType.INSTANCE);
 		addType(DimensionPropertyType.INSTANCE);

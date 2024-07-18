@@ -76,6 +76,7 @@ public class IndexPageEnhancer
 	 * @param writer the writer to write to
 	 * @throws IOException
 	 */
+	@SuppressWarnings("unchecked")
 	public static void enhance(URL resource, HttpServletRequest request, Collection<String> cssContributions, Collection<String> jsContributions,
 		Collection<String> extraMetaData, Map<String, Object> variableSubstitution, Writer writer, IContributionFilter contributionFilter,
 		IContributionEntryFilter contributionEntryFilter, String contentSecurityPolicyNonce) throws IOException

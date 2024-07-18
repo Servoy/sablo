@@ -72,6 +72,8 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 
 	private final AtomicLong lastPingTime = new AtomicLong(System.currentTimeMillis());
 
+	private String logInfo = ""; //$NON-NLS-1$
+
 	public WebsocketEndpoint(String endpointType)
 	{
 		this.endpointType = endpointType;
@@ -173,6 +175,11 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 						if (session != null && session.isOpen())
 						{
 							wsSession.onOpen(session.getRequestParameterMap());
+							if (wsSession.getHttpSession() != null)
+							{
+								wsSession.getHttpSession().getId();
+								logInfo = wsSession.getLogInformation();
+							}
 						}
 					}
 				}
@@ -304,7 +311,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 	{
 		if (t instanceof IOException)
 		{
-			log.info("IOException happened", t.getMessage()); // TODO if it has no message but has a 'cause' it will not print anything useful
+			log.info("IOException happened, " + logInfo, t.getMessage()); // TODO if it has no message but has a 'cause' it will not print anything useful
 		}
 		else
 		{
@@ -339,7 +346,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 			}
 			catch (IOException e)
 			{
-				log.warn("could not reply to ping message for window " + window, e);
+				log.warn("could not reply to ping message for window " + window + "," + logInfo, e);
 			}
 			return;
 		}
@@ -376,7 +383,8 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 							if (obj.has("err")) ret.add(obj.opt("err")); // second element is added only if an error happened while calling api in browser
 						}
 						else log.error(
-							"Discarded response for obsolete pending message (it probably timed - out waiting for response before it got one): " + suspendID);
+							"Discarded response for obsolete pending message (it probably timed - out waiting for response before it got one): " + suspendID +
+								", " + logInfo);
 
 						window.getSession().getEventDispatcher().resume(suspendID);
 					}
@@ -429,7 +437,8 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 								if (session == null && window == null)
 								{
 									// this websocket endpoint is already closed, ignore the stuff that can't be send..
-									log.warn("return value of the service call: " + methodName + " is ignored because the websocket is already closed");
+									log.warn(
+										"return value of the service call: " + methodName + " is ignored because the websocket is already closed." + logInfo);
 								}
 								else
 								{
@@ -450,7 +459,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 				}
 				else
 				{
-					log.info("Unknown service called from the client: " + serviceName);
+					log.info("Unknown service called from the client: " + serviceName + "," + logInfo);
 				}
 			}
 			else if (obj.has("servicedatapush"))
@@ -478,7 +487,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 							}
 							catch (JSONException e)
 							{
-								log.error("JSONException while executing service " + serviceScriptingName + " datachange.", e);
+								log.error("JSONException while executing service " + serviceScriptingName + " datachange." + logInfo, e);
 								return;
 							}
 						}
@@ -486,7 +495,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 				}
 				else
 				{
-					log.info("Unknown service datapush from client; ignoring: " + serviceScriptingName);
+					log.info("Unknown service datapush from client; ignoring: " + serviceScriptingName + "," + logInfo);
 				}
 
 			}
@@ -498,7 +507,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		}
 		catch (JSONException e)
 		{
-			log.error("JSONException while processing message from client:", e);
+			log.error("JSONException while processing message from client, " + logInfo, e);
 			return;
 		}
 		finally
@@ -518,7 +527,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 	{
 		if (session == null)
 		{
-			throw new IOException("No session");
+			throw new IOException("No session to send the message, " + logInfo);
 		}
 		session.getBasicRemote().sendText(txt);
 	}
@@ -548,11 +557,11 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		{
 			if (ret.size() == 0 && session == null && window == null)
 			{
-				throw new CancellationException("Websocket session was closed while waiting for client response");
+				throw new CancellationException("Websocket session was closed while waiting for client response, " + logInfo);
 			}
 			throw new RuntimeException("Unexpected: Incorrect return value (" + ret.size() +
 				" - not even null/undefined) from client for message (could be due to a close/exit cancelling all pending sync req. to client). Content: " +
-				ret);
+				ret + ", " + logInfo);
 		}
 
 		return ret.get(0);

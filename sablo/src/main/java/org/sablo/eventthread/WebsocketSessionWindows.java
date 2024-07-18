@@ -24,7 +24,7 @@ import org.json.JSONWriter;
 import org.sablo.Container;
 import org.sablo.WebComponent;
 import org.sablo.specification.IFunctionParameters;
-import org.sablo.specification.WebObjectFunctionDefinition;
+import org.sablo.specification.WebObjectApiFunctionDefinition;
 import org.sablo.specification.property.IBrowserConverterContext;
 import org.sablo.websocket.ClientToServerCallReturnValue;
 import org.sablo.websocket.IClientService;
@@ -175,7 +175,7 @@ public class WebsocketSessionWindows implements IWindow
 	}
 
 	@Override
-	public Object executeServiceCall(IClientService clientService, String functionName, Object[] arguments, WebObjectFunctionDefinition apiFunction,
+	public Object executeServiceCall(IClientService clientService, String functionName, Object[] arguments, WebObjectApiFunctionDefinition apiFunction,
 		IToJSONWriter<IBrowserConverterContext> pendingChangesWriter, boolean blockEventProcessing) throws IOException
 	{
 		// always just return the first none null value.
@@ -189,7 +189,7 @@ public class WebsocketSessionWindows implements IWindow
 	}
 
 	@Override
-	public Object invokeApi(WebComponent receiver, WebObjectFunctionDefinition apiFunction, Object[] arguments)
+	public Object invokeApi(WebComponent receiver, WebObjectApiFunctionDefinition apiFunction, Object[] arguments)
 	{
 		Object retValue = null;
 		for (IWindow window : session.getWindows())

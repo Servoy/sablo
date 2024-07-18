@@ -299,14 +299,15 @@ public class CustomJSONObjectType<ET, WT> extends CustomJSONPropertyType<Map<Str
 			if (((JSONObject)newJSONValue).has(NO_OP)) return previousChangeAwareMap;
 
 			log.error("Property (" + pd + ") of '" + (dataConverterContext != null ? dataConverterContext.getWebObject() : null) +
-				"' o tried to change something from client to server but with unsupported content: " + newJSONValue);
+				"' tried to change something from client (to server) but with unsupported content: " + newJSONValue);
 			if (previousChangeAwareMap != null) previousChangeAwareMap.getChangeSetter().markAllChanged();
 			return previousChangeAwareMap;
 		}
 		else
 		{
-			log.error("property " + pd + " of '" + (dataConverterContext != null ? dataConverterContext.getWebObject() : null) +
-				"' is typed as custom JSON object, but the value is not an JSONObject or supported update value: " + newJSONValue);
+			log.error("Property " + pd + " of '" + (dataConverterContext != null ? dataConverterContext.getWebObject() : null) +
+				"' is typed as custom JSON object, but the value received from client (to server) is not an JSONObject or supported update value: " +
+				newJSONValue);
 			return previousChangeAwareMap;
 		}
 	}

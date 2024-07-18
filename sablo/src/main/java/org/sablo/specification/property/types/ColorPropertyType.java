@@ -66,6 +66,7 @@ public class ColorPropertyType extends DefaultPropertyType<Color> implements ICl
 
 	protected ColorPropertyType()
 	{
+		super(true);
 	}
 
 	@Override

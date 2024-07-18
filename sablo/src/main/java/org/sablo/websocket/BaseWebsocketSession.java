@@ -29,6 +29,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import javax.servlet.http.HttpSession;
+
 import org.json.JSONObject;
 import org.sablo.IChangeListener;
 import org.sablo.eventthread.EventDispatcher;
@@ -77,6 +79,7 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 
 	private final DisposeHandlersSubject disposeHandlersSubject = new DisposeHandlersSubject();
 	private int windowCounter;
+	private HttpSession httpSession;
 
 
 	public BaseWebsocketSession(WebsocketSessionKey sessionKey)
@@ -518,4 +521,15 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 		return null;
 	}
 
+	@Override
+	public void setHttpSession(HttpSession httpSession)
+	{
+		this.httpSession = httpSession;
+	}
+
+	@Override
+	public HttpSession getHttpSession()
+	{
+		return httpSession;
+	}
 }

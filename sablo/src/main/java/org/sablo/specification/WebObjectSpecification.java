@@ -85,11 +85,46 @@ public class WebObjectSpecification extends PropertyDescription
 
 		// keep them ordered (in code checks for < and > can be used; so for example allow.compareTo(pushToServer) <= 0  can be used to check that a property can change on server due to client change)
 
-		reject, // default, throw exception when updates are pushed to server
-		allow, // allow changes, not default implementation in sablo
-		shallow, // allow changes, implementation in sablo by creating watcher on client with objectEquality = false
-		deep // allow changes, implementation in sablo by creating watcher on client with objectEquality = true
-		;
+		/**
+		 * Default (if not set at all in .spec)
+		 * It will throw an exception when updates are pushed to server from client on such properties (for both NG1 & Titanium client)
+		 */
+		reject,
+
+		/**
+		 * Server allows changes received from client for that property.
+		 *
+		 * NG1 client-side note: it needs a manual trigger or a directive that triggers the send of changes for that property (in NG1, it's for dataprovider properties -> svy-apply (manual servoy api call) or svy-autoapply (directive));
+		 * Titanium client-side note: it needs manual send-to-server; that means that component client side code needs to call an .emit(value) on the @ Output (and in case of services via ServoyPublicService.sendServiceChanges()) of the root property that is/contains the changed value (even if it intends to send a subprop/element of the root property that only has ALLOW pushToServer).
+		 *                            Before using .emit(...)/.sendServiceChanges(...), in the rare cases where you use an 'object' type in the .spec file for elements of custom arrays or sub-properties of typed custom objects, and the content of that value is a nested JSON, in order for the custom objects type/custom array type to 'see' the changes nested inside the JSON of the plain 'object' value, you can use either ICustomObjectValue.markSubPropertyAsHavingDeepChanges(subPropertyName: string) or ICustomArrayValue.markElementAsHavingDeepChanges(index: number)
+		 */
+		allow,
+
+		/**
+		 * Server allows changes received from client for that property.
+		 *
+		 * NG1 client-side note: it will send changes automatically by automatically creating a watcher on client with objectEquality = false
+		 * Titanium client-side note: client code will automatically react and send to server ONLY when components/services change by reference the values inside nested custom objects/arrays/... marked with SHALLOW push-to-server.
+		 *                            These new values will automatically be sent to server.
+		 *
+		 *                            But it DOES NOT work automatically for root properties that change by ref. Root property change-by-ref in Titanium currently always needs a manual trigger; see description from 'allow'.
+		 *                            Changes nested inside untyped nested JSON values ('object' in .spec) need to be triggered manually as well, as they are not changes-by ref of that 'object' value; see description from 'allow'.
+		 */
+		shallow,
+
+		/**
+		 * Server allows changes received from client for that property.
+		 *
+		 * NG1 client-side note: it will send automatically any deep change inside an 'object' typed property by creating a watcher on client with objectEquality = true
+		 * Titanium client-side note: new angular does not have deep watches anymore (to detect nested changes in plain 'object' typed-in-spec JSON values).
+		 *                            It can only handle automatically SHALLOW, but even that to a limited extent (see doc from SHALLOW) through use of Proxy - and it will do the same for DEEP.
+		 *
+		 *                            Changes nested inside untyped nested JSON values ('object' in .spec) need to be triggered by component/service client-side code manually using one of:
+		 *                              - emit(value) on the component @ Output (and in case of services via ServoyPublicService.sendServiceChanges()) of the root property that is the changed JSON
+		 *                              - ICustomObjectValue.markSubPropertyAsHavingDeepChanges(subPropertyName: string) if the deep untyped JSON that has changes is a subproperty of a typed custom object from .spec
+		 *                              - ICustomArrayValue.markElementAsHavingDeepChanges(index: number) if the deep untyped JSON that has changes is an element of a custom array from .spec
+		 */
+		deep;
 
 		public static PushToServerEnum fromString(String s)
 		{
@@ -111,8 +146,7 @@ public class WebObjectSpecification extends PropertyDescription
 		 * <pre>
 		 * PARENT      CHILD       RESULT ON CHILD
 		 * ----------------------------------------
-		 * unset       unset       reject (default)           this actually can't happen in this method as parent is the 'this' object
-		 * unset       The_Rest    same as CHILD              this actually can't happen in this method as parent is the 'this' object
+		 * unset       *           reject (default)           this actually can't happen in this method as parent is the 'this' object
 		 *
 		 * reject      *           reject
 		 *
@@ -126,9 +160,9 @@ public class WebObjectSpecification extends PropertyDescription
 		 *
 		 * deep        unset       deep                                  "deep" is for random untyped JSON object values only (so "object" type); but if we get this called here
 		 *                                                               it means that smart types (custom object/array) are marked as deep in spec; being smart types,
-		 *                                                               they won't add deep angulat watches directly on themselves, only on their dumb child values maybe; so
-		 *                                                               propagate the deep value to children anyway, even though it will not actually generate deep angulat
-		 *                                                               watches for smart nested structures (which would behave similar to 'shallow' then except for dumb leafes)
+		 *                                                               they won't add deep angular watches directly on themselves, only on their dumb child values maybe; so
+		 *                                                               propagate the deep value to children anyway, even though it will not actually generate deep angular
+		 *                                                               watches for smart nested structures (which would behave similar to 'shallow' then except for dumb leafs)
 		 * deep        The_Rest    same as CHILD
 		 * </pre>
 		 *
@@ -159,9 +193,9 @@ public class WebObjectSpecification extends PropertyDescription
 
 	}
 
-	private final Map<String, WebObjectFunctionDefinition> handlers = new HashMap<>(); // second String is always a "function" for now, but in the future it will probably contain more (to specify sent args/types...)
-	private final Map<String, WebObjectFunctionDefinition> apis = new HashMap<>();
-	private final Map<String, WebObjectFunctionDefinition> internalApis = new HashMap<>();
+	private final Map<String, WebObjectHandlerFunctionDefinition> handlers = new HashMap<>(); // second String is always a "function" for now, but in the future it will probably contain more (to specify sent args/types...)
+	private final Map<String, WebObjectApiFunctionDefinition> apis = new HashMap<>();
+	private final Map<String, WebObjectApiFunctionDefinition> internalApis = new HashMap<>();
 	private final String definition;
 	private final JSONArray libraries;
 	private final String displayName;
@@ -198,6 +232,13 @@ public class WebObjectSpecification extends PropertyDescription
 	private boolean supportsGrouping;
 
 	private String replacement = null;
+
+	private SourceOfCodeExtractedDocs sourceOfCodeExtractedDocs = SourceOfCodeExtractedDocs.NOT_YET_PARSED;
+
+	public static enum SourceOfCodeExtractedDocs
+	{
+		NOT_YET_PARSED, DEDICATED_DOC_SCRIPT_FILE, NG1_CLIENT_AND_SERVER_SIDE_SCRIPT, TITANIUM_CLIENT_AND_SERVER_SIDE_SCRIPT
+	}
 
 	/**
 	 * @param packageType one of {@link IPackageReader#WEB_SERVICE}, {@link IPackageReader#WEB_COMPONENT} and {@link IPackageReader#WEB_LAYOUT}.
@@ -261,17 +302,17 @@ public class WebObjectSpecification extends PropertyDescription
 	}
 
 
-	protected final void addApiFunction(WebObjectFunctionDefinition apiFunction)
+	protected final void addApiFunction(WebObjectApiFunctionDefinition apiFunction)
 	{
 		apis.put(apiFunction.getName(), apiFunction);
 	}
 
-	protected final void addInternalApiFunction(WebObjectFunctionDefinition apiFunction)
+	protected final void addInternalApiFunction(WebObjectApiFunctionDefinition apiFunction)
 	{
 		internalApis.put(apiFunction.getName(), apiFunction);
 	}
 
-	protected final void addHandler(WebObjectFunctionDefinition propertyDescription)
+	protected final void addHandler(WebObjectHandlerFunctionDefinition propertyDescription)
 	{
 		handlers.put(propertyDescription.getName(), propertyDescription);
 	}
@@ -279,7 +320,7 @@ public class WebObjectSpecification extends PropertyDescription
 	/**
 	 * @param hndlrs
 	 */
-	protected final void putAllHandlers(Map<String, WebObjectFunctionDefinition> hndlrs)
+	protected final void putAllHandlers(Map<String, WebObjectHandlerFunctionDefinition> hndlrs)
 	{
 		handlers.putAll(hndlrs);
 	}
@@ -287,32 +328,32 @@ public class WebObjectSpecification extends PropertyDescription
 	/**
 	 * You are not allowed to modify this map!
 	 */
-	public Map<String, WebObjectFunctionDefinition> getHandlers()
+	public Map<String, WebObjectHandlerFunctionDefinition> getHandlers()
 	{
 		return Collections.unmodifiableMap(handlers);
 	}
 
-	public WebObjectFunctionDefinition getHandler(String handlerName)
+	public WebObjectHandlerFunctionDefinition getHandler(String handlerName)
 	{
 		return handlers.get(handlerName);
 	}
 
-	public WebObjectFunctionDefinition getApiFunction(String apiFunctionName)
+	public WebObjectApiFunctionDefinition getApiFunction(String apiFunctionName)
 	{
 		return apis.get(apiFunctionName);
 	}
 
-	public WebObjectFunctionDefinition getInternalApiFunction(String apiFunctionName)
+	public WebObjectApiFunctionDefinition getInternalApiFunction(String apiFunctionName)
 	{
 		return internalApis.get(apiFunctionName);
 	}
 
-	public Map<String, WebObjectFunctionDefinition> getApiFunctions()
+	public Map<String, WebObjectApiFunctionDefinition> getApiFunctions()
 	{
 		return Collections.unmodifiableMap(apis);
 	}
 
-	public Map<String, WebObjectFunctionDefinition> getInternalApiFunctions()
+	public Map<String, WebObjectApiFunctionDefinition> getInternalApiFunctions()
 	{
 		return Collections.unmodifiableMap(internalApis);
 	}
@@ -484,7 +525,9 @@ public class WebObjectSpecification extends PropertyDescription
 			Iterator<String> itk = api.keys();
 			while (itk.hasNext())
 			{
-				WebObjectFunctionDefinition def = parseFunctionDefinition(spec, api, itk.next());
+				String func = itk.next();
+				WebObjectHandlerFunctionDefinition def = new WebObjectHandlerFunctionDefinition(func);
+				parseFunctionDefinition(def, spec, api, func);
 				spec.addHandler(def);
 			}
 		}
@@ -496,7 +539,9 @@ public class WebObjectSpecification extends PropertyDescription
 			Iterator<String> itk = api.keys();
 			while (itk.hasNext())
 			{
-				WebObjectFunctionDefinition def = parseFunctionDefinition(spec, api, itk.next());
+				String func = itk.next();
+				WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
+				parseFunctionDefinition(def, spec, api, func);
 				spec.addApiFunction(def);
 			}
 		}
@@ -507,7 +552,9 @@ public class WebObjectSpecification extends PropertyDescription
 			Iterator<String> itk = api.keys();
 			while (itk.hasNext())
 			{
-				WebObjectFunctionDefinition def = parseFunctionDefinition(spec, api, itk.next());
+				String func = itk.next();
+				WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
+				parseFunctionDefinition(def, spec, api, func);
 				spec.addInternalApiFunction(def);
 			}
 		}
@@ -516,9 +563,9 @@ public class WebObjectSpecification extends PropertyDescription
 		return spec;
 	}
 
-	private static WebObjectFunctionDefinition parseFunctionDefinition(WebObjectSpecification spec, JSONObject api, String func) throws JSONException
+	private static WebObjectFunctionDefinition parseFunctionDefinition(WebObjectFunctionDefinition def, WebObjectSpecification spec, JSONObject api,
+		String func) throws JSONException
 	{
-		WebObjectFunctionDefinition def = new WebObjectFunctionDefinition(func);
 		if (api.get(func) instanceof JSONObject)
 		{
 			JSONObject jsonDef = api.getJSONObject(func);
@@ -576,23 +623,23 @@ public class WebObjectSpecification extends PropertyDescription
 				}
 				else if ("blockEventProcessing".equals(key))
 				{
-					def.setBlockEventProcessing(jsonDef.getBoolean("blockEventProcessing"));
+					castToApiFunction(def, key).setBlockEventProcessing(jsonDef.getBoolean("blockEventProcessing"));
 				}
 				else if ("delayUntilFormLoad".equals(key) || "delayUntilFormLoads".equals(key)) // first one is deprecated but still usable
 				{
-					def.setDelayUntilFormLoads(jsonDef.getBoolean(key));
+					castToApiFunction(def, key).setDelayUntilFormLoads(jsonDef.getBoolean(key));
 				}
 				else if ("async".equals(key))
 				{
-					def.setAsync(jsonDef.getBoolean("async"));
+					castToApiFunction(def, key).setAsync(jsonDef.getBoolean("async"));
 				}
 				else if ("async-now".equals(key))
 				{
-					def.setAsyncNow(jsonDef.getBoolean("async-now"));
+					castToApiFunction(def, key).setAsyncNow(jsonDef.getBoolean("async-now"));
 				}
 				else if ("globalExclusive".equals(key) || "discardPreviouslyQueuedSimilarCalls".equals(key)) // first one is deprecated but still usable
 				{
-					def.setDiscardPreviouslyQueuedSimilarCalls(jsonDef.getBoolean(key));
+					castToApiFunction(def, key).setDiscardPreviouslyQueuedSimilarCalls(jsonDef.getBoolean(key));
 				}
 //				else if ("waitsForUserAction".equals(key))
 //				{
@@ -621,7 +668,7 @@ public class WebObjectSpecification extends PropertyDescription
 				}
 				else if ("ignoreNGBlockDuplicateEvents".equals(key))
 				{
-					def.setIgnoreNGBlockDuplicateEvents(jsonDef.getBoolean(key));
+					castToHandlerFunction(def, key).setIgnoreNGBlockDuplicateEvents(jsonDef.getBoolean(key));
 				}
 				else
 				{
@@ -635,6 +682,20 @@ public class WebObjectSpecification extends PropertyDescription
 			new PropertyDescriptionBuilder().withName(func).withType(TypesRegistry.getType(FunctionPropertyType.TYPE_NAME)).withConfig(api.get(func))
 				.withDeprecated(def.getDeprecated()).build());
 		return def;
+	}
+
+	private static WebObjectHandlerFunctionDefinition castToHandlerFunction(WebObjectFunctionDefinition def, String property)
+	{
+		if (def instanceof WebObjectHandlerFunctionDefinition handler) return handler;
+		log.error("Property {} can't be set on FunctionDefinition {} which is not a handler", property, def);
+		return new WebObjectHandlerFunctionDefinition("empty");
+	}
+
+	private static WebObjectApiFunctionDefinition castToApiFunction(WebObjectFunctionDefinition def, String property)
+	{
+		if (def instanceof WebObjectApiFunctionDefinition api) return api;
+		log.error("Property {} can't be set on FunctionDefinition {} which is not a api", property, def);
+		return new WebObjectApiFunctionDefinition("empty");
 	}
 
 	private static IPropertyType< ? > resolveArrayType(ParsedProperty pp)
@@ -686,7 +747,7 @@ public class WebObjectSpecification extends PropertyDescription
 				JSONObject typeJSON = jsonObject.getJSONObject(typeName);
 				PropertyDescription pd = new PropertyDescriptionBuilder().withName(specName != null ? (specName + "." + typeName) : typeName).withType(
 					type).withProperties(
-						typeJSON.has("model") ? parseProperties("model", typeJSON, foundTypes, specName)
+						typeJSON.has("model") && typeJSON.get("model") instanceof JSONObject ? parseProperties("model", typeJSON, foundTypes, specName)
 							: parseProperties(typeName, jsonObject, foundTypes, specName))
 					.build();
 				type.setCustomJSONDefinition(pd);
@@ -967,6 +1028,19 @@ public class WebObjectSpecification extends PropertyDescription
 	public String getStyleVariantCategory()
 	{
 		return styleVariantCategory;
+	}
+
+
+	public boolean areDocsAlreadyExtractedFromCode(boolean titaniumIsUsed)
+	{
+		return sourceOfCodeExtractedDocs == SourceOfCodeExtractedDocs.DEDICATED_DOC_SCRIPT_FILE || // dedicated docs file always leads; if it's present then it's what we use
+			(titaniumIsUsed ? sourceOfCodeExtractedDocs == SourceOfCodeExtractedDocs.TITANIUM_CLIENT_AND_SERVER_SIDE_SCRIPT
+				: sourceOfCodeExtractedDocs == SourceOfCodeExtractedDocs.NG1_CLIENT_AND_SERVER_SIDE_SCRIPT);
+	}
+
+	public void setDocsWereExtractedFromCode(SourceOfCodeExtractedDocs sourceOfCodeExtractedDocs)
+	{
+		this.sourceOfCodeExtractedDocs = sourceOfCodeExtractedDocs;
 	}
 
 }

@@ -17,7 +17,7 @@
 package org.sablo;
 
 import org.sablo.specification.WebComponentSpecProvider;
-import org.sablo.specification.WebObjectFunctionDefinition;
+import org.sablo.specification.WebObjectApiFunctionDefinition;
 import org.sablo.specification.WebObjectSpecification;
 import org.sablo.websocket.CurrentWindow;
 
@@ -144,7 +144,7 @@ public class WebComponent extends BaseWebObject
 	 */
 	public Object invokeApi(String apiFunctionName, Object[] args)
 	{
-		WebObjectFunctionDefinition apiFunction = specification.getApiFunction(apiFunctionName);
+		WebObjectApiFunctionDefinition apiFunction = specification.getApiFunction(apiFunctionName);
 		if (apiFunction != null)
 		{
 			return invokeApi(apiFunction, args);
@@ -161,9 +161,15 @@ public class WebComponent extends BaseWebObject
 	 *            the args
 	 * @return the value if any
 	 */
-	public Object invokeApi(WebObjectFunctionDefinition apiFunction, Object[] args)
+	public Object invokeApi(WebObjectApiFunctionDefinition apiFunction, Object[] args)
 	{
-		return CurrentWindow.get().invokeApi(this, apiFunction, args);
+		if (isVisible()) return CurrentWindow.get().invokeApi(this, apiFunction, args);
+		else
+		{
+			log.atWarn().setMessage("Calling an api {} on a none visible component {} of parent {}").addArgument(apiFunction.getName()).addArgument(getName()) //$NON-NLS-1$
+				.addArgument(getParent().getName()).log();
+			return null;
+		}
 	}
 
 	@Override

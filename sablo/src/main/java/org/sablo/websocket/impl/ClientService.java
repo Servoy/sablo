@@ -22,6 +22,7 @@ import org.json.JSONStringer;
 import org.json.JSONWriter;
 import org.sablo.BaseWebObject;
 import org.sablo.specification.IFunctionParameters;
+import org.sablo.specification.WebObjectApiFunctionDefinition;
 import org.sablo.specification.WebObjectFunctionDefinition;
 import org.sablo.specification.WebObjectSpecification;
 import org.sablo.specification.WebObjectSpecification.PushToServerEnum;
@@ -67,7 +68,7 @@ public class ClientService extends BaseWebObject implements IClientService
 	@Override
 	public Object executeServiceCall(String functionName, Object[] arguments) throws IOException
 	{
-		WebObjectFunctionDefinition apiFunction = specification.getApiFunction(functionName);
+		WebObjectApiFunctionDefinition apiFunction = specification.getApiFunction(functionName);
 
 		Object retValue = CurrentWindow.get().executeServiceCall(this, functionName, arguments, apiFunction, new IToJSONWriter<IBrowserConverterContext>()
 		{

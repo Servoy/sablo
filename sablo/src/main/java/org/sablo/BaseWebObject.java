@@ -90,7 +90,9 @@ public abstract class BaseWebObject implements IWebObjectContext
 	protected final Map<String, Object> properties = new HashMap<>();
 
 	/**
-	 * default model properties that are not send to the browser or template (design) values that were sent to browser as template values but have not (yet) changed at runtime
+	 * default model properties that are not send to the browser or template (design) values that were sent to browser as template values but have not (yet) changed at runtime;
+	 * the common thing for these is that they either don't have to be sent initially to client
+	 * or they have already been sent to client as template-to-json; they will not be written afterwards when a fullToJSON happens or when a changesToJSON happens
 	 */
 	protected final Map<String, Object> defaultAndTemplatePropertiesUnwrapped = new HashMap<>();
 
@@ -209,6 +211,8 @@ public abstract class BaseWebObject implements IWebObjectContext
 				somethingHappened = changes.propertiesWithChangedContent.add(key);
 			} // else don't add it in the changes map as it's already in the ref. changed map; it will be fully sent to client
 
+			if (somethingHappened) makeSureItIsInPropertiesMapAndNotInDefaultAndTemplateMap(key);
+
 			if (somethingHappened && dirtyPropertyListener != null) dirtyPropertyListener.propertyFlaggedAsDirty(key, true, true);
 			return somethingHappened;
 		}
@@ -218,11 +222,27 @@ public abstract class BaseWebObject implements IWebObjectContext
 			checkIfChangeCameInWhenItShouldnt(); // this can change the "changes" ref. that is why below we always use changes. instead of directly the properties
 
 			boolean somethingHappened = changes.propertiesChangedByRef.add(key); // whether or not we will add it to a changes map (if it is already there or can't be removed, it will be false)
-			if (somethingHappened) changes.propertiesWithChangedContent.remove(key); // we just added it to be sent fully; remove it from contents changed so that it will not be sent twice
+			if (somethingHappened)
+			{
+				// we just added it to be sent fully; remove it from contents changed so that it will not be sent twice
+				changes.propertiesWithChangedContent.remove(key);
+				makeSureItIsInPropertiesMapAndNotInDefaultAndTemplateMap(key);
+			}
 
 			if (somethingHappened && dirtyPropertyListener != null) dirtyPropertyListener.propertyFlaggedAsDirty(key, true, false);
 
 			return somethingHappened;
+		}
+
+		private void makeSureItIsInPropertiesMapAndNotInDefaultAndTemplateMap(String key)
+		{
+			// it is changed and needs to be re-sent to client - so make sure it's in 'properties' not in 'defaultAndTemplatePropertiesUnwrapped'
+			// because full/changes toJSON does not send stuff from 'defaultAndTemplatePropertiesUnwrapped'
+			if (!properties.containsKey(key) && defaultAndTemplatePropertiesUnwrapped.containsKey(key))
+			{
+				properties.put(key, wrapPropertyValue(key, null,
+					defaultAndTemplatePropertiesUnwrapped.remove(key)));
+			}
 		}
 
 		public boolean isChanged()
@@ -883,7 +903,8 @@ public abstract class BaseWebObject implements IWebObjectContext
 				((ISmartPropertyValue)oldWrappedValue).detach();
 			}
 
-			// in case the 'smart' value completely changed by ref., no use keeping it in default values as it is too smart and it might want to notify changes later, although it wouldn't make sense cause the value is different now
+			// in case the 'smart' value completely changed by ref. - which is the case here, no use keeping
+			// something for it in default values - as it is too smart and it might want to notify changes later, although it wouldn't make sense cause the value is different now
 			Object defaultSmartValue = defaultAndTemplatePropertiesUnwrapped.get(complexPropertyRoot);
 			if (defaultSmartValue instanceof ISmartPropertyValue && defaultSmartValue != newWrappedValue)
 			{
@@ -891,9 +912,9 @@ public abstract class BaseWebObject implements IWebObjectContext
 				((ISmartPropertyValue)defaultSmartValue).detach();
 			}
 
-			// a new complex property is linked to this component; initialize it
 			if (newWrappedValue instanceof ISmartPropertyValue)
 			{
+				// a new complex property is linked to this component; initialize it
 				((ISmartPropertyValue)newWrappedValue).attachToBaseObject(new IChangeListener()
 				{
 					@Override
@@ -903,6 +924,9 @@ public abstract class BaseWebObject implements IWebObjectContext
 
 						if (defaultAndTemplatePropertiesUnwrapped.containsKey(complexPropertyRoot))
 						{
+							// TODO I think this can now be removed as markPropertyContentsUpdated(...) above
+							// will call makeSureItIsInPropertiesMapAndNotInDefaultAndTemplateMap(...) and do what is also done here
+
 							// something changed in this 'smart' property - so it no longer represents the default value; remove
 							// it from default values (as the value reference is the same but the content changed) and put it in properties map
 							properties.put(complexPropertyRoot, newWrappedValue);

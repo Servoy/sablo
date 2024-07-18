@@ -57,4 +57,9 @@ public interface IPropertyType<T>
 	 */
 	boolean isProtecting();
 
+	/**
+	 * True for primitive types like int, string, etc.
+	 */
+	boolean isPrimitive();
+
 }

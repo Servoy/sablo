@@ -40,4 +40,10 @@ public class TestBaseWebsocketSession extends BaseWebsocketSession
 	{
 		this.locale = locale;
 	}
+
+	@Override
+	public String getLogInformation()
+	{
+		return ""; //$NON-NLS-1$
+	}
 }

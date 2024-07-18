@@ -246,7 +246,7 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object>
 					log.info("Property (" + pd + ") of '" + (dataConverterContext != null ? dataConverterContext.getWebObject() : null) +
 						"' is typed as array; it got browser updates (" + clientReceivedJSON.getInt(CONTENT_VERSION) +
 						") but expected server version (" + previousChangeAwareList.getListContentVersion() +
-						")  - so server changed meanwhile; ignoring browser update. Update JSON: " + newJSONValue);
+						") - so server changed meanwhile; ignoring browser update. Update JSON: " + newJSONValue);
 
 					// dropped browser update because server object changed meanwhile;
 					// will send a full update if needed to have the correct value browser-side as well again (currently server side is leading / has more prio because not all server side values might support being recreated from client values)
@@ -286,7 +286,7 @@ public class CustomJSONArrayType<ET, WT> extends CustomJSONPropertyType<Object>
 		else
 		{
 			log.error("Property (" + pd + ") of '" + (dataConverterContext != null ? dataConverterContext.getWebObject() : null) +
-				"' is typed as array, but the value is not a supported update value: " + newJSONValue);
+				"' is typed as array, but the value received from client (to server) is not a supported update value: " + newJSONValue);
 			return previousChangeAwareList;
 		}
 	}

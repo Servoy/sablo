@@ -128,7 +128,7 @@ public class ClientSideTypeCache
 	 */
 	public static EmbeddableJSONWriter buildClientSideTypesFor(WebObjectSpecification webObjectSpec)
 	{
-		Map<String, WebObjectFunctionDefinition> handlers = webObjectSpec.getHandlers();
+		Map<String, WebObjectHandlerFunctionDefinition> handlers = webObjectSpec.getHandlers();
 		Map<String, WebObjectFunctionDefinition> apis = new HashMap<>(webObjectSpec.getApiFunctions());
 		apis.putAll(webObjectSpec.getInternalApiFunctions());
 		HashSet<String> modelProperties = new HashSet<>(webObjectSpec.getAllPropertiesNames());
@@ -167,7 +167,7 @@ public class ClientSideTypeCache
 
 		// check handlers
 		boolean anyHandlersWereWritten = false;
-		for (Entry<String, WebObjectFunctionDefinition> handler : handlers.entrySet())
+		for (Entry<String, WebObjectHandlerFunctionDefinition> handler : handlers.entrySet())
 		{
 			anyHandlersWereWritten = writeClientSideConversionsForFunction(clientSideTypesJSON, handler.getValue(), handler.getKey(), HANDLERS_KEY,
 				anyHandlersWereWritten);
@@ -214,7 +214,7 @@ public class ClientSideTypeCache
 			}
 		}
 
-		if (function.shouldIgnoreNGBlockDuplicateEvents())
+		if (function instanceof WebObjectHandlerFunctionDefinition && ((WebObjectHandlerFunctionDefinition)function).shouldIgnoreNGBlockDuplicateEvents())
 		{
 			if (!somethingFromFuncWasWritten)
 			{

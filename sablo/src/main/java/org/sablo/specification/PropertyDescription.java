@@ -48,6 +48,8 @@ public class PropertyDescription
 	 */
 	public static final String DOCUMENTATION_TAG_FOR_PROP_OR_KEY_FOR_HANDLERS = "doc"; //$NON-NLS-1$
 
+	public static final String VALUE_TYPES_TAG_FOR_PROP = "value_types"; //$NON-NLS-1$
+
 	private static final Logger log = LoggerFactory.getLogger(WebObjectSpecification.class.getCanonicalName());
 
 	private final String name;

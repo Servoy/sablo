@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.servlet.http.HttpSession;
+
 import org.json.JSONObject;
 import org.sablo.eventthread.IEventDispatcher;
 import org.sablo.services.client.SabloService;
@@ -175,4 +177,13 @@ public interface IWebsocketSession
 	void addDisposehandler(Disposehandler handler);
 
 	void removeDisposehandler(Disposehandler handler);
+
+	void setHttpSession(HttpSession httpSession);
+
+	HttpSession getHttpSession();
+
+	/**
+	 * generates a string that returns the log information that is used when the websocket logs or throws exceptions
+	 */
+	public String getLogInformation();
 }

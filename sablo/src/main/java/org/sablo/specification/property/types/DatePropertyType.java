@@ -43,6 +43,7 @@ public class DatePropertyType extends DefaultPropertyType<Date> implements IClas
 
 	protected DatePropertyType()
 	{
+		super(true);
 	}
 
 	@Override

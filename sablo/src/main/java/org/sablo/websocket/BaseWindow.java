@@ -41,6 +41,7 @@ import org.sablo.WebComponent;
 import org.sablo.specification.IFunctionParameters;
 import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.PropertyDescriptionBuilder;
+import org.sablo.specification.WebObjectApiFunctionDefinition;
 import org.sablo.specification.WebObjectFunctionDefinition;
 import org.sablo.specification.WebObjectSpecification.PushToServerEnum;
 import org.sablo.specification.property.BrowserConverterContext;
@@ -521,12 +522,14 @@ public class BaseWindow implements IWindow
 		try
 		{
 			boolean hasContentToSend = false;
+			boolean containsModelChanges = false;
 			JSONStringer w = new DebugFriendlyJSONStringer();
 			w.object();
 
 			if (dataWriter != null)
 			{
-				hasContentToSend = dataWriter.writeJSONContent(w, "msg", converter) || hasContentToSend;
+				containsModelChanges = dataWriter.writeJSONContent(w, "msg", converter);
+				hasContentToSend = containsModelChanges || hasContentToSend;
 			}
 
 			if (serviceCalls.size() > 0)
@@ -544,12 +547,13 @@ public class BaseWindow implements IWindow
 			{
 				Iterator<ComponentCall> it = componentApiCalls.iterator();
 				boolean callObjectStarted = false;
+				boolean asyncAPIs = true;
 				while (it.hasNext())
 				{
-					ComponentCall delayedCall = it.next();
-					if (!delayedCall.delayUntilFormLoads || isFormResolved(delayedCall.formContainer))
+					ComponentCall apiCall = it.next();
+					if (!apiCall.async) asyncAPIs = false;
+					if (!apiCall.delayUntilFormLoads || isFormResolved(apiCall.formContainer))
 					{
-						// so it is either async (so not 'delayUntilFormLoads') in which case it must execute anyway or it is 'delayUntilFormLoads' and the form is loaded/resolved so it can get executed on client
 						hasContentToSend = true;
 						it.remove();
 
@@ -560,13 +564,21 @@ public class BaseWindow implements IWindow
 						}
 
 						w.object();
-						delayedCall.writeToJSON(w);
+						apiCall.writeToJSON(w);
 						w.endObject();
 					}
 				}
 				if (callObjectStarted)
 				{
 					w.endArray();
+				}
+				if (!containsModelChanges && callObjectStarted && asyncAPIs && !w.toString().contains("\"msg\":"))
+				{
+					// if we execute some async api and model is not already sent, we have to send it before execution, like we do for sync api
+					w.key("msg");
+					w.object();
+					writeAllComponentsChanges(w, "forms", ChangesToJSONConverter.INSTANCE);
+					w.endObject();
 				}
 			}
 
@@ -736,7 +748,7 @@ public class BaseWindow implements IWindow
 	}
 
 	@Override
-	public Object executeServiceCall(IClientService clientService, String functionName, Object[] arguments, WebObjectFunctionDefinition apiFunction,
+	public Object executeServiceCall(IClientService clientService, String functionName, Object[] arguments, WebObjectApiFunctionDefinition apiFunction,
 		IToJSONWriter<IBrowserConverterContext> pendingChangesWriter, boolean blockEventProcessing) throws IOException
 	{
 		IFunctionParameters argumentTypes = (apiFunction != null ? apiFunction.getParameters() : null);
@@ -830,23 +842,23 @@ public class BaseWindow implements IWindow
 
 	private ServiceCall createServiceCall(IClientService clientService, String functionName, Object[] arguments, IFunctionParameters argumentTypes)
 	{
-		WebObjectFunctionDefinition handler = clientService.getSpecification().getApiFunction(functionName);
+		WebObjectApiFunctionDefinition api = clientService.getSpecification().getApiFunction(functionName);
 		return new ServiceCall(clientService, functionName, processVarArgsIfNeeded(arguments, argumentTypes), argumentTypes,
-			(handler != null && handler.isPreDataServiceCall()));
+			(api != null && api.isPreDataServiceCall()));
 	}
 
 	public ComponentCall createComponentCall(WebComponent component, WebObjectFunctionDefinition apiFunction, Object[] arguments,
 		Map<String, JSONString> callContributions)
 	{
-		return createComponentCall(component, apiFunction, arguments, callContributions, false, null);
+		return createComponentCall(component, apiFunction, arguments, callContributions, false, null, false);
 	}
 
 	private ComponentCall createComponentCall(WebComponent component, WebObjectFunctionDefinition apiFunction, Object[] arguments,
 		Map<String, JSONString> callContributions,
-		boolean delayUntilFormLoads, Container formContainer)
+		boolean delayUntilFormLoads, Container formContainer, boolean async)
 	{
 		return new ComponentCall(component, apiFunction, processVarArgsIfNeeded(arguments, apiFunction.getParameters()), callContributions, delayUntilFormLoads,
-			formContainer);
+			formContainer, async);
 	}
 
 	private Object[] processVarArgsIfNeeded(Object[] arguments, IFunctionParameters parameters)
@@ -943,12 +955,12 @@ public class BaseWindow implements IWindow
 	}
 
 	@Override
-	public Object invokeApi(WebComponent receiver, WebObjectFunctionDefinition apiFunction, Object[] arguments)
+	public Object invokeApi(WebComponent receiver, WebObjectApiFunctionDefinition apiFunction, Object[] arguments)
 	{
 		return invokeApi(receiver, apiFunction, arguments, null);
 	}
 
-	protected Object invokeApi(final WebComponent receiver, final WebObjectFunctionDefinition apiFunction, final Object[] arguments,
+	protected Object invokeApi(final WebComponent receiver, final WebObjectApiFunctionDefinition apiFunction, final Object[] arguments,
 		final Map<String, JSONString> callContributions)
 	{
 		// {"call":{"form":"product","bean":"datatextfield1","api":"requestFocus","args":[arg1, arg2]}}
@@ -957,7 +969,7 @@ public class BaseWindow implements IWindow
 		if (delayedCall || isAsyncApiCall(apiFunction))
 		{
 			ComponentCall call = createComponentCall(receiver, apiFunction, arguments, callContributions, delayedCall,
-				delayedCall ? getFormContainer(receiver) : null);
+				delayedCall ? getFormContainer(receiver) : null, isAsyncApiCall(apiFunction));
 			addDelayedOrAsyncComponentCall(apiFunction, call);
 		}
 		else if (isAsyncNowApiCall(apiFunction))
@@ -1040,7 +1052,7 @@ public class BaseWindow implements IWindow
 		return null;
 	}
 
-	protected void addDelayedOrAsyncComponentCall(final WebObjectFunctionDefinition apiFunction, ComponentCall call)
+	protected void addDelayedOrAsyncComponentCall(final WebObjectApiFunctionDefinition apiFunction, ComponentCall call)
 	{
 		if (apiFunction.shouldDiscardPreviouslyQueuedSimilarCalls())
 		{
@@ -1080,17 +1092,17 @@ public class BaseWindow implements IWindow
 		return true;
 	}
 
-	protected static boolean isDelayedApiCall(WebObjectFunctionDefinition apiFunction)
+	protected static boolean isDelayedApiCall(WebObjectApiFunctionDefinition apiFunction)
 	{
 		return apiFunction.getReturnType() == null && apiFunction.shouldDelayUntilFormLoads();
 	}
 
-	protected static boolean isAsyncApiCall(WebObjectFunctionDefinition apiFunction)
+	protected static boolean isAsyncApiCall(WebObjectApiFunctionDefinition apiFunction)
 	{
 		return apiFunction.getReturnType() == null && apiFunction.isAsync();
 	}
 
-	protected static boolean isAsyncNowApiCall(WebObjectFunctionDefinition apiFunction)
+	protected static boolean isAsyncNowApiCall(WebObjectApiFunctionDefinition apiFunction)
 	{
 		return apiFunction.getReturnType() == null && apiFunction.isAsyncNow();
 	}
@@ -1148,10 +1160,11 @@ public class BaseWindow implements IWindow
 		private final WebObjectFunctionDefinition apiFunction;
 		private final Map<String, JSONString> callContributions;
 		private final boolean delayUntilFormLoads;
+		private final boolean async;
 		private final Container formContainer;
 
 		public ComponentCall(WebComponent component, WebObjectFunctionDefinition apiFunction, Object[] arguments, Map<String, JSONString> callContributions,
-			boolean delayUntilFormLoads, Container formContainer)
+			boolean delayUntilFormLoads, Container formContainer, boolean async)
 		{
 			this.component = component;
 			this.apiFunction = apiFunction;
@@ -1159,6 +1172,7 @@ public class BaseWindow implements IWindow
 			this.callContributions = callContributions;
 			this.delayUntilFormLoads = delayUntilFormLoads;
 			this.formContainer = formContainer; // this is only relevant if delayUntilFormLoads == true
+			this.async = async;
 		}
 
 		/**

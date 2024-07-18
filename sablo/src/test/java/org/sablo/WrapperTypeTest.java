@@ -75,6 +75,12 @@ public class WrapperTypeTest
 		}
 
 		@Override
+		public boolean isPrimitive()
+		{
+			return false;
+		}
+
+		@Override
 		public String unwrap(MyWrapper value)
 		{
 			return value.string;

@@ -97,13 +97,13 @@ public interface IEventDispatcher extends Runnable
 	void suspend(Object suspendID, int minEventLevelToDispatch, long timeout) throws CancellationException, TimeoutException;
 
 	/**
-	 * Same as {@link #suspend(Object, int)} with "minEventLevelToDispatch" having a value of {@link #EVENT_LEVEL_DEFAULT} and "timeout" of {@link #DEFAULT_TIMEOUT} (the default timeout can be modified by implementing classes).
+	 * Same as {@link #suspend(Object, int, long)} with "minEventLevelToDispatch" having a value of {@link #EVENT_LEVEL_DEFAULT} and "timeout" of {@link #DEFAULT_TIMEOUT} (the default timeout can be modified by implementing classes).
 	 * So all other events will continue to dispatch.
 	 *
 	 * @param suspendID The Object that is the suspend operation identifier.
 	 *
 	 * @throws CancellationException in case  {@link #cancelSuspend(Integer)} is called for this suspendID later on.
-	 * @throws TimeoutException when the {@link #DEFAULT_TIMEOUT} (that can be modified by implemented classes) expires before getting a resume with this suspendID.
+	 * @throws TimeoutException when the {@link #CONFIGURED_TIMEOUT} (that can be modified by implemented classes) expires before getting a resume with this suspendID.
 	 */
 	void suspend(Object suspendID) throws CancellationException, TimeoutException;
 

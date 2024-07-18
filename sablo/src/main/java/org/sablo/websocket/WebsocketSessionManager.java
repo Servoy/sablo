@@ -204,6 +204,7 @@ public class WebsocketSessionManager
 					wsSession = websocketSessionFactories.get(endpointType).createSession(key);
 					if (wsSession != null)
 					{
+						wsSession.setHttpSession(httpSession);
 						AtomicInteger sessionCounter = getCounter(httpSession, HTTP_SESSION_COUNTER);
 						sessionCounter.incrementAndGet();
 

@@ -39,6 +39,7 @@ public class DoublePropertyType extends DefaultPropertyType<Double> implements I
 
 	private DoublePropertyType()
 	{
+		super(true);
 	}
 
 	@Override

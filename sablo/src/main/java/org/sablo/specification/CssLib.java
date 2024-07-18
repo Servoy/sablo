@@ -36,7 +36,7 @@ public final class CssLib implements Comparable<CssLib>
 		if (splitted.length > 1)
 		{
 			this.url = splitted[0];
-			int parsed = 10; // default to 10
+			int parsed = 9; // default to 9
 			try
 			{
 				parsed = Integer.parseInt(splitted[1]);
@@ -49,7 +49,7 @@ public final class CssLib implements Comparable<CssLib>
 		else
 		{
 			this.url = url;
-			this.priority = 10; // default prio set set to 10, so that once that do set it can get in front of these.
+			this.priority = 9; // default prio set set to 9, so that once that do set it can get in front of these.
 		}
 	}
 

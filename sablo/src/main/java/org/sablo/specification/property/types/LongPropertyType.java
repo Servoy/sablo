@@ -39,6 +39,7 @@ public class LongPropertyType extends DefaultPropertyType<Long> implements IProp
 
 	private LongPropertyType()
 	{
+		super(true);
 	}
 
 	@Override
