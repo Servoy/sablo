@@ -16,7 +16,10 @@
 
 package org.sablo.specification.property;
 
+import java.util.Collection;
+
 import org.sablo.specification.PropertyDescription;
+import org.sablo.specification.WebObjectApiFunctionDefinition;
 
 /**
  * @author jcompagner
@@ -34,4 +37,27 @@ public interface ICustomType<T> extends IPropertyType<T>
 	PropertyDescription getCustomJSONTypeDefinition();
 
 	void setCustomJSONDefinition(PropertyDescription definition);
+
+	/**
+	 * @param text
+	 */
+	void setDocumentation(String text);
+
+	public String getDocumentation();
+
+	public void setParent(ICustomType< ? > parent);
+
+	/**
+	 * @return the parent
+	 */
+	public ICustomType< ? > getParent();
+
+	/**
+	 * @param def
+	 */
+	void addApiFunction(WebObjectApiFunctionDefinition def);
+
+	public WebObjectApiFunctionDefinition getApiFunction(String name);
+
+	public Collection<WebObjectApiFunctionDefinition> getApiFunctions();
 }

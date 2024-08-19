@@ -527,7 +527,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectHandlerFunctionDefinition def = new WebObjectHandlerFunctionDefinition(func);
-				parseFunctionDefinition(def, spec, api, func);
+				parseFunctionDefinition(def, spec.foundTypes, api, func, spec.getName());
 				spec.addHandler(def);
 			}
 		}
@@ -541,7 +541,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-				parseFunctionDefinition(def, spec, api, func);
+				parseFunctionDefinition(def, spec.foundTypes, api, func, spec.getName());
 				spec.addApiFunction(def);
 			}
 		}
@@ -554,7 +554,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-				parseFunctionDefinition(def, spec, api, func);
+				parseFunctionDefinition(def, spec.foundTypes, api, func, spec.getName());
 				spec.addInternalApiFunction(def);
 			}
 		}
@@ -563,8 +563,9 @@ public class WebObjectSpecification extends PropertyDescription
 		return spec;
 	}
 
-	private static WebObjectFunctionDefinition parseFunctionDefinition(WebObjectFunctionDefinition def, WebObjectSpecification spec, JSONObject api,
-		String func) throws JSONException
+	private static WebObjectFunctionDefinition parseFunctionDefinition(WebObjectFunctionDefinition def, Map<String, ICustomType< ? >> foundTypes,
+		JSONObject api,
+		String func, String typeName) throws JSONException
 	{
 		if (api.get(func) instanceof JSONObject)
 		{
@@ -589,14 +590,14 @@ public class WebObjectSpecification extends PropertyDescription
 							paramJSON.put((String)param.get("name"), param.get("type"));
 							JSONObject parseJSON = new JSONObject();
 							parseJSON.put("", paramJSON);
-							PropertyDescription propertyDescription = WebObjectSpecification.parseProperties("", parseJSON, spec.foundTypes,
-								spec.getName()).get(param.get("name"));
+							PropertyDescription propertyDescription = WebObjectSpecification.parseProperties("", parseJSON, foundTypes,
+								typeName).get(param.get("name"));
 							propertyType = propertyDescription.getType();
 							config = propertyDescription.getConfig();
 						}
 						else
 						{
-							ParsedProperty pp = WebObjectSpecification.parsePropertyString(param.getString("type"), spec.foundTypes, spec.getName());
+							ParsedProperty pp = WebObjectSpecification.parsePropertyString(param.getString("type"), foundTypes, typeName);
 							propertyType = resolveArrayType(pp);
 							config = propertyType.parseConfig(null);
 						}
@@ -610,13 +611,13 @@ public class WebObjectSpecification extends PropertyDescription
 					if (jsonDef.get("returns") instanceof JSONObject)
 					{
 						JSONObject returnType = jsonDef.getJSONObject("returns");
-						ParsedProperty pp = WebObjectSpecification.parsePropertyString(returnType.getString("type"), spec.foundTypes, spec.getName());
+						ParsedProperty pp = WebObjectSpecification.parsePropertyString(returnType.getString("type"), foundTypes, typeName);
 						PropertyDescription desc = new PropertyDescriptionBuilder().withName("return").withType(resolveArrayType(pp)).build();
 						def.setReturnType(desc);
 					}
 					else
 					{
-						ParsedProperty pp = WebObjectSpecification.parsePropertyString(jsonDef.getString("returns"), spec.foundTypes, spec.getName());
+						ParsedProperty pp = WebObjectSpecification.parsePropertyString(jsonDef.getString("returns"), foundTypes, typeName);
 						PropertyDescription desc = new PropertyDescriptionBuilder().withName("return").withType(resolveArrayType(pp)).build();
 						def.setReturnType(desc);
 					}
@@ -751,6 +752,26 @@ public class WebObjectSpecification extends PropertyDescription
 							: parseProperties(typeName, jsonObject, foundTypes, specName))
 					.build();
 				type.setCustomJSONDefinition(pd);
+				if (typeJSON.has("extends"))
+				{
+					ICustomType< ? > parentType = foundTypes.get(typeJSON.getString("extends"));
+					if (parentType != null)
+					{
+						type.setParent(parentType);
+					}
+				}
+				if (typeJSON.has("serversideapi"))
+				{
+					JSONObject api = typeJSON.getJSONObject("serversideapi");
+					Iterator<String> itk = api.keys();
+					while (itk.hasNext())
+					{
+						String func = itk.next();
+						WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
+						parseFunctionDefinition(def, foundTypes, api, func, typeName);
+						type.addApiFunction(def);
+					}
+				}
 				// TODO this is currently never true? See 5 lines above this, types are always just PropertyDescription?
 				// is this really supported? or should we add it just to the properties? But how are these handlers then added and used
 //				if (type instanceof WebObjectSpecification)
