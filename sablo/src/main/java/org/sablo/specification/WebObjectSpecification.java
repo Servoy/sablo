@@ -527,7 +527,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectHandlerFunctionDefinition def = new WebObjectHandlerFunctionDefinition(func);
-				parseFunctionDefinition(def, spec.foundTypes, api, func, spec.getName());
+				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName());
 				spec.addHandler(def);
 			}
 		}
@@ -541,7 +541,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-				parseFunctionDefinition(def, spec.foundTypes, api, func, spec.getName());
+				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName());
 				spec.addApiFunction(def);
 			}
 		}
@@ -554,7 +554,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-				parseFunctionDefinition(def, spec.foundTypes, api, func, spec.getName());
+				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName());
 				spec.addInternalApiFunction(def);
 			}
 		}
@@ -564,12 +564,11 @@ public class WebObjectSpecification extends PropertyDescription
 	}
 
 	private static WebObjectFunctionDefinition parseFunctionDefinition(WebObjectFunctionDefinition def, Map<String, ICustomType< ? >> foundTypes,
-		JSONObject api,
+		Object defintion,
 		String func, String typeName) throws JSONException
 	{
-		if (api.get(func) instanceof JSONObject)
+		if (defintion instanceof JSONObject jsonDef)
 		{
-			JSONObject jsonDef = api.getJSONObject(func);
 			Iterator<String> it = jsonDef.keys();
 			JSONObject customConfiguration = null;
 			while (it.hasNext())
@@ -680,7 +679,7 @@ public class WebObjectSpecification extends PropertyDescription
 			if (customConfiguration != null) def.setCustomConfigOptions(customConfiguration);
 		}
 		def.setPropertyDescription(
-			new PropertyDescriptionBuilder().withName(func).withType(TypesRegistry.getType(FunctionPropertyType.TYPE_NAME)).withConfig(api.get(func))
+			new PropertyDescriptionBuilder().withName(func).withType(TypesRegistry.getType(FunctionPropertyType.TYPE_NAME)).withConfig(defintion)
 				.withDeprecated(def.getDeprecated()).build());
 		return def;
 	}
@@ -768,8 +767,19 @@ public class WebObjectSpecification extends PropertyDescription
 					{
 						String func = itk.next();
 						WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-						parseFunctionDefinition(def, foundTypes, api, func, typeName);
+						parseFunctionDefinition(def, foundTypes, api.get(func), func, typeName);
 						type.addApiFunction(def);
+						if (api.get(func) instanceof JSONObject jsonDef && jsonDef.has("overloads"))
+						{
+							JSONArray overloads = jsonDef.getJSONArray("overloads");
+							for (int i = 0; i < overloads.length(); i++)
+							{
+								JSONObject overload = overloads.getJSONObject(i);
+								WebObjectApiFunctionDefinition overloadDef = new WebObjectApiFunctionDefinition(func);
+								parseFunctionDefinition(overloadDef, foundTypes, overload, func, typeName);
+								def.addOverLoad(overloadDef);
+							}
+						}
 					}
 				}
 				// TODO this is currently never true? See 5 lines above this, types are always just PropertyDescription?

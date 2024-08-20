@@ -16,6 +16,10 @@
 
 package org.sablo.specification;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * @author lvostinar
  *
@@ -28,6 +32,7 @@ public class WebObjectApiFunctionDefinition extends WebObjectFunctionDefinition
 	private boolean preDataServiceCall;
 	private boolean blockEventProcessing = true;
 	private boolean discardPreviouslyQueuedSimilarCalls = false;
+	private ArrayList<WebObjectApiFunctionDefinition> overloads;
 
 	public WebObjectApiFunctionDefinition(String name)
 	{
@@ -144,5 +149,27 @@ public class WebObjectApiFunctionDefinition extends WebObjectFunctionDefinition
 	public void setAsyncNow(boolean asyncNow)
 	{
 		this.asyncNow = asyncNow;
+	}
+
+	public void addOverLoad(WebObjectApiFunctionDefinition overload)
+	{
+		if (overloads == null) overloads = new ArrayList<>();
+		overloads.add(overload);
+	}
+
+	/**
+	 * @return the overloads
+	 */
+	public List<WebObjectApiFunctionDefinition> getOverloads()
+	{
+		return overloads == null ? Collections.emptyList() : overloads;
+	}
+
+
+	@Override
+	public void setDocumentation(String documentation)
+	{
+		super.setDocumentation(documentation);
+		if (overloads != null) overloads.forEach(overload -> overload.setDocumentation(documentation));
 	}
 }
