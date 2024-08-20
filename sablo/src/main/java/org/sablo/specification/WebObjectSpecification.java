@@ -602,7 +602,7 @@ public class WebObjectSpecification extends PropertyDescription
 						}
 						def.addParameter(
 							new PropertyDescriptionBuilder().withName((String)param.get("name")).withType(propertyType).withConfig(config).withOptional(
-								Boolean.TRUE.equals(param.opt("optional"))).build());
+								Boolean.TRUE.equals(param.opt("optional"))).withTags(param.optJSONObject("tags")).build());
 					}
 				}
 				else if ("returns".equals(key))
