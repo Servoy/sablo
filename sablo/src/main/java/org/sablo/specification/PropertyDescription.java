@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import org.json.JSONObject;
 import org.sablo.specification.IYieldingType.YieldDescriptionArguments;
@@ -62,7 +63,7 @@ public class PropertyDescription
 	private final PushToServerEnum pushToServer;
 	private final JSONObject tags;
 	private String deprecated = null;
-	private String documentation;
+	private String description;
 
 	// case of nested type
 	private final Map<String, PropertyDescription> properties;
@@ -119,7 +120,7 @@ public class PropertyDescription
 			this.optional = optional;
 			this.deprecated = deprecated;
 		}
-		setDocumentation((String)getTag(DOCUMENTATION_TAG_FOR_PROP_OR_KEY_FOR_HANDLERS));
+		setDescription((String)getTag(DOCUMENTATION_TAG_FOR_PROP_OR_KEY_FOR_HANDLERS));
 	}
 
 	/**
@@ -571,21 +572,29 @@ public class PropertyDescription
 		return tags != null ? new JSONObject(tags.toString()) : null;
 	}
 
-	public String getDocumentation()
+	/**
+	 * Get the raw description.
+	 */
+	public String getDescriptionRaw()
 	{
-		return getDocumentation(true);
+		return description;
 	}
 
-	public String getDocumentation(boolean addDeprecationInfoIfAvailable)
+	/**
+	 * Adds deprecation info to the description - if that is requested - and uses the given descriptionProcessor for pre-processing existing descriptions.
+	 * @param descriptionProcessor can be null
+	 */
+	public String getDescriptionProcessed(boolean addDeprecationInfoIfAvailable, Function<String, String> descriptionProcessor)
 	{
-		if (addDeprecationInfoIfAvailable) return (isDeprecated()
-			? "<b>@deprecated</b>: " + getDeprecatedMessage() + (documentation != null ? "<br/><br/>" + documentation : "") : documentation); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-		else return documentation;
+		if (addDeprecationInfoIfAvailable && isDeprecated())
+			return "<b>@deprecated</b>: " + (descriptionProcessor != null ? descriptionProcessor.apply(getDeprecatedMessage()) : getDeprecatedMessage()) + //$NON-NLS-1$
+				(description != null ? "<br/><br/>" + (descriptionProcessor != null ? descriptionProcessor.apply(description) : description) : ""); //$NON-NLS-1$//$NON-NLS-2$
+		else return descriptionProcessor != null ? descriptionProcessor.apply(description) : description;
 	}
 
-	public void setDocumentation(String documentation)
+	public void setDescription(String description)
 	{
-		this.documentation = documentation;
+		this.description = description;
 	}
 
 }
