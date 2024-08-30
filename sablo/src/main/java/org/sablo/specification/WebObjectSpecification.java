@@ -749,6 +749,7 @@ public class WebObjectSpecification extends PropertyDescription
 					type).withProperties(
 						typeJSON.has("model") && typeJSON.get("model") instanceof JSONObject ? parseProperties("model", typeJSON, foundTypes, specName)
 							: parseProperties(typeName, jsonObject, foundTypes, specName))
+					.withTags(typeJSON.optJSONObject("tags"))
 					.build();
 				type.setCustomJSONDefinition(pd);
 				if (typeJSON.has("extends"))
