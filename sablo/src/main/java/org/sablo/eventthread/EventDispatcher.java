@@ -124,7 +124,16 @@ public class EventDispatcher implements Runnable, IEventDispatcher
 					}
 					if (event == null)
 					{
-						events.wait(endMillis == NO_TIMEOUT ? 0 : remainingMillis);
+						try
+						{
+							events.wait(endMillis == NO_TIMEOUT ? 0 : remainingMillis);
+						}
+						catch (InterruptedException e)
+						{
+							// Server shutdown
+							log.debug("Interrupted while waiting for events", e);
+							break;
+						}
 					}
 				}
 			}
