@@ -42,7 +42,7 @@ public class VisiblePropertyType extends DefaultPropertyType<Boolean>
 	@Override
 	public Boolean defaultValue(PropertyDescription pd)
 	{
-		return Boolean.TRUE;
+		return null;
 	}
 
 	@Override
