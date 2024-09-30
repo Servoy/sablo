@@ -29,7 +29,7 @@ public class VisiblePropertyType extends DefaultPropertyType<Boolean>
 	public static final VisiblePropertyType INSTANCE = new VisiblePropertyType();
 	public static final String TYPE_NAME = "visible";
 
-	protected VisiblePropertyType()
+	private VisiblePropertyType()
 	{
 	}
 
