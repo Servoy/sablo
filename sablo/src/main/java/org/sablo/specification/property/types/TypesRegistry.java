@@ -159,14 +159,14 @@ public class TypesRegistry
 	public static void addType(IPropertyType< ? > type)
 	{
 		IPropertyType< ? > previous = types.put(type.getName(), type);
-		if (previous != null)
+		if (previous != null && log.isTraceEnabled())
 		{
 			log.trace("there was already a type for typename " + type.getName() + ": " + previous + " replaced by: " + type);
 		}
 		if (type instanceof IClassPropertyType)
 		{
 			previous = typesByClass.put(((IClassPropertyType< ? >)type).getTypeClass(), (IClassPropertyType< ? >)type);
-			if (previous != null)
+			if (previous != null && log.isTraceEnabled())
 			{
 				log.trace(
 					"there was already a type for type class " + ((IClassPropertyType< ? >)type).getTypeClass() + ": " + previous + " replaced by: " + type);
@@ -177,7 +177,7 @@ public class TypesRegistry
 	public static void addTypeFactory(String typeName, IPropertyTypeFactory< ? , ? > factory)
 	{
 		IPropertyTypeFactory< ? , ? > previous = typeFactories.put(typeName, factory);
-		if (previous != null)
+		if (previous != null && log.isTraceEnabled())
 		{
 			log.trace("there was already a type factory for typename " + typeName + ": " + previous + " replaced by: " + factory);
 		}
