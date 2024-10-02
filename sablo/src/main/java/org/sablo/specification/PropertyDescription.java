@@ -32,6 +32,7 @@ import org.sablo.specification.property.CustomJSONArrayType;
 import org.sablo.specification.property.CustomJSONObjectType;
 import org.sablo.specification.property.CustomJSONPropertyType;
 import org.sablo.specification.property.ICustomType;
+import org.sablo.specification.property.IInnerPropertyTypeProvider;
 import org.sablo.specification.property.IPropertyType;
 import org.sablo.websocket.utils.PropertyUtils;
 import org.slf4j.Logger;
@@ -437,6 +438,22 @@ public class PropertyDescription
 				log.debug("Property description get was called on an array type with propName that's not similar to [index] or []: " + propName + ". Path: " +
 					propertyPathToPopulateIfRequested);
 			}
+		}
+		else if (type instanceof IInnerPropertyTypeProvider typeProvider)
+		{
+			innerMostPDifRequested = typeProvider.getInnerPropertyDescription(propName);
+			if (propertyPathToPopulateIfRequested != null)
+			{
+				if (innerMostPDifRequested != null)
+				{
+					propertyPathToPopulateIfRequested.add(innerMostPDifRequested);
+				}
+				else
+				{
+					propertyPathToPopulateIfRequested.clear();
+				}
+			}
+
 		}
 		else if (propertyPathToPopulateIfRequested != null) propertyPathToPopulateIfRequested.clear(); // not found
 
