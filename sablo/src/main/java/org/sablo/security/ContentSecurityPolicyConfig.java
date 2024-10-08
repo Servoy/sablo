@@ -32,10 +32,8 @@ public class ContentSecurityPolicyConfig
 	public static final String DEFAULT_FRAME_SRC_DIRECTIVE_VALUE = "* data:";
 	public static final String DEFAULT_FRAME_ANCESTORS_DIRECTIVE_VALUE = "'self'";
 	public static final String DEFAULT_SCRIPT_SRC_DIRECTIVE_VALUE = "'unsafe-eval' 'nonce-${nonce}' 'strict-dynamic'"; // can we get rid of unsafe-eval?
-	// We cannot use random nonce for styles because this is would block inline style attributes on elements,
-	// when style-src-attr is supported by the major browsers we can use that to override inline styles for elements.
-	// Styles may be loaded by scripts from any source, unless we list them in the component manifest and include them here we have to allow all style sources
-	public static final String DEFAULT_STYLE_SRC_DIRECTIVE_VALUE = "* 'unsafe-inline'";
+	public static final String DEFAULT_STYLE_SRC_DIRECTIVE_VALUE = "'self' 'nonce-${nonce}'";
+	public static final String DEFAULT_STYLE_SRC_ATTR_DIRECTIVE_VALUE = "'unsafe-inline'";
 	public static final String DEFAULT_IMG_SRC_DIRECTIVE_VALUE = "* data: blob:";
 	public static final String DEFAULT_FONT_SRC_DIRECTIVE_VALUE = "* data:";
 	public static final String DEFAULT_OBJECT_SRC_DIRECTIVE_VALUE = "'none'";
@@ -87,6 +85,7 @@ public class ContentSecurityPolicyConfig
 		setDirective(defaultDirectives, "object-src", DEFAULT_OBJECT_SRC_DIRECTIVE_VALUE, nonce);
 		setDirective(defaultDirectives, "base-uri", DEFAULT_BASE_URI_VALUE, nonce);
 		setDirective(defaultDirectives, "form-action", DEFAULT_BASE_URI_VALUE, nonce);
+		setDirective(defaultDirectives, "style-src-attr", DEFAULT_STYLE_SRC_ATTR_DIRECTIVE_VALUE, nonce);
 		return defaultDirectives;
 	}
 }
