@@ -3,7 +3,7 @@
 /// <reference path="../../../../typings/jquery/jquery.d.ts" />
 /// <reference path="websocket.ts" />
 
-namespace sablo_app { export class Model{}}
+namespace sablo_app { export class Model{ visible=true }}
 
 angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabloConstants", {
 	modelChangeNotifier: "$modelChangeNotifier"
