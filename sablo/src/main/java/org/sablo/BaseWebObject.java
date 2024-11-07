@@ -48,7 +48,6 @@ import org.sablo.specification.property.BrowserConverterContext;
 import org.sablo.specification.property.IBrowserConverterContext;
 import org.sablo.specification.property.IClassPropertyType;
 import org.sablo.specification.property.IGranularProtectionChecker;
-import org.sablo.specification.property.IInnerPropertiesProvider;
 import org.sablo.specification.property.IPropertyType;
 import org.sablo.specification.property.IPushToServerSpecialType;
 import org.sablo.specification.property.ISmartPropertyValue;
@@ -733,40 +732,33 @@ public abstract class BaseWebObject implements IWebObjectContext
 		}
 		if (parts.length > 1)
 		{
-			if (oldValue instanceof IInnerPropertiesProvider innerPropertiesProvider)
+			// here we rely on the fact that .spec does not allow nesting arrays directly into other arrays directly so you can't currently have prop: int[][],
+			// you have to have something like prop: {a: int[]}[] so you access it like prop[4].a[3] not prop[4][3]
+			for (int i = 1; i < parts.length; i++)
 			{
-				oldValue = innerPropertiesProvider.getInnerPropertyValue(parts);
-			}
-			else
-			{
-				// here we rely on the fact that .spec does not allow nesting arrays directly into other arrays directly so you can't currently have prop: int[][],
-				// you have to have something like prop: {a: int[]}[] so you access it like prop[4].a[3] not prop[4][3]
-				for (int i = 1; i < parts.length; i++)
+				String pathProperty = parts[i];
+				arrayIndex = -1;
+				if (pathProperty.indexOf('[') > 0)
 				{
-					String pathProperty = parts[i];
-					arrayIndex = -1;
-					if (pathProperty.indexOf('[') > 0)
+					if (pathProperty.endsWith("]"))
 					{
-						if (pathProperty.endsWith("]"))
-						{
-							arrayIndex = Integer.parseInt((pathProperty.substring(pathProperty.lastIndexOf('[') + 1, pathProperty.length() - 1)));
-						}
-						pathProperty = pathProperty.substring(0, pathProperty.indexOf('['));
+						arrayIndex = Integer.parseInt((pathProperty.substring(pathProperty.lastIndexOf('[') + 1, pathProperty.length() - 1)));
 					}
-					if (oldValue instanceof Map)
+					pathProperty = pathProperty.substring(0, pathProperty.indexOf('['));
+				}
+				if (oldValue instanceof Map)
+				{
+					oldValue = ((Map)oldValue).get(pathProperty);
+					if (arrayIndex >= 0)
 					{
-						oldValue = ((Map)oldValue).get(pathProperty);
-						if (arrayIndex >= 0)
+						if (oldValue instanceof List) oldValue = ((List)oldValue).get(arrayIndex);
+						else if (oldValue != null)
 						{
-							if (oldValue instanceof List) oldValue = ((List)oldValue).get(arrayIndex);
-							else if (oldValue != null)
-							{
-								log.error(
-									"Trying to get a nested array element while the nested value is not an array: property=" + propertyName + ", component=" +
-										getName() + ", spec=" + getSpecification() + ", part=" + parts[i],
-									new RuntimeException());
-								return null;
-							}
+							log.error(
+								"Trying to get a nested array element while the nested value is not an array: property=" + propertyName + ", component=" +
+									getName() + ", spec=" + getSpecification() + ", part=" + parts[i],
+								new RuntimeException());
+							return null;
 						}
 					}
 				}
