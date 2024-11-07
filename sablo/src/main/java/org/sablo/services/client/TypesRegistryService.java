@@ -37,7 +37,7 @@ public class TypesRegistryService
 
 	public void addComponentClientSideSpecs(EmbeddableJSONWriter toBeSent)
 	{
-		clientService.executeAsyncServiceCall("addComponentClientSideSpecs", new Object[] { toBeSent });
+		clientService.executeAsyncServiceCall("addComponentClientSideSpecs", new Object[] { toBeSent }, false);
 	}
 
 	public void setServiceClientSideSpecs(EmbeddableJSONWriter toBeSent)

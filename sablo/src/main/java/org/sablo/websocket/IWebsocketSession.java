@@ -24,6 +24,7 @@ import java.util.Map;
 import javax.servlet.http.HttpSession;
 
 import org.json.JSONObject;
+import org.sablo.IChangeListener;
 import org.sablo.eventthread.IEventDispatcher;
 import org.sablo.services.client.SabloService;
 import org.sablo.services.client.TypesRegistryService;
@@ -33,7 +34,7 @@ import org.sablo.websocket.impl.ClientService;
  * Interface for classes handling a websocket user session.
  * @author rgansevles
  */
-public interface IWebsocketSession
+public interface IWebsocketSession extends IChangeListener
 {
 
 	/**

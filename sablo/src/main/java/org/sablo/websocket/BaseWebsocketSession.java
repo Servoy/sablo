@@ -464,7 +464,7 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 
 	protected IClientService createClientService(String name)
 	{
-		return new ClientService(name, WebServiceSpecProvider.getSpecProviderState().getWebObjectSpecification(name));
+		return new ClientService(name, WebServiceSpecProvider.getSpecProviderState().getWebObjectSpecification(name), this);
 	}
 
 	public void startHandlingEvent()
