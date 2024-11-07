@@ -18,6 +18,6 @@
     "build": "tsc",
     "test": "karma start ./client_tests/karma.conf.js --browsers ChromeHeadless",
     "test_watch": "karma start ./client_tests/karma_run_on_file_change.conf.js",
-    "test_edge_nowatch": "karma start ./client_tests/karma.conf.js --browsers Edge"
+    "test_edge_nowatch": "karma start ./client_tests/karma.conf.js --browsers EdgeHeadless"
   }
 }
