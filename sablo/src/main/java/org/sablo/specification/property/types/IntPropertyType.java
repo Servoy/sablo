@@ -44,9 +44,9 @@ public class IntPropertyType extends DefaultPropertyType<Integer> implements IPr
 		}
 	};
 
-	public static final String TYPE_NAME = "int";
+	public static final String TYPE_NAME = "int"; //$NON-NLS-1$
 
-	private IntPropertyType()
+	protected IntPropertyType()
 	{
 		super(true);
 	}

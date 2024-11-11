@@ -683,7 +683,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 	}
 
 	/**
-	 * Gets the current value from the properties, if not set then it could fall-back to default properties value from spec - if possible.
+	 * Gets the current value from the properties; if not set then it could fall-back to default properties value from spec - if possible.
 	 * DO NOT USE THIS METHOD; when possible please use {@link #getProperty(String)}, {@link #getProperties()} or {@link #getAllPropertyNames(boolean)} instead.
 	 */
 	@SuppressWarnings("nls")

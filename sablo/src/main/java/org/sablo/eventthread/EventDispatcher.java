@@ -204,7 +204,7 @@ public class EventDispatcher implements Runnable, IEventDispatcher
 		postEvent(event, IEventDispatcher.EVENT_LEVEL_DEFAULT);
 	}
 
-	private void postEvent(Runnable event, int eventLevel)
+	public void postEvent(Runnable event, int eventLevel)
 	{
 		synchronized (events)
 		{

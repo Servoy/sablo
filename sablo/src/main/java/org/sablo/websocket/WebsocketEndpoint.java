@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import javax.servlet.http.HttpSession;
 import javax.websocket.CloseReason;
@@ -37,6 +38,7 @@ import org.json.JSONObject;
 import org.sablo.IllegalChangeFromClientException;
 import org.sablo.eventthread.EventDispatcher;
 import org.sablo.eventthread.IEventDispatcher;
+import org.sablo.util.SabloUtils.RecursiveAnnonymusClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -442,16 +444,34 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 								}
 								else
 								{
-									try
-									{
-										getWindow().setClientToServerCallReturnValueForChanges(
-											new ClientToServerCallReturnValue(error == null ? result : error, error == null, msgId));
-										getWindow().sendChanges();
-									}
-									catch (IOException e)
-									{
-										log.warn(e.getMessage(), e);
-									}
+									final String errorMsg = error;
+									RecursiveAnnonymusClass<Consumer<Object>> setReturnValueAndSendChanges = new RecursiveAnnonymusClass<>();
+									setReturnValueAndSendChanges.me = (retVal) -> {
+										if (errorMsg == null && retVal instanceof IDelayedReturnValue delayedReturnValue)
+										{
+											// the service wishes to delay returning a value to client
+											// post an event for later - that will send the resolved return value to client
+											window.getSession().getEventDispatcher().postEvent(() -> {
+												setReturnValueAndSendChanges.me.accept(delayedReturnValue.getValueToReturn());
+											}, delayedReturnValue.getEventLevelForPostponedReturn());
+										}
+										else
+										{
+											// we have the return value that should be sent to client to be resolved right now
+											try
+											{
+												getWindow().setClientToServerCallReturnValueForChanges(
+													new ClientToServerCallReturnValue(errorMsg == null ? retVal : errorMsg, errorMsg == null, msgId));
+												getWindow().sendChanges();
+											}
+											catch (IOException e)
+											{
+												log.warn(e.getMessage(), e);
+											}
+										}
+									};
+
+									setReturnValueAndSendChanges.me.accept(result);
 								}
 							}
 						}
