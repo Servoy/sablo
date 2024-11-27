@@ -81,6 +81,8 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	private int windowCounter;
 	private HttpSession httpSession;
 
+	private SabloService sabloService;
+	private TypesRegistryService typesRegistryService;
 
 	public BaseWebsocketSession(WebsocketSessionKey sessionKey)
 	{
@@ -447,13 +449,15 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 	@Override
 	public SabloService getSabloService()
 	{
-		return new SabloService(getClientService(SabloService.SABLO_SERVICE));
+		if (sabloService == null) sabloService = new SabloService(getClientService(SabloService.SABLO_SERVICE));
+		return sabloService;
 	}
 
 	@Override
 	public TypesRegistryService getTypesRegistryService()
 	{
-		return new TypesRegistryService(getClientService(TypesRegistryService.TYPES_REGISTRY_SERVICE));
+		if (typesRegistryService == null) typesRegistryService = new TypesRegistryService(getClientService(TypesRegistryService.TYPES_REGISTRY_SERVICE));
+		return typesRegistryService;
 	}
 
 	@Override

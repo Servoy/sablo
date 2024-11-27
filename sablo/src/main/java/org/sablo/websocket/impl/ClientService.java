@@ -142,7 +142,12 @@ public class ClientService extends BaseWebObject implements IClientService
 
 	public void executeAsyncNowServiceCall(String functionName, Object[] arguments)
 	{
-		CurrentWindow.get().executeAsyncNowServiceCall(this, functionName, arguments, getParameterTypes(functionName));
+		executeAsyncNowServiceCall(functionName, arguments, false);
+	}
+
+	public void executeAsyncNowServiceCall(String functionName, Object[] arguments, boolean sendOtherPendingAsyncCallsAsWell)
+	{
+		CurrentWindow.get().executeAsyncNowServiceCall(this, functionName, arguments, getParameterTypes(functionName), sendOtherPendingAsyncCallsAsWell);
 	}
 
 	protected IFunctionParameters getParameterTypes(String functionName)

@@ -166,11 +166,12 @@ public class WebsocketSessionWindows implements IWindow
 	}
 
 	@Override
-	public void executeAsyncNowServiceCall(IClientService clientService, String functionName, Object[] arguments, IFunctionParameters argumentTypes)
+	public void executeAsyncNowServiceCall(IClientService clientService, String functionName, Object[] arguments, IFunctionParameters argumentTypes,
+		boolean sendOtherPendingAsyncCallsAsWell)
 	{
 		for (IWindow window : session.getWindows())
 		{
-			window.executeAsyncNowServiceCall(clientService, functionName, arguments, argumentTypes);
+			window.executeAsyncNowServiceCall(clientService, functionName, arguments, argumentTypes, sendOtherPendingAsyncCallsAsWell);
 		}
 	}
 

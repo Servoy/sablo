@@ -55,8 +55,18 @@ public interface IClientService
 	/**
 	 * Execute a (client/browser) async-now method; such methods are to be executed right away but do not wait for a return value.
 	 * The async-now call does not send any component/service pending changes - or call other pending async/delayed api to client; it just calls the method.
+	 *
+	 * Equivalent to calling {@link #executeAsyncNowServiceCall(String, Object[], boolean)} with last param. false.
 	 */
 	public void executeAsyncNowServiceCall(String functionName, Object[] arguments);
+
+	/**
+	 * Execute a (client/browser) async-now method; such methods are to be executed right away but do not wait for a return value.
+	 * The async-now call does not send any component/service pending changes; it call other pending async/delayed api to client or not depending on the value of 'sendOtherPendingAsyncCallsAsWell'.
+	 *
+	 * @param sendOtherPendingAsyncCallsAsWell if this is true, it will send other pending async calls before this async call; if false, it will just send this async now call.
+	 */
+	public void executeAsyncNowServiceCall(String functionName, Object[] arguments, boolean sendOtherPendingAsyncCallsAsWell);
 
 	/**
 	 * Execute a service call synchronously.. It will be called on the current window.

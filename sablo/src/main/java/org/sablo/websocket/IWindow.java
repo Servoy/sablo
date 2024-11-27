@@ -95,13 +95,16 @@ public interface IWindow
 
 	/**
 	 * Execute a (client/browser) async-now method; such methods are to be executed right away but do not wait for a return value.
-	 * The async-now call does not send any component/service pending changes - or call other pending async/delayed api to client; it just calls the method.
+	 * The async-now call does not send any component/service pending changes; it call other pending async/delayed api to client or not depending on the value of 'sendOtherPendingAsyncCallsAsWell'.
+	 *
 	 * @param clientService the service to call client side.
 	 * @param functionName the name of the service's function to call.
 	 * @param arguments the arguments to be passed to the service's function call.
 	 * @param argumentTypes the types of arguments passed; can be null (the types are used for correct 'to JSON' conversion for websocket traffic).
+	 * @param sendOtherPendingAsyncCallsAsWell if this is true, it will send other pending async calls before this async call; if false, it will just send this async now call.
 	 */
-	void executeAsyncNowServiceCall(IClientService clientService, String functionName, Object[] arguments, IFunctionParameters argumentTypes);
+	void executeAsyncNowServiceCall(IClientService clientService, String functionName, Object[] arguments, IFunctionParameters argumentTypes,
+		boolean sendOtherPendingAsyncCallsAsWell);
 
 	/**
 	 * Execute a (client/browser) service call asynchronously and returns the resulting value.

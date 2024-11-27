@@ -760,11 +760,17 @@ public class BaseWindow implements IWindow
 	}
 
 	@Override
-	public void executeAsyncNowServiceCall(IClientService clientService, String functionName, Object[] arguments, IFunctionParameters argumentTypes)
+	public void executeAsyncNowServiceCall(IClientService clientService, String functionName, Object[] arguments,
+		IFunctionParameters argumentTypes, boolean sendOtherPendingAsyncCallsAsWell)
 	{
 		try
 		{
-			sendOnlyThisMessageInternal(new SimpleToJSONWriter<IBrowserConverterContext>()
+			if (sendOtherPendingAsyncCallsAsWell)
+			{
+				serviceCalls.add(createServiceCall(clientService, functionName, arguments, argumentTypes));
+				sendMessageInternal(null, FullValueToJSONConverter.INSTANCE, null);
+			}
+			else sendOnlyThisMessageInternal(new SimpleToJSONWriter<IBrowserConverterContext>()
 			{
 				@Override
 				public boolean writeJSONContent(JSONWriter w, String keyInParent, IToJSONConverter<IBrowserConverterContext> converter) throws JSONException
