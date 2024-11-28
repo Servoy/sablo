@@ -86,7 +86,7 @@ public class SabloService
 	@SuppressWarnings("nls")
 	public void setExpectFormToShowOnClient(boolean expectAFormToShow)
 	{
-		CurrentWindow.get().executeAsyncServiceCall(clientService, "expectFormToShowOnClient", new Object[] { Boolean.valueOf(expectAFormToShow) }, null);
+		clientService.executeAsyncServiceCall("expectFormToShowOnClient", new Object[] { Boolean.valueOf(expectAFormToShow) });
 	}
 
 }
