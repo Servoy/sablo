@@ -26,7 +26,7 @@ import java.util.List;
  */
 public class WebObjectApiFunctionDefinition extends WebObjectFunctionDefinition
 {
-	private boolean delayUntilFormLoads = false;
+	private boolean delayUntilFormLoads = true;
 	private boolean async = false;
 	private boolean asyncNow = false;
 	private boolean preDataServiceCall;
@@ -51,16 +51,17 @@ public class WebObjectApiFunctionDefinition extends WebObjectFunctionDefinition
 
 	/**
 	 * Only for components, not services. This is a special type of async method call that waits for a form to be loaded on client before executing the method.
-	 * Calling this kind of methods will not forcefully load the form in hidden DOM just to call the method.
+	 * Calling this kind of methods will not forcefully load the form in hidden DOM (NG1) just to call the method, not will it fail to call it/ignore if the form is not yet there on client (TiNG).
 	 * @return
 	 */
 	public boolean shouldDelayUntilFormLoads()
 	{
-		return delayUntilFormLoads;
+		return async && delayUntilFormLoads;
 	}
 
 	public void setDelayUntilFormLoads(boolean delayUntilFormLoads)
 	{
+		if (delayUntilFormLoads) this.async = true;
 		this.delayUntilFormLoads = delayUntilFormLoads;
 	}
 
