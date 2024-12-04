@@ -884,7 +884,7 @@ public class BaseWindow implements IWindow
 		return arguments;
 	}
 
-	protected void addServiceCall(IClientService clientService, String functionName, Object[] arguments, IFunctionParameters argumentTypes)
+	private void addServiceCall(IClientService clientService, String functionName, Object[] arguments, IFunctionParameters argumentTypes)
 	{
 		serviceCalls.add(createServiceCall(clientService, functionName, arguments, argumentTypes));
 	}
