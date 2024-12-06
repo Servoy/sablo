@@ -1010,6 +1010,7 @@ public class BaseWindow implements IWindow
 			{
 				Object ret = executeCall(receiver, apiFunction.getName(), arguments, new IToJSONWriter<IBrowserConverterContext>()
 				{
+
 					@Override
 					public boolean writeJSONContent(JSONWriter w, String keyInParent, IToJSONConverter<IBrowserConverterContext> converter) throws JSONException
 					{
@@ -1091,6 +1092,17 @@ public class BaseWindow implements IWindow
 			}
 		}
 		return hasPendingDelayedCalls;
+	}
+
+	protected void clearAllDelayedCallsToForm(String formName)
+	{
+		Iterator<ComponentCall> it = componentApiCalls.iterator();
+		while (it.hasNext())
+		{
+			ComponentCall delayedCall = it.next();
+			if (delayedCall.delayUntilFormLoads && formName.equals(delayedCall.formContainer.getName()))
+				it.remove();
+		}
 	}
 
 	protected boolean isFormResolved(Container formContainer)
