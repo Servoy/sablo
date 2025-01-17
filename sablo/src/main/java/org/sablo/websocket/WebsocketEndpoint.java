@@ -360,7 +360,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 			return;
 		}
 
-		CurrentWindow.set(window);
+		IWindow oldW = CurrentWindow.set(window); // this oldW is mostly for java unit tests; there it can be non-null
 		try
 		{
 			if (messageLogger != null) messageLogger.messageReceived(message);
@@ -512,7 +512,7 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 		}
 		finally
 		{
-			CurrentWindow.set(null);
+			CurrentWindow.set(oldW);
 		}
 
 	}
