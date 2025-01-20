@@ -370,6 +370,8 @@ public class ChangeAwareMap<ET, WT> extends AbstractMap<String, ET> implements I
 	@Override
 	public void detach()
 	{
+		if (webObjectContext == null) return; // it is already detached
+
 		changeMonitor = null;
 
 		Map<String, WT> wrappedBaseList = getWrappedBaseMap();
