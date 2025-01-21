@@ -432,6 +432,8 @@ public class ChangeAwareList<ET, WT> implements List<ET>, ISmartPropertyValue
 	@Override
 	public void detach()
 	{
+		if (webObjectContext == null) return; // it is already detached
+
 		changeMonitor = null;
 
 		List<WT> wrappedBaseList = getWrappedBaseList();
