@@ -27,6 +27,8 @@ import org.sablo.specification.property.IPropertyType;
 public class IllegalChangeFromClientException extends RuntimeException
 {
 
+	private boolean shouldPrintWarningToLog;
+
 	private final String blockedByProperty;
 	private final String blockReason;
 	private final String componentName;
@@ -37,13 +39,15 @@ public class IllegalChangeFromClientException extends RuntimeException
 	/**
 	 * @param blockedByProperty can be null if the blockedProperty is itself 'protecting' (so it can never be changed from client anyway) or has 'pushToServer' set to 'reject'. {@link IPropertyType#isProtecting()}
 	 */
-	public IllegalChangeFromClientException(String blockedByProperty, String blockReason, String componentName, String blockedProperty)
+	public IllegalChangeFromClientException(String blockedByProperty, String blockReason, String componentName, String blockedProperty,
+		boolean shouldPrintWarningToLog)
 	{
 		this.blockedByProperty = blockedByProperty;
 		this.blockReason = blockReason;
 		this.componentName = componentName;
 		this.property = blockedProperty;
 		this.e = null;
+		this.shouldPrintWarningToLog = shouldPrintWarningToLog;
 	}
 
 	/**
@@ -51,7 +55,7 @@ public class IllegalChangeFromClientException extends RuntimeException
 	 */
 	public IllegalChangeFromClientException(String blockedByProperty, String blockReason, String name, String eventType, IllegalChangeFromClientException e)
 	{
-		this(blockedByProperty, blockReason, name, eventType);
+		this(blockedByProperty, blockReason, name, eventType, true);
 		this.e = e;
 	}
 
@@ -105,6 +109,16 @@ public class IllegalChangeFromClientException extends RuntimeException
 	public void setData(Object data)
 	{
 		this.data = data;
+	}
+
+	public boolean shouldPrintWarningToLog()
+	{
+		return shouldPrintWarningToLog;
+	}
+
+	public void setShouldPrintWarningToLog(boolean shouldPrintWarning)
+	{
+		shouldPrintWarningToLog = shouldPrintWarning;
 	}
 
 }

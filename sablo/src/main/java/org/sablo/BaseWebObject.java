@@ -494,12 +494,25 @@ public abstract class BaseWebObject implements IWebObjectContext
 					}
 					// general protected property or specific for this property
 					throw new IllegalChangeFromClientException(prop.getName(), "Changes from client for property '" + property +
-						"' are not allowed when the value of property '" + prop.getName() + "' is " + blockingOn, getName(), property);
+						"' are not allowed when the value of property '" + prop.getName() + "' is " + blockingOn, getName(), property,
+						shouldPrintWarningMessageOnIllegalChangeFromClient(prop.getName()));
 				}
 			}
 		}
 
 		// ok
+	}
+
+	/**
+	 * In case some generated IllegalChangeFromClientException needs to be thrown in order to ignore
+	 * a something sent from client (handler, prop. update), but it shouldn't print a warning message in the
+	 * log file (it is a scenario that we just want to ignore, not complain about), then this method makes that possible.
+	 *
+	 * @return
+	 */
+	protected boolean shouldPrintWarningMessageOnIllegalChangeFromClient(String nameOfPropertyThatBlocksTheClientSentChange)
+	{
+		return true;
 	}
 
 	/**
@@ -525,7 +538,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 				throw new IllegalChangeFromClientException(null,
 					"Property '" + propertyPath.stream().limit(i + 1).map(pd -> pd.getName()).reduce(specification.getName(), (a, b) -> a + '.' + b) +
 						"' is a 'protecting' property itself so it can never be changed from client.",
-					getName(), propName);
+					getName(), propName, true);
 			}
 
 			if (PushToServerEnum.allow.compareTo(computedPushToServer) > 0 && (!(property.getType() instanceof IPushToServerSpecialType) ||
@@ -535,7 +548,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 				throw new IllegalChangeFromClientException(null,
 					"Property '" + propertyPath.stream().limit(i + 1).map(pd -> pd.getName()).reduce(specification.getName(), (a, b) -> a + '.' + b) +
 						"' has computed 'pushToServer' set to 'reject' so it cannot be changed from client.",
-					getName(), propName);
+					getName(), propName, true);
 			}
 		}
 		// if propertyPath.size() == 0, so properties that are sent from browser but are not in spec will be converted to null later anyway in BaseWebObject.convertValueFromJSON() because PD is null

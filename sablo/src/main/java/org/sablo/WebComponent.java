@@ -117,7 +117,7 @@ public class WebComponent extends BaseWebObject
 				throw new IllegalChangeFromClientException(e.getBlockedByProperty(),
 					"Parent container '" + parent.getName() + "' of this component '" + getName() +
 						"' currently blocks incoming client changes because of parent container property: " + e.getBlockedByProperty(),
-					this.getName(), eventType);
+					this.getName(), eventType, e.shouldPrintWarningToLog());
 			}
 
 		}

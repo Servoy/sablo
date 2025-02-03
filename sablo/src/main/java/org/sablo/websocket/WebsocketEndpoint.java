@@ -423,9 +423,14 @@ public abstract class WebsocketEndpoint implements IWebsocketEndpoint
 							{
 								log.warn("Warning: " + pe.getMessage(), pe);
 							}
-							catch (IllegalChangeFromClientException | IllegalAccessException e)
+							catch (IllegalChangeFromClientException e)
 							{
-								log.warn("Warning: " + e.getMessage());
+								if (e.shouldPrintWarningToLog()) log.warn("Warning: " + e.getMessage()); //$NON-NLS-1$
+								else log.debug("(happened right after hiding the form or in another acceptable scenario): " + e.getMessage()); //$NON-NLS-1$
+							}
+							catch (IllegalAccessException e)
+							{
+								log.warn("Warning: " + e.getMessage()); //$NON-NLS-1$
 							}
 							catch (Exception e)
 							{
