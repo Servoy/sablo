@@ -48,7 +48,6 @@ public class IntPropertyType extends DefaultPropertyType<Integer> implements IPr
 
 	protected IntPropertyType()
 	{
-		super(true);
 	}
 
 	@Override

@@ -39,7 +39,6 @@ public class FloatPropertyType extends DefaultPropertyType<Float> implements IPr
 
 	private FloatPropertyType()
 	{
-		super(true);
 	}
 
 	@Override

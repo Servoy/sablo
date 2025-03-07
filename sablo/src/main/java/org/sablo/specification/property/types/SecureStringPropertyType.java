@@ -54,7 +54,6 @@ public class SecureStringPropertyType extends DefaultPropertyType<String> implem
 
 	protected SecureStringPropertyType()
 	{
-		super(true);
 		SecretKey key = null;
 		try
 		{
