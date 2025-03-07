@@ -30,7 +30,6 @@ public class BooleanPropertyType extends DefaultPropertyType<Boolean>
 
 	private BooleanPropertyType()
 	{
-		super(true);
 	}
 
 	@Override

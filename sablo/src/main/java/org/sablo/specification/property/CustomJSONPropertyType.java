@@ -150,4 +150,10 @@ public abstract class CustomJSONPropertyType<T> extends DefaultPropertyType<T> i
 		return config;
 	}
 
+	@Override
+	public boolean isBuiltinType()
+	{
+		return false;
+	}
+
 }

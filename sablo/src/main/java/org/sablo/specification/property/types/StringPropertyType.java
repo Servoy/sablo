@@ -28,7 +28,6 @@ public class StringPropertyType extends DefaultPropertyType<String>
 
 	protected StringPropertyType()
 	{
-		super(true);
 	}
 
 	@Override

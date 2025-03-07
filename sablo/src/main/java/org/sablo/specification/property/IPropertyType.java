@@ -58,8 +58,8 @@ public interface IPropertyType<T>
 	boolean isProtecting();
 
 	/**
-	 * True for primitive types like int, string, etc.
+	 * True for primitive types like int, string and Servoy own types like form, relation.
 	 */
-	boolean isPrimitive();
+	boolean isBuiltinType();
 
 }
