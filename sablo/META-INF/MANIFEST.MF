@@ -16,7 +16,7 @@ Export-Package: org.sablo,
  org.sablo.websocket,
  org.sablo.websocket.impl,
  org.sablo.websocket.utils
-Bundle-RequiredExecutionEnvironment: JavaSE-17
+Bundle-RequiredExecutionEnvironment: JavaSE-21
 Bundle-ClassPath: .
 Bundle-Vendor: Servoy
 Bundle-ActivationPolicy: lazy
