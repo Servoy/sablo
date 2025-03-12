@@ -30,6 +30,7 @@ import org.junit.After;
 import org.junit.Test;
 import org.sablo.specification.Package.IPackageReader;
 import org.sablo.specification.WebComponentSpecProvider;
+import org.sablo.specification.property.types.VisibleSabloValue;
 import org.sablo.websocket.utils.JSONUtils.FullValueToJSONConverter;
 
 /**
@@ -174,7 +175,7 @@ public class WebComponentSecurityDataTest
 		assertTrue(testcomponent.hasChanges());
 
 		changes = testcomponent.getAndClearChanges().content;
-		assertEquals(Boolean.TRUE, changes.get("vis"));
+		assertEquals(Boolean.TRUE, ((VisibleSabloValue)changes.get("vis")).getValue());
 		assertEquals(Boolean.TRUE, changes.get("abool"));
 		assertEquals("fourty-two", changes.get("astr"));
 		assertEquals("test", changes.get("name"));
@@ -230,7 +231,7 @@ public class WebComponentSecurityDataTest
 		testcomponent.setProperty("aint", new Integer(42));
 
 		changes = testcomponent.getAndClearChanges().content;
-		assertEquals(Boolean.FALSE, changes.get("vis"));
+		assertEquals(Boolean.FALSE, ((VisibleSabloValue)changes.get("vis")).getValue());
 		assertEquals(1, changes.size());
 
 		// set another property, no changes when component still invisible
@@ -243,7 +244,7 @@ public class WebComponentSecurityDataTest
 		testcomponent.setVisible(true);
 
 		changes = testcomponent.getAndClearChanges().content;
-		assertEquals(Boolean.TRUE, changes.get("vis"));
+		assertEquals(Boolean.TRUE, ((VisibleSabloValue)changes.get("vis")).getValue());
 		assertEquals("hello", changes.get("astr"));
 		assertEquals(new Integer(-42), changes.get("aint"));
 		assertEquals(3, changes.size());
