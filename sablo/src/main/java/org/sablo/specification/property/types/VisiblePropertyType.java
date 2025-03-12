@@ -15,23 +15,27 @@
  */
 package org.sablo.specification.property.types;
 
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONWriter;
 import org.sablo.specification.PropertyDescription;
+import org.sablo.specification.property.IBrowserConverterContext;
+import org.sablo.specification.property.IWrapperType;
+import org.sablo.specification.property.IWrappingContext;
+import org.sablo.util.ValueReference;
+import org.sablo.websocket.utils.JSONUtils;
 
 
 /**
  * @author rgansevles
  *
  */
-public class VisiblePropertyType extends DefaultPropertyType<Boolean>
+public class VisiblePropertyType extends DefaultPropertyType<Boolean> implements IWrapperType<Boolean, VisibleSabloValue>
 {
 
 	public static final VisiblePropertyType INSTANCE = new VisiblePropertyType();
 	public static final String TYPE_NAME = "visible";
 
-	private VisiblePropertyType()
-	{
-	}
 
 	@Override
 	public String getName()
@@ -60,5 +64,40 @@ public class VisiblePropertyType extends DefaultPropertyType<Boolean>
 	public boolean isProtecting()
 	{
 		return true;
+	}
+
+	@Override
+	public VisibleSabloValue fromJSON(Object newJSONValue, VisibleSabloValue previousSabloValue, PropertyDescription propertyDescription,
+		IBrowserConverterContext context, ValueReference<Boolean> returnValueAdjustedIncommingValue)
+	{
+		return previousSabloValue;
+	}
+
+	@Override
+	public JSONWriter toJSON(JSONWriter writer, String key, VisibleSabloValue sabloValue, PropertyDescription propertyDescription,
+		IBrowserConverterContext dataConverterContext) throws JSONException
+	{
+		JSONUtils.addKeyIfPresent(writer, key);
+		return sabloValue.toJSON(writer);
+	}
+
+	@Override
+	public VisibleSabloValue wrap(Boolean newValue, VisibleSabloValue oldValue, PropertyDescription propertyDescription, IWrappingContext dataConverterContext)
+	{
+		if (oldValue != null)
+		{
+			oldValue.setValue(newValue.booleanValue());
+		}
+		else
+		{
+			return new VisibleSabloValue(newValue.booleanValue(), dataConverterContext);
+		}
+		return oldValue;
+	}
+
+	@Override
+	public Boolean unwrap(VisibleSabloValue value)
+	{
+		return Boolean.valueOf(value.getValue());
 	}
 }

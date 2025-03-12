@@ -24,5 +24,5 @@ import java.util.Map;
  */
 public interface IDefaultComponentPropertiesProvider
 {
-	Map<String, PropertyDescription> getDefaultComponentProperties();
+	void addDefaultComponentProperties(Map<String, PropertyDescription> collection);
 }

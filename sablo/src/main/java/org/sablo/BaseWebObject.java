@@ -456,7 +456,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 	public boolean isVisibilityProperty(String propertyName)
 	{
 		PropertyDescription description = specification.getProperty(propertyName);
-		return description != null && description.getType() == VisiblePropertyType.INSTANCE;
+		return description != null && description.getType() instanceof VisiblePropertyType;
 	}
 
 	/**
