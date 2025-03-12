@@ -26,8 +26,8 @@
     <!-- IF updating dependecies, version or new jar, also update the pom_only_dep,xml -->
     <properties>
         <tycho.version>4.0.9</tycho.version>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <log4j-version>2.24.0</log4j-version>
         <jenkins.javascript_tests.reportsDirectory>target/protractor-reports</jenkins.javascript_tests.reportsDirectory>
         <test.script>test</test.script>
@@ -82,7 +82,7 @@
                         <configuration>
                             <toolchains>
                                 <jdk>
-                                    <id>JavaSE-17</id>
+                                    <id>JavaSE-21</id>
                                 </jdk>
                             </toolchains>
                         </configuration>
