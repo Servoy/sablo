@@ -25,7 +25,7 @@
     
     <!-- IF updating dependecies, version or new jar, also update the pom_only_dep,xml -->
     <properties>
-        <tycho.version>4.0.9</tycho.version>
+        <tycho.version>4.0.12</tycho.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <log4j-version>2.24.0</log4j-version>
