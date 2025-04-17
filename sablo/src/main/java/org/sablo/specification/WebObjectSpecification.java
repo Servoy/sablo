@@ -461,6 +461,8 @@ public class WebObjectSpecification extends PropertyDescription
 	{
 		JSONObject json = new JSONObject(specfileContent);
 
+		System.out.println("JSON name: " + json.getString("name"));
+
 		// first types, can be used in properties
 		Map<String, ICustomType< ? >> types = WebObjectSpecification.parseTypes(json);
 
@@ -527,7 +529,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectHandlerFunctionDefinition def = new WebObjectHandlerFunctionDefinition(func);
-				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName());
+				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName(), "handlers");
 				spec.addHandler(def);
 			}
 		}
@@ -541,7 +543,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName());
+				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName(), "api");
 				spec.addApiFunction(def);
 			}
 		}
@@ -554,7 +556,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName());
+				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName(), "internalApi");
 				spec.addInternalApiFunction(def);
 			}
 		}
@@ -564,8 +566,7 @@ public class WebObjectSpecification extends PropertyDescription
 	}
 
 	private static WebObjectFunctionDefinition parseFunctionDefinition(WebObjectFunctionDefinition def, Map<String, ICustomType< ? >> foundTypes,
-		Object defintion,
-		String func, String typeName) throws JSONException
+		Object defintion, String func, String typeName, String functionCategory) throws JSONException
 	{
 		if (defintion instanceof JSONObject jsonDef)
 		{
@@ -670,6 +671,17 @@ public class WebObjectSpecification extends PropertyDescription
 				{
 					castToHandlerFunction(def, key).setIgnoreNGBlockDuplicateEvents(jsonDef.getBoolean(key));
 				}
+				else if ("overloads".equals(key) && def instanceof WebObjectApiFunctionDefinition && "api".equals(functionCategory))
+				{
+					JSONArray overloads = jsonDef.getJSONArray("overloads");
+					for (int i = 0; i < overloads.length(); i++)
+					{
+						JSONObject overload = overloads.getJSONObject(i);
+						WebObjectApiFunctionDefinition overloadDef = new WebObjectApiFunctionDefinition(func);
+						parseFunctionDefinition(overloadDef, foundTypes, overload, func, typeName, "overload");
+						((WebObjectApiFunctionDefinition)def).addOverLoad(overloadDef);
+					}
+				}
 				else
 				{
 					if (customConfiguration == null) customConfiguration = new JSONObject();
@@ -768,7 +780,7 @@ public class WebObjectSpecification extends PropertyDescription
 					{
 						String func = itk.next();
 						WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-						parseFunctionDefinition(def, foundTypes, api.get(func), func, typeName);
+						parseFunctionDefinition(def, foundTypes, api.get(func), func, typeName, "serversideapi");
 						type.addApiFunction(def);
 						if (api.get(func) instanceof JSONObject jsonDef && jsonDef.has("overloads"))
 						{
@@ -777,7 +789,7 @@ public class WebObjectSpecification extends PropertyDescription
 							{
 								JSONObject overload = overloads.getJSONObject(i);
 								WebObjectApiFunctionDefinition overloadDef = new WebObjectApiFunctionDefinition(func);
-								parseFunctionDefinition(overloadDef, foundTypes, overload, func, typeName);
+								parseFunctionDefinition(overloadDef, foundTypes, overload, func, typeName, "overload");
 								def.addOverLoad(overloadDef);
 							}
 						}
