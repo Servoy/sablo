@@ -461,8 +461,6 @@ public class WebObjectSpecification extends PropertyDescription
 	{
 		JSONObject json = new JSONObject(specfileContent);
 
-		System.out.println("JSON name: " + json.getString("name"));
-
 		// first types, can be used in properties
 		Map<String, ICustomType< ? >> types = WebObjectSpecification.parseTypes(json);
 
