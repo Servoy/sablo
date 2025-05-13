@@ -155,8 +155,7 @@ public class PropertyUtils
 		}
 		catch (NumberFormatException e)
 		{
-			// Re-throw with a more informative message or handle as per application needs
-			throw new NumberFormatException("Invalid number string for BigDecimal: \"" + numberStr + "\" - " + e.getMessage());
+			return getAsDouble(numberStr);
 		}
 
 		// Attempt to convert the BigDecimal to a double
