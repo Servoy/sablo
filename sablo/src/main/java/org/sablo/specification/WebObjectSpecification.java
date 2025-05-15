@@ -527,7 +527,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectHandlerFunctionDefinition def = new WebObjectHandlerFunctionDefinition(func);
-				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName(), "handlers");
+				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName());
 				spec.addHandler(def);
 			}
 		}
@@ -541,7 +541,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName(), "api");
+				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName());
 				spec.addApiFunction(def);
 			}
 		}
@@ -554,7 +554,7 @@ public class WebObjectSpecification extends PropertyDescription
 			{
 				String func = itk.next();
 				WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName(), "internalApi");
+				parseFunctionDefinition(def, spec.foundTypes, api.get(func), func, spec.getName());
 				spec.addInternalApiFunction(def);
 			}
 		}
@@ -564,7 +564,7 @@ public class WebObjectSpecification extends PropertyDescription
 	}
 
 	private static WebObjectFunctionDefinition parseFunctionDefinition(WebObjectFunctionDefinition def, Map<String, ICustomType< ? >> foundTypes,
-		Object defintion, String func, String typeName, String functionCategory) throws JSONException
+		Object defintion, String func, String typeName) throws JSONException
 	{
 		if (defintion instanceof JSONObject jsonDef)
 		{
@@ -669,14 +669,14 @@ public class WebObjectSpecification extends PropertyDescription
 				{
 					castToHandlerFunction(def, key).setIgnoreNGBlockDuplicateEvents(jsonDef.getBoolean(key));
 				}
-				else if ("overloads".equals(key) && def instanceof WebObjectApiFunctionDefinition && "api".equals(functionCategory))
+				else if ("overloads".equals(key) && def instanceof WebObjectApiFunctionDefinition)
 				{
 					JSONArray overloads = jsonDef.getJSONArray("overloads");
 					for (int i = 0; i < overloads.length(); i++)
 					{
 						JSONObject overload = overloads.getJSONObject(i);
 						WebObjectApiFunctionDefinition overloadDef = new WebObjectApiFunctionDefinition(func);
-						parseFunctionDefinition(overloadDef, foundTypes, overload, func, typeName, "overload");
+						parseFunctionDefinition(overloadDef, foundTypes, overload, func, typeName);
 						((WebObjectApiFunctionDefinition)def).addOverLoad(overloadDef);
 					}
 				}
@@ -783,19 +783,19 @@ public class WebObjectSpecification extends PropertyDescription
 					{
 						String func = itk.next();
 						WebObjectApiFunctionDefinition def = new WebObjectApiFunctionDefinition(func);
-						parseFunctionDefinition(def, foundTypes, api.get(func), func, typeName, "serversideapi");
+						parseFunctionDefinition(def, foundTypes, api.get(func), func, typeName);
 						type.addApiFunction(def);
-						if (api.get(func) instanceof JSONObject jsonDef && jsonDef.has("overloads"))
-						{
-							JSONArray overloads = jsonDef.getJSONArray("overloads");
-							for (int i = 0; i < overloads.length(); i++)
-							{
-								JSONObject overload = overloads.getJSONObject(i);
-								WebObjectApiFunctionDefinition overloadDef = new WebObjectApiFunctionDefinition(func);
-								parseFunctionDefinition(overloadDef, foundTypes, overload, func, typeName, "overload");
-								def.addOverLoad(overloadDef);
-							}
-						}
+//						if (api.get(func) instanceof JSONObject jsonDef && jsonDef.has("overloads"))
+//						{
+//							JSONArray overloads = jsonDef.getJSONArray("overloads");
+//							for (int i = 0; i < overloads.length(); i++)
+//							{
+//								JSONObject overload = overloads.getJSONObject(i);
+//								WebObjectApiFunctionDefinition overloadDef = new WebObjectApiFunctionDefinition(func);
+//								parseFunctionDefinition(overloadDef, foundTypes, overload, func, typeName, "overload");
+//								def.addOverLoad(overloadDef);
+//							}
+//						}
 					}
 				}
 				// TODO this is currently never true? See 5 lines above this, types are always just PropertyDescription?
