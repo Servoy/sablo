@@ -43,6 +43,7 @@ public abstract class CustomJSONPropertyType<T> extends DefaultPropertyType<T> i
 	private String documentation;
 	private Map<String, WebObjectApiFunctionDefinition> apiFunctions;
 	private ICustomType< ? > parent;
+	private String extendsName;
 
 	/**
 	 * Creates a new property types that is defined in JSON spec files.
@@ -136,6 +137,16 @@ public abstract class CustomJSONPropertyType<T> extends DefaultPropertyType<T> i
 	public ICustomType< ? > getParent()
 	{
 		return parent;
+	}
+
+	public void setExtends(String extendsName)
+	{
+		this.extendsName = extendsName;
+	}
+
+	public String getExtends()
+	{
+		return extendsName;
 	}
 
 	@Override

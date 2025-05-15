@@ -53,6 +53,13 @@ public interface ICustomType<T> extends IPropertyType<T>
 	public ICustomType< ? > getParent();
 
 	/**
+	 * @param extendsName
+	 */
+	public void setExtends(String extendsName);
+
+	public String getExtends();
+
+	/**
 	 * @param def
 	 */
 	void addApiFunction(WebObjectApiFunctionDefinition def);

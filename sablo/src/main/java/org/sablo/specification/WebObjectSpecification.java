@@ -764,10 +764,15 @@ public class WebObjectSpecification extends PropertyDescription
 				type.setCustomJSONDefinition(pd);
 				if (typeJSON.has("extends"))
 				{
-					ICustomType< ? > parentType = foundTypes.get(typeJSON.getString("extends"));
+					String extendsName = typeJSON.getString("extends");
+					ICustomType< ? > parentType = foundTypes.get(extendsName);
 					if (parentType != null)
 					{
 						type.setParent(parentType);
+					}
+					else
+					{
+						type.setExtends(extendsName);
 					}
 				}
 				if (typeJSON.has("serversideapi"))
