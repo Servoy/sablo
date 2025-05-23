@@ -22,9 +22,11 @@ package org.sablo.specification;
  */
 public class PropertyDescriptionBuilder extends AbstractPropertyDescriptionBuilder<PropertyDescriptionBuilder, PropertyDescription>
 {
+	@Override
 	public PropertyDescription build()
 	{
-		return new PropertyDescription(name, type, config, properties, defaultValue, initialValue, hasDefault, values, pushToServer, tags, optional,
+		return new PropertyDescription(name, type, config, properties, defaultValue, initialValue, hasDefault, values, pushToServer, tags, optional, internal,
 			properties != null && properties.containsKey("deprecated") ? ((String)properties.get("deprecated").getConfig()) : deprecated);
 	}
+
 }

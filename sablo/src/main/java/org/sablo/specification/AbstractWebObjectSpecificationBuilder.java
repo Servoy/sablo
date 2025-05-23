@@ -23,6 +23,7 @@ import org.json.JSONObject;
  * @author lvostinar
  *
  */
+@SuppressWarnings({ "hiding", "nls" })
 abstract class AbstractWebObjectSpecificationBuilder<B extends AbstractWebObjectSpecificationBuilder<B, P>, P extends WebObjectSpecification>
 	extends AbstractPropertyDescriptionBuilder<B, P>
 {
@@ -37,6 +38,7 @@ abstract class AbstractWebObjectSpecificationBuilder<B extends AbstractWebObject
 	protected JSONArray keywords;
 	protected JSONObject ng2Config;
 	protected String styleVariantCategory;
+	protected String standalone;
 
 	public B withPackageName(String packageName)
 	{
@@ -88,6 +90,12 @@ abstract class AbstractWebObjectSpecificationBuilder<B extends AbstractWebObject
 	public B withDefinition(String definition)
 	{
 		this.definition = definition;
+		return getThis();
+	}
+
+	public B withStandalone(String standalone)
+	{
+		this.standalone = standalone;
 		return getThis();
 	}
 

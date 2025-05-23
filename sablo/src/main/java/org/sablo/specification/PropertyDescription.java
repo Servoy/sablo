@@ -57,6 +57,7 @@ public class PropertyDescription
 	private final IPropertyType< ? > type;
 	private final Object config;
 	private final boolean optional;
+	private final boolean internal;
 	private final Object defaultValue;
 	private final Object initialValue;
 	private final List<Object> values;
@@ -69,13 +70,16 @@ public class PropertyDescription
 	private final Map<String, PropertyDescription> properties;
 	private final boolean hasDefault;
 
+
 	// only call from builder or child classes
 	PropertyDescription(String name, IPropertyType< ? > type, Object config, Map<String, PropertyDescription> properties, Object defaultValue,
-		Object initialValue, boolean hasDefault, List<Object> values, PushToServerEnum pushToServer, JSONObject tags, boolean optional, String deprecated)
+		Object initialValue, boolean hasDefault, List<Object> values, PushToServerEnum pushToServer, JSONObject tags, boolean optional, boolean internal,
+		String deprecated)
 	{
 		this.name = name;
 		this.hasDefault = hasDefault;
 		this.properties = properties;
+		this.internal = internal;
 		if (type instanceof IYieldingType)
 		{
 			YieldDescriptionArguments params = new YieldDescriptionArguments(config, defaultValue, initialValue, values, pushToServer, tags, optional,
@@ -556,6 +560,11 @@ public class PropertyDescription
 	public String getDeprecated()
 	{
 		return deprecated;
+	}
+
+	public boolean isInternal()
+	{
+		return internal;
 	}
 
 	public String getDeprecatedMessage()

@@ -43,6 +43,7 @@ abstract class AbstractPropertyDescriptionBuilder<B extends AbstractPropertyDesc
 	protected Map<String, PropertyDescription> properties;
 	protected boolean hasDefault;
 	protected String deprecated;
+	protected boolean internal;
 
 	public B withProperty(String propertyName, PropertyDescription pd)
 	{
@@ -148,6 +149,19 @@ abstract class AbstractPropertyDescriptionBuilder<B extends AbstractPropertyDesc
 		return getThis();
 	}
 
+
+	/**
+	 * internal means this is a property added by servoy internally, but should not be outputted on the tag  because its not a component property.
+	 *
+	 * @param b
+	 * @return
+	 */
+	public B internal(boolean b)
+	{
+		this.internal = b;
+		return getThis();
+	}
+
 	public B copyFrom(PropertyDescription pd)
 	{
 		this.name = pd.getName();
@@ -162,6 +176,7 @@ abstract class AbstractPropertyDescriptionBuilder<B extends AbstractPropertyDesc
 		this.properties = new HashMap<>(pd.getProperties());
 		this.hasDefault = pd.hasDefault();
 		this.deprecated = pd.getDeprecated();
+		this.internal = pd.isInternal();
 		return getThis();
 	}
 

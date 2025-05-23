@@ -202,6 +202,8 @@ public class WebObjectSpecification extends PropertyDescription
 	private final String categoryName;
 	private final String icon;
 	private final String packageName;
+	private final String standalone;
+
 
 	/** One can define in his solution a bunch of styling variants (collections of css classes) for a component; some standard class collection variants can be made based on styling category of component
 	    (label/button/input/etc) */
@@ -248,18 +250,16 @@ public class WebObjectSpecification extends PropertyDescription
 		String icon, String preview,
 		String definition, JSONArray libs, JSONArray keywords, JSONObject ng2Config)
 	{
-		this(name, packageName, packageType, displayName, categoryName, styleVariantCategory, icon, preview, definition, libs, null, null, null, keywords,
+		this(name, packageName, packageType, displayName, categoryName, styleVariantCategory, icon, preview, definition, libs, null, null, null, null, keywords,
 			ng2Config);
 	}
 
 
 	WebObjectSpecification(String name, String packageName, String packageType, String displayName, String categoryName, String styleVariantCategory,
-		String icon,
-		String preview,
-		String definition, JSONArray libs, Object configObject, Map<String, PropertyDescription> properties, String deprecated, JSONArray keywords,
-		JSONObject ng2Config)
+		String icon, String preview, String definition, JSONArray libs, Object configObject, Map<String, PropertyDescription> properties,
+		String deprecated, String standalone, JSONArray keywords, JSONObject ng2Config)
 	{
-		super(name, null, configObject, properties, null, null, false, null, null, null, false, deprecated);
+		super(name, null, configObject, properties, null, null, false, null, null, null, false, false, deprecated);
 		this.scriptingName = scriptifyNameIfNeeded(name, packageType);
 		this.packageName = packageName;
 		this.displayName = displayName;
@@ -268,6 +268,7 @@ public class WebObjectSpecification extends PropertyDescription
 		this.icon = icon;
 		this.preview = preview;
 		this.definition = definition;
+		this.standalone = standalone;
 		this.libraries = libs != null ? libs : new JSONArray();
 		this.foundTypes = new HashMap<>();
 		this.keywords = keywords != null ? keywords : new JSONArray();
@@ -396,6 +397,11 @@ public class WebObjectSpecification extends PropertyDescription
 		return definition;
 	}
 
+	public String getStandalone()
+	{
+		return standalone;
+	}
+
 	@Override
 	public Set<String> getAllPropertiesNames()
 	{
@@ -472,15 +478,21 @@ public class WebObjectSpecification extends PropertyDescription
 			defaultComponentPropertiesProvider.addDefaultComponentProperties(properties);
 		}
 
-		WebObjectSpecification spec = new WebObjectSpecificationBuilder().withPackageName(packageName).withPackageType(
-			reader != null ? reader.getPackageType() : null).withDisplayName(json.optString("displayName", null)).withCategoryName(
-				json.optString("categoryName", null))
+		WebObjectSpecification spec = new WebObjectSpecificationBuilder()
+			.withPackageName(packageName)
+			.withPackageType(reader != null ? reader.getPackageType() : null)
+			.withDisplayName(json.optString("displayName", null))
+			.withCategoryName(json.optString("categoryName", null))
 			.withStyleVariantCategory(json.optString("styleVariantCategory", null))
-			.withIcon(json.optString("icon", null)).withPreview(json.optString("preview", null)).withDefinition(
-				json.optString("definition", null))
-			.withLibraries(json.optJSONArray("libraries")).withProperties(properties).withName(
-				json.getString("name"))
-			.withDeprecated(json.optString("deprecated", null)).withKeywords(json.optJSONArray("keywords")).withNG2Config(json.optJSONObject("ng2Config"))
+			.withIcon(json.optString("icon", null))
+			.withPreview(json.optString("preview", null))
+			.withDefinition(json.optString("definition", null))
+			.withLibraries(json.optJSONArray("libraries"))
+			.withProperties(properties).withName(json.getString("name"))
+			.withDeprecated(json.optString("deprecated", null))
+			.withKeywords(json.optJSONArray("keywords"))
+			.withNG2Config(json.optJSONObject("ng2Config"))
+			.withStandalone(json.optString("standalone", null))
 			.build();
 		spec.foundTypes = types;
 		if (json.has("serverscript"))
