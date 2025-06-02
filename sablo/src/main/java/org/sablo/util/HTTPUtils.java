@@ -152,7 +152,7 @@ public class HTTPUtils
 
 	private static String generateNonce()
 	{
-		byte[] bytes = new byte[8];
+		byte[] bytes = new byte[16]; // 128 bits;
 		RANDOM.nextBytes(bytes);
 		return new String(Base64.getEncoder().encode(bytes));
 	}
