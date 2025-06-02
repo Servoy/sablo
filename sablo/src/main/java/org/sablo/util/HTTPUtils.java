@@ -18,10 +18,10 @@ package org.sablo.util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -38,7 +38,7 @@ public class HTTPUtils
 	public static final String IF_MODIFIED_SINCE = "If-Modified-Since"; //$NON-NLS-1$
 	public static final String LAST_MODIFIED = "Last-Modified"; //$NON-NLS-1$
 
-	private static final Random RANDOM = new Random(System.currentTimeMillis());
+	private static final SecureRandom RANDOM = new SecureRandom();
 	private static final String ATTRIBUTE_NONCE = "SABLO-NONCE"; //$NON-NLS-1$
 
 	/**
