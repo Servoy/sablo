@@ -84,13 +84,14 @@ public class VisiblePropertyType extends DefaultPropertyType<Boolean> implements
 	@Override
 	public VisibleSabloValue wrap(Boolean newValue, VisibleSabloValue oldValue, PropertyDescription propertyDescription, IWrappingContext dataConverterContext)
 	{
+		Boolean newVal = newValue != null ? newValue : Boolean.FALSE;
 		if (oldValue != null)
 		{
-			oldValue.setValue(newValue.booleanValue());
+			oldValue.setValue(newVal.booleanValue());
 		}
 		else
 		{
-			return new VisibleSabloValue(newValue.booleanValue(), dataConverterContext);
+			return new VisibleSabloValue(newVal.booleanValue(), dataConverterContext);
 		}
 		return oldValue;
 	}
