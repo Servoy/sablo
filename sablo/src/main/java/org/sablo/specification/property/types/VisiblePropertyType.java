@@ -30,7 +30,7 @@ import org.sablo.websocket.utils.JSONUtils;
  * @author rgansevles
  *
  */
-public class VisiblePropertyType extends DefaultPropertyType<Boolean> implements IWrapperType<Boolean, VisibleSabloValue>
+public class VisiblePropertyType extends DefaultPropertyType<Object> implements IWrapperType<Object, VisibleSabloValue>
 {
 
 	public static final VisiblePropertyType INSTANCE = new VisiblePropertyType();
@@ -82,22 +82,37 @@ public class VisiblePropertyType extends DefaultPropertyType<Boolean> implements
 	}
 
 	@Override
-	public VisibleSabloValue wrap(Boolean newValue, VisibleSabloValue oldValue, PropertyDescription propertyDescription, IWrappingContext dataConverterContext)
+	public VisibleSabloValue wrap(Object newValue, VisibleSabloValue oldValue, PropertyDescription propertyDescription, IWrappingContext dataConverterContext)
 	{
-		Boolean newVal = newValue != null ? newValue : Boolean.FALSE;
+		boolean newVal = convertToBoolean(newValue);
 		if (oldValue != null)
 		{
-			oldValue.setValue(newVal.booleanValue());
+			oldValue.setValue(newVal);
 		}
 		else
 		{
-			return new VisibleSabloValue(newVal.booleanValue(), dataConverterContext);
+			return new VisibleSabloValue(newVal, dataConverterContext);
 		}
 		return oldValue;
 	}
 
+	/**
+	 * @param newValue
+	 * @return
+	 */
+	protected boolean convertToBoolean(Object newValue)
+	{
+		return switch (newValue)
+		{
+			case null -> false;
+			case Boolean b -> b.booleanValue();
+			case String s -> s.equalsIgnoreCase("true"); //$NON-NLS-1$
+			default -> false;
+		};
+	}
+
 	@Override
-	public Boolean unwrap(VisibleSabloValue value)
+	public Object unwrap(VisibleSabloValue value)
 	{
 		return Boolean.valueOf(value.getValue());
 	}
