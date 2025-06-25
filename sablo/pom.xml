@@ -270,7 +270,7 @@
         <dependency>
             <groupId>com.servoy</groupId>
             <artifactId>jabsorb</artifactId>
-            <version>1.3.2.s7</version>
+            <version>1.3.3.s1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
