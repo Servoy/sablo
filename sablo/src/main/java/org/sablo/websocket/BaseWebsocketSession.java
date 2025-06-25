@@ -29,8 +29,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import javax.servlet.http.HttpSession;
-
 import org.json.JSONObject;
 import org.sablo.IChangeListener;
 import org.sablo.eventthread.EventDispatcher;
@@ -46,6 +44,8 @@ import org.sablo.websocket.impl.ClientService;
 import org.sablo.websocket.utils.ObjectReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.http.HttpSession;
 
 
 /**

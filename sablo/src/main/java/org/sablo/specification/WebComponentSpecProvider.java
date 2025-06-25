@@ -21,12 +21,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.jar.Manifest;
 
-import javax.servlet.ServletContext;
-
 import org.sablo.specification.Package.IPackageReader;
 import org.sablo.specification.Package.JarServletContextReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.ServletContext;
 
 /**
  * Class responsible for loading a set of web component packages and specs.

@@ -28,11 +28,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
-import javax.servlet.http.HttpSession;
-import javax.websocket.CloseReason;
-import javax.websocket.CloseReason.CloseCodes;
-import javax.websocket.Session;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sablo.IllegalChangeFromClientException;
@@ -41,6 +36,11 @@ import org.sablo.eventthread.IEventDispatcher;
 import org.sablo.util.SabloUtils.RecursiveAnnonymusClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.http.HttpSession;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.CloseReason.CloseCodes;
+import jakarta.websocket.Session;
 
 /**
  * The websocket endpoint for communication between the WebSocketWindow instance on the server and the browser.

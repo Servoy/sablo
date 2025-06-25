@@ -30,8 +30,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.websocket.CloseReason;
-
 import org.json.JSONException;
 import org.json.JSONString;
 import org.json.JSONStringer;
@@ -55,6 +53,8 @@ import org.sablo.websocket.utils.JSONUtils.FullValueToJSONConverter;
 import org.sablo.websocket.utils.JSONUtils.IToJSONConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.websocket.CloseReason;
 
 /** A window is created for a websocket endpoint to communicate with the websocket session.
  * When the websocket connection is dropped and recreated (browser refresh), the window will be reused.
