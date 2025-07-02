@@ -151,7 +151,10 @@ public class WebComponentTest
 		assertEquals(Color.black, component.getProperty("background"));
 
 		String msg = JSONUtils.writeChanges(properties, null, null);
-		assertEquals("{\"background\":\"#000000\",\"name\":\"test\"}", msg);
+		// Use JSONObject.similar() to compare JSON content regardless of property order
+		JSONObject actual = new JSONObject(msg);
+		JSONObject expected = new JSONObject("{\"background\":\"#000000\",\"name\":\"test\"}");
+		assertTrue("JSON content should be equivalent regardless of property order", expected.similar(actual));
 
 		component.putBrowserProperty("background", "#ff0000");
 		properties = component.getRawPropertiesWithoutDefaults();
@@ -246,11 +249,18 @@ public class WebComponentTest
 
 		// the following uses just a default conversion not customObjectType; but test that anyway to see that Color type works based on class type conversions
 		String msg = JSONUtils.writeDataAsFullToJSON(properties, null, null);
-		assertEquals("{\"atype\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"},\"name\":\"test\"}", msg);
+		// Use JSONObject.similar() to compare JSON content regardless of property order
+		JSONObject actual1 = new JSONObject(msg);
+		JSONObject expected1 = new JSONObject(
+			"{\"atype\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"},\"name\":\"test\"}");
+		assertTrue("JSON content should be equivalent regardless of property order", expected1.similar(actual1));
 
 		// now do it as it's supposed to be done
 		msg = JSONUtils.writeDataAsFullToJSON(properties, component.getSpecification(), null);
-		assertEquals("{\"atype\":{\"vEr\":2,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},\"name\":\"test\"}", msg);
+		JSONObject actual2 = new JSONObject(msg);
+		JSONObject expected2 = new JSONObject(
+			"{\"atype\":{\"vEr\":2,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},\"name\":\"test\"}");
+		assertTrue("JSON content should be equivalent regardless of property order", expected2.similar(actual2));
 
 		component.putBrowserProperty("atype",
 			new JSONObject(
