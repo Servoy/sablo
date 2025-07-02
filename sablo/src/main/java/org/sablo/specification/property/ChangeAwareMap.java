@@ -1,18 +1,18 @@
 /*
-  * Copyright (C) 2014 Servoy BV
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*      http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright (C) 2014 Servoy BV
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.sablo.specification.property;
 
@@ -22,7 +22,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -53,7 +52,6 @@ public class ChangeAwareMap<ET, WT> extends AbstractMap<String, ET> implements I
 
 	protected IPropertyType<ET> type;
 	protected Map<String, ET> baseMap;
-	private LinkedHashSet<String> depSortedKeys;
 
 	protected Map<String, KeyChangeListener> changeHandlers = new HashMap<>();
 
@@ -330,8 +328,7 @@ public class ChangeAwareMap<ET, WT> extends AbstractMap<String, ET> implements I
 			};
 		}); // just make sure it always attaches them in the same order to avoid random bugs
 		sortedKeys.addAll(wrappedBaseList.keySet());
-
-		for (String key : depSortedKeys != null ? depSortedKeys : sortedKeys)
+		for (String key : sortedKeys)
 		{
 			attachToBaseObject(key, wrappedBaseList.get(key));
 		}
@@ -517,12 +514,6 @@ public class ChangeAwareMap<ET, WT> extends AbstractMap<String, ET> implements I
 			componentOrServiceExtension.setPropertyValues(this);
 		}
 		return componentOrServiceExtension;
-	}
-
-	public void setSortedKeys(Set<String> sortedKeys)
-	{
-		if (sortedKeys instanceof LinkedHashSet<String> linkedSet)
-			this.depSortedKeys = linkedSet;
 	}
 
 }
