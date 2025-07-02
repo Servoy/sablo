@@ -17,21 +17,30 @@
 package org.sablo.specification;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.json.JSONObject;
 import org.sablo.specification.IYieldingType.YieldDescriptionArguments;
 import org.sablo.specification.WebObjectSpecification.PushToServerEnum;
+import org.sablo.specification.property.ChangeAwareList;
+import org.sablo.specification.property.ChangeAwareMap;
 import org.sablo.specification.property.CustomJSONArrayType;
 import org.sablo.specification.property.CustomJSONObjectType;
 import org.sablo.specification.property.CustomJSONPropertyType;
 import org.sablo.specification.property.ICustomType;
+import org.sablo.specification.property.IPropertyCanDependsOn;
 import org.sablo.specification.property.IPropertyType;
 import org.sablo.websocket.utils.PropertyUtils;
 import org.slf4j.Logger;
@@ -75,7 +84,16 @@ public class PropertyDescription
 	{
 		this.name = name;
 		this.hasDefault = hasDefault;
-		this.properties = properties;
+
+		if (properties != null)
+		{
+			this.properties = dependencySort(properties);
+		}
+		else
+		{
+			this.properties = properties;
+		}
+
 		if (type instanceof IYieldingType)
 		{
 			YieldDescriptionArguments params = new YieldDescriptionArguments(config, defaultValue, initialValue, values, pushToServer, tags, optional,
@@ -597,4 +615,289 @@ public class PropertyDescription
 		this.description = description;
 	}
 
+	/**
+	 * Performs dependency sorting and returns a LinkedHashMap with properties in sorted order
+	 * @param unsortedProperties Map of property names to their descriptions
+	 * @return LinkedHashMap of properties sorted by dependency order
+	 */
+	private LinkedHashMap<String, PropertyDescription> dependencySort(Map<String, PropertyDescription> unsortedProperties)
+	{
+//		boolean debug = false;
+//		if (getName().equals("aggrid-groupingtable.column"))
+//		{
+//			debug = true;
+//		}
+//		else
+//		{
+//			debug = false;
+//		}
+		if (unsortedProperties != null)
+		{
+			// Phase 1: filter dependencies by category: independent / may depends on / custom
+			LinkedHashMap<String, PropertyDescription> independentProps = new LinkedHashMap<>();
+			List<String> dependentProps = new ArrayList<>();
+			LinkedHashMap<String, PropertyDescription> customProps = new LinkedHashMap<>();
+
+			for (Map.Entry<String, PropertyDescription> entry : unsortedProperties.entrySet())
+			{
+				String key = entry.getKey();
+				PropertyDescription pd = entry.getValue();
+				if (!(pd.getType() instanceof IPropertyCanDependsOn))
+				{
+					independentProps.put(key, pd);
+				}
+				else //can depends on something
+				{
+					String[] deps = ((IPropertyCanDependsOn)pd.getType()).getDependencies();
+					if (deps != null)
+					{
+						if (IPropertyCanDependsOn.DEPENDS_ON_ALL[0].equals(deps[0]))
+						{//custom type
+							customProps.put(key, pd);
+						}
+						else
+						{
+							dependentProps.add(key);
+						}
+					}
+					else
+					{// no dependencies
+						independentProps.put(key, pd);
+					}
+				}
+			}
+
+			// Phase 2: topological sort of explicit dependencies
+			Map<String, List<String>> depMap = new HashMap<>();
+			for (String key : dependentProps)
+			{
+				String[] deps = ((IPropertyCanDependsOn)unsortedProperties.get(key).getType()).getDependencies();
+				List<String> list = deps == null
+					? Collections.emptyList()
+					: Arrays.stream(deps).filter(unsortedProperties::containsKey).collect(Collectors.toList());
+				depMap.put(key, list);
+			}
+
+			List<String> sortedDependencies = alphaSortDependenciesByCategory(depMap, dependentProps);
+
+			// Phase 3: assemble final map
+			LinkedHashMap<String, PropertyDescription> result = new LinkedHashMap<>();
+			result.putAll(independentProps);
+			for (String key : sortedDependencies)
+			{
+				result.put(key, unsortedProperties.get(key));
+			}
+			result.putAll(customProps);
+
+			return result;
+		}
+		return new LinkedHashMap<>();
+	}
+
+	@SuppressWarnings("boxing")
+	private List<String> alphaSortDependenciesByCategory(Map<String, List<String>> dependenciesMap, List<String> dependentProperties)
+	{
+		// Step 1: Perform initial sort - just make sure dependet properties are always follow their dependencies (not alpha sorting for now)
+		List<String> initialSort = new ArrayList<>();
+		Set<String> visited = new HashSet<>();
+		Set<String> visiting = new HashSet<>();
+		for (String key : dependentProperties)
+		{
+			if (!visited.contains(key))
+			{
+				visit(key, dependenciesMap, visited, visiting, initialSort);
+			}
+		}
+
+		// Step 2: Compute dependency levels for each property
+		Map<String, Integer> levels = computeDependencyLevels(dependenciesMap, initialSort);
+
+		// Step 3: Group properties by their dependency level
+		Map<Integer, List<String>> levelGroups = new HashMap<>();
+		for (String prop : initialSort)
+		{
+			int level = levels.get(prop);
+			if (!levelGroups.containsKey(level))
+			{
+				levelGroups.put(level, new ArrayList<>());
+			}
+			levelGroups.get(level).add(prop);
+		}
+
+		// Step 4: Sort each level alphabetically
+		for (List<String> group : levelGroups.values())
+		{
+			Collections.sort(group);
+		}
+
+		// Step 5: Reassemble in dependency order
+		List<String> sortedDependencies = new ArrayList<>();
+		if (!levelGroups.isEmpty())
+		{
+			int maxLevel = Collections.max(levelGroups.keySet());
+			for (int level = 0; level <= maxLevel; level++)
+			{
+				if (levelGroups.containsKey(level))
+				{
+					sortedDependencies.addAll(levelGroups.get(level));
+				}
+			}
+		}
+
+		return sortedDependencies;
+	}
+
+	/**
+	 * Computes the dependency level for each property.
+	 * Level 0: Properties with no dependencies
+	 * Level N: Properties that depend on properties of max level N-1
+	 *
+	 * @param depMap Map of property names to their dependencies
+	 * @param sortedProps List of properties in topological order
+	 * @return Map of property names to their dependency levels
+	 */
+	private Map<String, Integer> computeDependencyLevels(Map<String, List<String>> depMap, List<String> sortedProps)
+	{
+		Map<String, Integer> levels = new HashMap<>();
+
+		// First pass: assign level 0 to properties with no dependencies
+		for (String prop : sortedProps)
+		{
+			List<String> deps = depMap.getOrDefault(prop, Collections.emptyList());
+			if (deps.isEmpty())
+			{
+				levels.put(prop, 0);
+			}
+		}
+
+		// Second pass: compute levels for properties with dependencies
+		for (String prop : sortedProps)
+		{
+			if (!levels.containsKey(prop))
+			{
+				computeLevel(prop, depMap, levels);
+			}
+		}
+
+		return levels;
+	}
+
+	/**
+	 * Recursively computes the dependency level for a property.
+	 *
+	 * @param prop Property name
+	 * @param depMap Map of property names to their dependencies
+	 * @param levels Map of property names to their computed levels
+	 * @return The computed level for the property
+	 */
+	private int computeLevel(String prop, Map<String, List<String>> depMap, Map<String, Integer> levels)
+	{
+		// If level is already computed, return it
+		if (levels.containsKey(prop))
+		{
+			return levels.get(prop);
+		}
+
+		// Get dependencies
+		List<String> deps = depMap.getOrDefault(prop, Collections.emptyList());
+		if (deps.isEmpty())
+		{
+			// No dependencies, level is 0
+			levels.put(prop, 0);
+			return 0;
+		}
+
+		// Compute max level of dependencies
+		int maxLevel = -1;
+		for (String dep : deps)
+		{
+			int depLevel = computeLevel(dep, depMap, levels);
+			maxLevel = Math.max(maxLevel, depLevel);
+		}
+
+		// Property level is max dependency level + 1
+		int level = maxLevel + 1;
+		levels.put(prop, level);
+		return level;
+	}
+
+	private void visit(String key, Map<String, List<String>> depMap,
+		Set<String> visited, Set<String> visiting, List<String> sorted)
+	{
+		if (visited.contains(key)) return;
+		if (visiting.contains(key))
+		{
+			// already been here; just ensure this node still appears once in the sorted list
+			visited.add(key);
+			sorted.add(key);
+			return;
+		}
+		visiting.add(key);
+		for (String dep : depMap.getOrDefault(key, Collections.emptyList()))
+		{
+			visit(dep, depMap, visited, visiting, sorted);
+		}
+		visiting.remove(key);
+		visited.add(key);
+		sorted.add(key);
+	}
+
+	/**
+	 * Sort the received map according to dependency order stored in the previous calls
+	 * @param unsortedProperties Map of property names to their descriptions
+	 */
+	public void sortProperties(Map<String, Object> unsortedProperties)
+	{
+		if (unsortedProperties == null || unsortedProperties.isEmpty() || this.properties == null || this.properties.isEmpty())
+		{
+			return;
+		}
+
+		for (String key : unsortedProperties.keySet())
+		{
+			// ChangeAwareList contains an array of the same property type instances (for example a list of columns)
+			if (this.properties.get(key) != null && unsortedProperties.get(key) instanceof ChangeAwareList awareList)
+			{
+				PropertyDescription pd = this.properties.get(key);
+				for (Object obj : awareList)
+				{
+					//if the above property type have multiple properties - that is provided in a map
+
+					if (pd.getType() instanceof ICustomType)
+					{
+						pd = ((ICustomType< ? >)pd.getType()).getCustomJSONTypeDefinition();
+						Map<String, PropertyDescription> sortedProps = pd.getProperties();
+
+						while (sortedProps.isEmpty() && pd != null && pd.getType() instanceof ICustomType)
+						{
+							pd = ((ICustomType< ? >)pd.getType()).getCustomJSONTypeDefinition();
+							sortedProps = pd.getProperties();
+						}
+						if (!(sortedProps.isEmpty()) && (obj instanceof ChangeAwareMap< ? , ? > awareMap)) //we have something to sort
+						{
+							@SuppressWarnings("unchecked")
+							Map<String, Object> baseMap = (Map<String, Object>)awareMap.getBaseMap();
+							LinkedHashSet<String> sortedSet = new LinkedHashSet<>();
+							for (String sortedKey : sortedProps.keySet())
+							{
+								if (baseMap.containsKey(sortedKey))
+								{
+									sortedSet.add(sortedKey);
+								}
+							}
+							if (sortedSet.size() != baseMap.size())
+							{
+								log.warn("Can't sort properties; size mismatch"); //$NON-NLS-1$
+							}
+							else
+							{
+								awareMap.setSortedKeys(sortedSet);
+							}
+						}
+					}
+
+				}
+			}
+		}
+	}
 }
