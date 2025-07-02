@@ -734,7 +734,17 @@ public class PropertyDescription
 		List<String> sortedDependencies = new ArrayList<>();
 		if (!levelGroups.isEmpty())
 		{
-			int maxLevel = Collections.max(levelGroups.keySet());
+			// Find max level safely (in case of circular dependencies)
+			int maxLevel = 0;
+			for (Integer level : levelGroups.keySet())
+			{
+				if (level != null && level > maxLevel)
+				{
+					maxLevel = level;
+				}
+			}
+
+			// Add properties in level order
 			for (int level = 0; level <= maxLevel; level++)
 			{
 				if (levelGroups.containsKey(level))
@@ -775,7 +785,9 @@ public class PropertyDescription
 		{
 			if (!levels.containsKey(prop))
 			{
-				computeLevel(prop, depMap, levels);
+				// Use a new visiting set for each property to track cycles
+				Set<String> visiting = new HashSet<>();
+				computeLevel(prop, depMap, levels, visiting);
 			}
 		}
 
@@ -784,13 +796,15 @@ public class PropertyDescription
 
 	/**
 	 * Recursively computes the dependency level for a property.
+	 * Handles circular dependencies by assigning a default level.
 	 *
 	 * @param prop Property name
 	 * @param depMap Map of property names to their dependencies
 	 * @param levels Map of property names to their computed levels
+	 * @param visiting Set of properties currently being processed (for cycle detection)
 	 * @return The computed level for the property
 	 */
-	private int computeLevel(String prop, Map<String, List<String>> depMap, Map<String, Integer> levels)
+	private int computeLevel(String prop, Map<String, List<String>> depMap, Map<String, Integer> levels, Set<String> visiting)
 	{
 		// If level is already computed, return it
 		if (levels.containsKey(prop))
@@ -798,12 +812,25 @@ public class PropertyDescription
 			return levels.get(prop);
 		}
 
+		// Check for circular dependency
+		if (visiting.contains(prop))
+		{
+			// Circular dependency detected, assign a default level
+			// We'll use 0 as the default level for circular dependencies
+			levels.put(prop, 0);
+			return 0;
+		}
+
+		// Mark property as being visited
+		visiting.add(prop);
+
 		// Get dependencies
 		List<String> deps = depMap.getOrDefault(prop, Collections.emptyList());
 		if (deps.isEmpty())
 		{
 			// No dependencies, level is 0
 			levels.put(prop, 0);
+			visiting.remove(prop); // Done processing this property
 			return 0;
 		}
 
@@ -811,13 +838,16 @@ public class PropertyDescription
 		int maxLevel = -1;
 		for (String dep : deps)
 		{
-			int depLevel = computeLevel(dep, depMap, levels);
+			int depLevel = computeLevel(dep, depMap, levels, visiting);
 			maxLevel = Math.max(maxLevel, depLevel);
 		}
 
 		// Property level is max dependency level + 1
 		int level = maxLevel + 1;
 		levels.put(prop, level);
+
+		// Done processing this property
+		visiting.remove(prop);
 		return level;
 	}
 
@@ -900,4 +930,325 @@ public class PropertyDescription
 			}
 		}
 	}
+
+	/**
+	 * Test dependency sorting with a clear input/output format.
+	 * This method takes a map of property names to their dependencies and tests the sorting algorithm.
+	 *
+	 * @param dependencyMap Map where keys are property names and values are arrays of property names they depend on
+	 * @param expectedOrder Expected order of properties after sorting
+	 * @param verbose If true, print detailed output
+	 * @param timeout Timeout in milliseconds for circular dependency tests (0 for no timeout)
+	 * @return true if the test passed, false otherwise
+	 */
+	public static boolean testDependencySortingWithMap(Map<String, String[]> dependencyMap, String[] expectedOrder, boolean verbose, long timeout)
+	{
+		try
+		{
+			// Create a minimal PropertyDescription instance for testing
+			PropertyDescription pd = new PropertyDescription("test", new MockPropertyType(), null, null, null, null, false, null, null, null, false, null);
+
+			// Create unsorted properties map
+			Map<String, PropertyDescription> unsortedProps = new HashMap<>();
+
+			// Display input dependencies
+			if (verbose)
+			{
+				System.out.println("\nTest Input Dependencies:");
+				for (Map.Entry<String, String[]> entry : dependencyMap.entrySet())
+				{
+					String propName = entry.getKey();
+					String[] deps = entry.getValue();
+
+					if (deps == null || deps.length == 0)
+					{
+						System.out.println(propName + " -> [independent]");
+					}
+					else
+					{
+						System.out.println(propName + " -> depends on: " + String.join(", ", deps));
+					}
+				}
+			}
+
+			// Create property descriptions from the dependency map
+			for (Map.Entry<String, String[]> entry : dependencyMap.entrySet())
+			{
+				String propName = entry.getKey();
+				String[] deps = entry.getValue();
+
+				PropertyDescription propDesc = createMockPropertyWithDeps(propName, deps);
+				unsortedProps.put(propName, propDesc);
+			}
+
+			// If timeout is specified, run in a separate thread with timeout
+			if (timeout > 0)
+			{
+				final Map<String, PropertyDescription>[] result = new Map[1];
+				final boolean[] testCompleted = new boolean[1];
+				final boolean[] testStarted = new boolean[1];
+				final Map<String, PropertyDescription> finalUnsortedProps = unsortedProps;
+
+				Thread testThread = new Thread(new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						try
+						{
+							if (verbose)
+							{
+								System.out.println("Starting dependency sort with timeout...");
+							}
+							testStarted[0] = true;
+
+							// Sort the properties
+							result[0] = pd.dependencySort(finalUnsortedProps);
+							testCompleted[0] = true;
+						}
+						catch (Throwable e)
+						{
+							if (verbose)
+							{
+								System.out.println("Exception in dependency sort: " + e.getClass().getName() + ": " + e.getMessage());
+								e.printStackTrace();
+							}
+						}
+					}
+				});
+				testThread.setName("DependencySortTestThread");
+				testThread.start();
+
+				// Wait for the specified timeout
+				try
+				{
+					if (verbose)
+					{
+						System.out.println("Waiting for test thread to complete (timeout: " + timeout + "ms)...");
+					}
+					testThread.join(timeout);
+
+					if (testCompleted[0])
+					{
+						// Test completed successfully
+						Map<String, PropertyDescription> sortedProps = result[0];
+						String[] actualOrder = sortedProps.keySet().toArray(new String[0]);
+
+						if (verbose)
+						{
+							System.out.println("Expected order: " + String.join(", ", expectedOrder));
+							System.out.println("Actual order: " + String.join(", ", actualOrder));
+						}
+
+						boolean testPassed = Arrays.equals(expectedOrder, actualOrder);
+						if (verbose)
+						{
+							System.out.println("Test result: " + (testPassed ? "PASSED" : "FAILED"));
+						}
+						return testPassed;
+					}
+					else
+					{
+						// Test timed out
+						if (verbose)
+						{
+							System.out.println("Test result: FAILED - Test timed out after " + timeout + "ms");
+							if (testStarted[0])
+							{
+								System.out.println("Test started but did not complete. Likely stuck in dependencySort method.");
+							}
+							else
+							{
+								System.out.println("Test thread never started execution.");
+							}
+						}
+
+						// Interrupt the test thread to prevent it from running indefinitely
+						testThread.interrupt();
+						return false;
+					}
+				}
+				catch (InterruptedException e)
+				{
+					if (verbose)
+					{
+						System.out.println("Test was interrupted: " + e.getMessage());
+					}
+					return false;
+				}
+			}
+			else
+			{
+				// No timeout, run directly
+				LinkedHashMap<String, PropertyDescription> sortedProps = pd.dependencySort(unsortedProps);
+				String[] actualOrder = sortedProps.keySet().toArray(new String[0]);
+
+				if (verbose)
+				{
+					System.out.println("Expected order: " + String.join(", ", expectedOrder));
+					System.out.println("Actual order: " + String.join(", ", actualOrder));
+				}
+
+				boolean testPassed = Arrays.equals(expectedOrder, actualOrder);
+				if (verbose)
+				{
+					System.out.println("Test result: " + (testPassed ? "PASSED" : "FAILED"));
+				}
+				return testPassed;
+			}
+		}
+		catch (Exception e)
+		{
+			if (verbose)
+			{
+				System.err.println("Exception during dependency sorting test: " + e.getMessage());
+				e.printStackTrace();
+			}
+			return false;
+		}
+	}
+
+
+	/**
+	 * A simple mock property type for testing
+	 */
+	private static class MockPropertyType implements IPropertyType
+	{
+		@Override
+		public String getName()
+		{
+			return "mocktype";
+		}
+
+		@Override
+		public Object defaultValue(PropertyDescription pd)
+		{
+			return null;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see org.sablo.specification.property.IPropertyType#parseConfig(org.json.JSONObject)
+		 */
+		@Override
+		public Object parseConfig(JSONObject config)
+		{
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see org.sablo.specification.property.IPropertyType#isProtecting()
+		 */
+		@Override
+		public boolean isProtecting()
+		{
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see org.sablo.specification.property.IPropertyType#isBuiltinType()
+		 */
+		@Override
+		public boolean isBuiltinType()
+		{
+			// TODO Auto-generated method stub
+			return false;
+		}
+	}
+
+	/**
+	 * A mock property type that implements IPropertyCanDependsOn for testing
+	 */
+	private static class MockPropertyTypeWithDependencies implements IPropertyType, IPropertyCanDependsOn
+	{
+		private final IPropertyType delegate;
+		private final String[] dependencies;
+
+		public MockPropertyTypeWithDependencies(IPropertyType delegate, String[] dependencies)
+		{
+			this.delegate = delegate;
+			this.dependencies = dependencies;
+		}
+
+		@Override
+		public String getName()
+		{
+			return delegate.getName();
+		}
+
+		@Override
+		public Object defaultValue(PropertyDescription pd)
+		{
+			return delegate.defaultValue(pd);
+		}
+
+		@Override
+		public String[] getDependencies()
+		{
+			return dependencies;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see org.sablo.specification.property.IPropertyType#parseConfig(org.json.JSONObject)
+		 */
+		@Override
+		public Object parseConfig(JSONObject config)
+		{
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see org.sablo.specification.property.IPropertyType#isProtecting()
+		 */
+		@Override
+		public boolean isProtecting()
+		{
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see org.sablo.specification.property.IPropertyType#isBuiltinType()
+		 */
+		@Override
+		public boolean isBuiltinType()
+		{
+			// TODO Auto-generated method stub
+			return false;
+		}
+	}
+
+	/**
+	 * Helper method to create a mock PropertyDescription with dependencies for testing
+	 */
+	private static PropertyDescription createMockPropertyWithDeps(String name, String[] dependencies)
+	{
+		// Create a minimal PropertyDescription instance
+		PropertyDescription pd = new PropertyDescription(name, new MockPropertyType(), null, null, null, null, false, null, null, null, false, null);
+
+		// If dependencies are specified, create a type that implements both IPropertyType and IPropertyCanDependsOn
+		if (dependencies != null)
+		{
+			// Create a mock property type that also implements IPropertyCanDependsOn
+			pd = new PropertyDescription(name, new MockPropertyTypeWithDependencies(new MockPropertyType(), dependencies),
+				null, null, null, null, false, null, null, null, false, null);
+		}
+
+		return pd;
+	}
+
 }
