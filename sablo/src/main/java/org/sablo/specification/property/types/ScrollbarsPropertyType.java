@@ -16,16 +16,19 @@
 package org.sablo.specification.property.types;
 
 import org.json.JSONObject;
+import org.sablo.specification.property.IPropertyCanDependsOn;
 
 /**
  * @author jcompagner
  *
  */
-public class ScrollbarsPropertyType extends DefaultPropertyType<Integer>
+public class ScrollbarsPropertyType extends DefaultPropertyType<Integer> implements IPropertyCanDependsOn
 {
 
 	public static final ScrollbarsPropertyType INSTANCE = new ScrollbarsPropertyType();
 	public static final String TYPE_NAME = "scrollbars";
+
+	private String[] dependencies;
 
 	private ScrollbarsPropertyType()
 	{
@@ -40,6 +43,13 @@ public class ScrollbarsPropertyType extends DefaultPropertyType<Integer>
 	@Override
 	public Object parseConfig(JSONObject json)
 	{
+		dependencies = getDependencies(json, dependencies);
 		return json;
+	}
+
+	@Override
+	public String[] getDependencies()
+	{
+		return dependencies;
 	}
 }

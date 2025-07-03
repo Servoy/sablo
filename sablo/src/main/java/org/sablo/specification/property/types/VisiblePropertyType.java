@@ -20,6 +20,7 @@ import org.json.JSONObject;
 import org.json.JSONWriter;
 import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.property.IBrowserConverterContext;
+import org.sablo.specification.property.IPropertyCanDependsOn;
 import org.sablo.specification.property.IWrapperType;
 import org.sablo.specification.property.IWrappingContext;
 import org.sablo.util.ValueReference;
@@ -30,12 +31,13 @@ import org.sablo.websocket.utils.JSONUtils;
  * @author rgansevles
  *
  */
-public class VisiblePropertyType extends DefaultPropertyType<Object> implements IWrapperType<Object, VisibleSabloValue>
+public class VisiblePropertyType extends DefaultPropertyType<Object> implements IWrapperType<Object, VisibleSabloValue>, IPropertyCanDependsOn
 {
 
 	public static final VisiblePropertyType INSTANCE = new VisiblePropertyType();
 	public static final String TYPE_NAME = "visible";
 
+	private String[] dependencies;
 
 	@Override
 	public String getName()
@@ -56,7 +58,7 @@ public class VisiblePropertyType extends DefaultPropertyType<Object> implements 
 		{
 			return ProtectedConfig.DEFAULTBLOCKING_FALSE;
 		}
-
+		dependencies = getDependencies(json, dependencies);
 		return new ProtectedConfig(ForentriesConfig.parse(json), false);
 	}
 
@@ -115,5 +117,11 @@ public class VisiblePropertyType extends DefaultPropertyType<Object> implements 
 	public Object unwrap(VisibleSabloValue value)
 	{
 		return Boolean.valueOf(value.getValue());
+	}
+
+	@Override
+	public String[] getDependencies()
+	{
+		return dependencies;
 	}
 }

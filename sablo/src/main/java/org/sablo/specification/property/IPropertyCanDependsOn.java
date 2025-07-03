@@ -17,6 +17,9 @@
 
 package org.sablo.specification.property;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 /**
  * @author marianvid
  *
@@ -31,5 +34,28 @@ public interface IPropertyCanDependsOn
 		return DEPENDS_ON_ALL;
 	}
 
-
+	@SuppressWarnings("nls")
+	default String[] getDependencies(JSONObject json, String[] dependencies)
+	{
+		if (json == null || dependencies != null) return dependencies; //nothing to set OR already set
+		String[] result = null;
+		if (json.has("for"))
+		{
+			Object object = json.get("for");
+			if (object instanceof JSONArray)
+			{
+				JSONArray arr = (JSONArray)object;
+				result = new String[arr.length()];
+				for (int i = 0; i < arr.length(); i++)
+				{
+					result[i] = arr.getString(i);
+				}
+			}
+			else if (object instanceof String)
+			{
+				result = new String[] { (String)object };
+			}
+		}
+		return result;
+	}
 }

@@ -883,6 +883,31 @@ public class PropertyDescription
 			return;
 		}
 
+		//sort model'sproperties
+		if (this.properties != null && !this.properties.isEmpty())
+		{
+			LinkedHashMap<String, Object> temp = new LinkedHashMap<>();
+			// First, add entries not in design-time properties
+			for (String key : unsortedProperties.keySet())
+			{
+				if (!this.properties.containsKey(key))
+				{
+					temp.put(key, unsortedProperties.get(key));
+				}
+			}
+			// Then, add design-time properties in order
+			for (String key : this.properties.keySet())
+			{
+				if (unsortedProperties.containsKey(key))
+				{
+					temp.put(key, unsortedProperties.get(key));
+				}
+			}
+			unsortedProperties.clear();
+			unsortedProperties.putAll(temp);
+		}
+
+		//sort custom types properties
 		for (String key : unsortedProperties.keySet())
 		{
 			// ChangeAwareList contains an array of the same property type instances (for example a list of columns)

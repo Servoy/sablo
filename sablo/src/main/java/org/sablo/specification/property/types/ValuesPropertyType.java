@@ -18,16 +18,19 @@ package org.sablo.specification.property.types;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.sablo.specification.ValuesConfig;
+import org.sablo.specification.property.IPropertyCanDependsOn;
 
 /**
  * @author jcompagner
  *
  */
-public class ValuesPropertyType extends DefaultPropertyType<Object[]>
+public class ValuesPropertyType extends DefaultPropertyType<Object[]> implements IPropertyCanDependsOn
 {
 
 	public static final ValuesPropertyType INSTANCE = new ValuesPropertyType();
 	public static final String TYPE_NAME = "values";
+
+	private String[] dependencies;
 
 	private ValuesPropertyType()
 	{
@@ -93,7 +96,13 @@ public class ValuesPropertyType extends DefaultPropertyType<Object[]>
 			config.setEditable(json.optBoolean("editable"));
 			config.setMultiple(json.optBoolean("multiple"));
 		}
-
+		dependencies = getDependencies(json, dependencies);
 		return config;
+	}
+
+	@Override
+	public String[] getDependencies()
+	{
+		return dependencies;
 	}
 }
