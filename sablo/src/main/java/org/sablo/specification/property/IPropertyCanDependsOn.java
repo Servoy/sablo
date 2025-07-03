@@ -21,6 +21,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
+ * VERY IMPORTANT
+ * getDependencies methods can be used safely during the design time (when Servoy Developer is loading) - from PropertyDescription and
+ * types which are implementing this interface. There are no interferences between these two call moments.
+ * Calling them outside PropertyDescription class - can lead to unpredictable results
+ *
  * @author marianvid
  *
  */
@@ -37,7 +42,7 @@ public interface IPropertyCanDependsOn
 	@SuppressWarnings("nls")
 	default String[] getDependencies(JSONObject json, String[] dependencies)
 	{
-		if (json == null || dependencies != null) return dependencies; //nothing to set OR already set
+		if (json == null) return dependencies; //nothing to set OR already set
 		String[] result = null;
 		if (json.has("for"))
 		{
