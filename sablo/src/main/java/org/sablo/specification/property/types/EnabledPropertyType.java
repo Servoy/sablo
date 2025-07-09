@@ -22,7 +22,6 @@ import org.json.JSONObject;
 import org.json.JSONWriter;
 import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.property.IBrowserConverterContext;
-import org.sablo.specification.property.IPropertyCanDependsOn;
 import org.sablo.specification.property.IWrapperType;
 import org.sablo.specification.property.IWrappingContext;
 import org.sablo.util.ValueReference;
@@ -31,13 +30,11 @@ import org.sablo.websocket.utils.JSONUtils;
 /**
  * @author emera
  */
-public class EnabledPropertyType extends DefaultPropertyType<Boolean> implements IWrapperType<Boolean, EnabledSabloValue>, IPropertyCanDependsOn
+public class EnabledPropertyType extends DefaultPropertyType<Boolean> implements IWrapperType<Boolean, EnabledSabloValue>
 {
 
 	public static final String TYPE_NAME = "enabled";
 	public static final EnabledPropertyType INSTANCE = new EnabledPropertyType();
-
-	private String[] dependencies;
 
 	@Override
 	public String getName()
@@ -59,7 +56,6 @@ public class EnabledPropertyType extends DefaultPropertyType<Boolean> implements
 		{
 			return ProtectedConfig.DEFAULTBLOCKING_FALSE;
 		}
-		dependencies = getDependencies(json, dependencies);
 		return ProtectedConfig.parse(json, true);
 	}
 
@@ -104,9 +100,4 @@ public class EnabledPropertyType extends DefaultPropertyType<Boolean> implements
 		return Boolean.valueOf(value.getValue());
 	}
 
-	@Override
-	public String[] getDependencies()
-	{
-		return dependencies;
-	}
 }

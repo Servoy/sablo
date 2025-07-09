@@ -24,7 +24,7 @@ import org.sablo.specification.WebObjectApiFunctionDefinition;
 /**
  * @author jcompagner
  */
-public interface ICustomType<T> extends IPropertyType<T>, IPropertyCanDependsOn
+public interface ICustomType<T> extends IPropertyType<T>, IPropertyWithAttachDependencies<T>
 {
 
 	/**

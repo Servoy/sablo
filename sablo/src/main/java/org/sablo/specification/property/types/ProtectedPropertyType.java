@@ -17,20 +17,17 @@ package org.sablo.specification.property.types;
 
 import org.json.JSONObject;
 import org.sablo.specification.PropertyDescription;
-import org.sablo.specification.property.IPropertyCanDependsOn;
 
 
 /**
  * @author rgansevles
  *
  */
-public class ProtectedPropertyType extends DefaultPropertyType<Boolean> implements IPropertyCanDependsOn
+public class ProtectedPropertyType extends DefaultPropertyType<Boolean>
 {
 
 	public static final ProtectedPropertyType INSTANCE = new ProtectedPropertyType();
 	public static final String TYPE_NAME = "protected";
-
-	private String[] dependencies;
 
 	private ProtectedPropertyType()
 	{
@@ -51,7 +48,6 @@ public class ProtectedPropertyType extends DefaultPropertyType<Boolean> implemen
 	@Override
 	public ProtectedConfig parseConfig(JSONObject json)
 	{
-		dependencies = getDependencies(json, dependencies);
 		return ProtectedConfig.parse(json, true);
 	}
 
@@ -61,9 +57,4 @@ public class ProtectedPropertyType extends DefaultPropertyType<Boolean> implemen
 		return true;
 	}
 
-	@Override
-	public String[] getDependencies()
-	{
-		return dependencies;
-	}
 }

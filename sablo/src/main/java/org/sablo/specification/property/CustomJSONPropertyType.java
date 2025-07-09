@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author acostescu
  */
-public abstract class CustomJSONPropertyType<T> extends DefaultPropertyType<T> implements ICustomType<T>, IPropertyCanDependsOn
+public abstract class CustomJSONPropertyType<T> extends DefaultPropertyType<T> implements ICustomType<T>, IPropertyWithAttachDependencies<T>
 {
 
 	protected static final Logger log = LoggerFactory.getLogger(CustomJSONPropertyType.class.getCanonicalName());
@@ -44,7 +44,6 @@ public abstract class CustomJSONPropertyType<T> extends DefaultPropertyType<T> i
 	private Map<String, WebObjectApiFunctionDefinition> apiFunctions;
 	private ICustomType< ? > parent;
 	private String extendsName;
-	private String[] dependencies;
 
 	/**
 	 * Creates a new property types that is defined in JSON spec files.
@@ -159,7 +158,6 @@ public abstract class CustomJSONPropertyType<T> extends DefaultPropertyType<T> i
 	@Override
 	public Object parseConfig(JSONObject config)
 	{
-		dependencies = getDependencies();
 		return config;
 	}
 
@@ -170,9 +168,9 @@ public abstract class CustomJSONPropertyType<T> extends DefaultPropertyType<T> i
 	}
 
 	@Override
-	public String[] getDependencies()
+	public String[] getDependencies(PropertyDescription pd)
 	{
-		return dependencies;
+		return IPropertyWithAttachDependencies.DEPENDS_ON_ALL;
 	}
 
 }
