@@ -595,7 +595,7 @@ public class WebComponentTest
 		// In circular dependencies, the algorithm assigns level 0 to properties in a cycle
 		// Properties at the same level are sorted alphabetically
 		// We use a timeout to ensure the test doesn't hang
-		String[] expectedCircularOrder = new String[] { "\"x\", circular1", "circular2" };
+		String[] expectedCircularOrder = new String[] { "x", "circular1", "circular2" };
 		boolean test3Passed = testDependencySortingWithMap(circularDepsMap, expectedCircularOrder, true, 2000);
 		assertTrue("Simple circular dependencies should be handled gracefully", test3Passed);
 
