@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -87,7 +86,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 	/**
 	 * model properties to interact with webcomponent values, maps name to value
 	 */
-	protected final Map<String, Object> properties = new LinkedHashMap<>();
+	protected final Map<String, Object> properties = new HashMap<>();
 
 	/**
 	 * default model properties that are not send to the browser or template (design) values that were sent to browser as template values but have not (yet) changed at runtime;
