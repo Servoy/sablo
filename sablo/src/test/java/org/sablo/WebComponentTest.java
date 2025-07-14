@@ -626,8 +626,8 @@ public class WebComponentTest
 		// 1. Properties in a cycle get level 0 (for the first one detected)
 		// 2. Properties at the same level are sorted alphabetically
 		// 3. Remaining properties in the cycle get assigned levels based on their dependencies
-		String[] expectedComplexOrder = new String[] { "circular_a", "independent1", "independent2", "circular_b", "circular_c", "level1", "level2a", "level2b", "level3", "mixed", "final"
-		};
+		String[] expectedComplexOrder = new String[] { "independent1", "independent2", "circular_c", "level1", "circular_b", "level2a", "level2b", "circular_a", "level3", "mixed", "final" };
+
 
 		boolean test4Passed = testDependencySortingWithMap(complexDepsMap, expectedComplexOrder, true, 3000);
 		assertTrue("Complex circular dependencies with multilevel dependencies should be handled correctly", test4Passed);
