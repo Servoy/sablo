@@ -65,6 +65,11 @@ public class WebObjectApiFunctionDefinition extends WebObjectFunctionDefinition
 		this.delayUntilFormLoads = delayUntilFormLoads;
 	}
 
+	public boolean isSync()
+	{
+		return !async && !asyncNow;
+	}
+
 	public void setBlockEventProcessing(boolean blockEventProcessing)
 	{
 		this.blockEventProcessing = blockEventProcessing;
