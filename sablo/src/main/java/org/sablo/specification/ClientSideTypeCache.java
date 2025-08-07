@@ -45,6 +45,7 @@ public class ClientSideTypeCache
 	private static final String IGNORE_BLOCK_DUPLICATE_EVENTS = "iBDE";
 	public static final String PROPERTY_TYPE = "t";
 	public static final String PROPERTY_PUSH_TO_SERVER_VALUE = "s";
+	private static final String SHOULD_RETURN_VALUE = "srv";
 
 	private final HashMap<String, EmbeddableJSONWriter> webObjectClientTypeCache = new HashMap<>();
 
@@ -161,7 +162,7 @@ public class ClientSideTypeCache
 		boolean anyApisWereWritten = false;
 		for (Entry<String, WebObjectFunctionDefinition> api : apis.entrySet())
 		{
-			anyApisWereWritten = writeClientSideConversionsForFunction(clientSideTypesJSON, api.getValue(), api.getKey(), APIS_KEY, anyApisWereWritten);
+			anyApisWereWritten = writeClientSideSpecForFunction(clientSideTypesJSON, api.getValue(), api.getKey(), APIS_KEY, anyApisWereWritten);
 		}
 		if (anyApisWereWritten) clientSideTypesJSON.endObject();
 
@@ -169,7 +170,7 @@ public class ClientSideTypeCache
 		boolean anyHandlersWereWritten = false;
 		for (Entry<String, WebObjectHandlerFunctionDefinition> handler : handlers.entrySet())
 		{
-			anyHandlersWereWritten = writeClientSideConversionsForFunction(clientSideTypesJSON, handler.getValue(), handler.getKey(), HANDLERS_KEY,
+			anyHandlersWereWritten = writeClientSideSpecForFunction(clientSideTypesJSON, handler.getValue(), handler.getKey(), HANDLERS_KEY,
 				anyHandlersWereWritten);
 		}
 		if (anyHandlersWereWritten) clientSideTypesJSON.endObject();
@@ -182,7 +183,7 @@ public class ClientSideTypeCache
 		else return null;
 	}
 
-	private static boolean writeClientSideConversionsForFunction(EmbeddableJSONWriter clientSideTypesJSON, WebObjectFunctionDefinition function,
+	private static boolean writeClientSideSpecForFunction(EmbeddableJSONWriter clientSideTypesJSON, WebObjectFunctionDefinition function,
 		String functionName, String addAsObjectWithKey, boolean parentObjectStartWasAlreadyWritten)
 	{
 		boolean somethingFromFuncWasWritten = false;
@@ -214,15 +215,31 @@ public class ClientSideTypeCache
 			}
 		}
 
-		if (function instanceof WebObjectHandlerFunctionDefinition && ((WebObjectHandlerFunctionDefinition)function).shouldIgnoreNGBlockDuplicateEvents())
+		if (function instanceof WebObjectHandlerFunctionDefinition)
 		{
-			if (!somethingFromFuncWasWritten)
+			if (((WebObjectHandlerFunctionDefinition)function).shouldIgnoreNGBlockDuplicateEvents())
 			{
-				if (!parentObjectStartWasAlreadyWritten) clientSideTypesJSON.key(addAsObjectWithKey).object();
-				somethingFromFuncWasWritten = true;
-				clientSideTypesJSON.key(functionName).object();
+				if (!somethingFromFuncWasWritten)
+				{
+					if (!parentObjectStartWasAlreadyWritten) clientSideTypesJSON.key(addAsObjectWithKey).object();
+					somethingFromFuncWasWritten = true;
+					clientSideTypesJSON.key(functionName).object();
+				}
+				clientSideTypesJSON.key(IGNORE_BLOCK_DUPLICATE_EVENTS).value(true);
 			}
-			clientSideTypesJSON.key(IGNORE_BLOCK_DUPLICATE_EVENTS).value(true);
+		}
+		else if (function instanceof WebObjectApiFunctionDefinition apiFunction)
+		{
+			if (apiFunction.isSync() || apiFunction.getReturnType() != null) // see BaseWindow.isAsyncApiCall
+			{
+				if (!somethingFromFuncWasWritten)
+				{
+					if (!parentObjectStartWasAlreadyWritten) clientSideTypesJSON.key(addAsObjectWithKey).object();
+					somethingFromFuncWasWritten = true;
+					clientSideTypesJSON.key(functionName).object();
+				}
+				clientSideTypesJSON.key(SHOULD_RETURN_VALUE).value(true);
+			}
 		}
 
 		if (somethingFromFuncWasWritten) clientSideTypesJSON.endObject();
