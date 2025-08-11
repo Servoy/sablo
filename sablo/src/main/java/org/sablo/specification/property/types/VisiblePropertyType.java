@@ -107,6 +107,7 @@ public class VisiblePropertyType extends DefaultPropertyType<Object> implements 
 			case null -> false;
 			case Boolean b -> b.booleanValue();
 			case String s -> s.equalsIgnoreCase("true"); //$NON-NLS-1$
+			case Number n -> n.intValue() != 0;
 			default -> false;
 		};
 	}
