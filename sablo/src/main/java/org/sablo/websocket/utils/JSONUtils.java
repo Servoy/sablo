@@ -774,6 +774,17 @@ public class JSONUtils
 
 	}
 
+	public static String[] getJavaStringArrayFromJSONArray(JSONArray jsonArray)
+	{
+		if (jsonArray == null) return null;
+
+		String[] javaArray = new String[jsonArray.length()];
+		for (int i = javaArray.length - 1; i >= 0; i--)
+			javaArray[i] = jsonArray.optString(i, null);
+
+		return javaArray;
+	}
+
 	// THESE METHODS FOR JSON comparison are copy pasted from servoy_shared's Utils to avoid a dependency; if you alter them please update code in both places!
 	// BEGIN -------------------------
 	/**
