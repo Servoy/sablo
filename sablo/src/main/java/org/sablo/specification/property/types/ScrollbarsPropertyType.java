@@ -42,4 +42,5 @@ public class ScrollbarsPropertyType extends DefaultPropertyType<Integer>
 	{
 		return json;
 	}
+
 }

@@ -99,4 +99,5 @@ public class EnabledPropertyType extends DefaultPropertyType<Boolean> implements
 	{
 		return Boolean.valueOf(value.getValue());
 	}
+
 }

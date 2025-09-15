@@ -17,6 +17,8 @@
 package org.sablo.websocket.utils;
 
 
+import java.math.BigDecimal;
+
 import org.sablo.specification.property.CustomJSONArrayType;
 import org.sablo.specification.property.CustomJSONObjectType;
 import org.sablo.specification.property.ICustomType;
@@ -127,6 +129,75 @@ public class PropertyUtils
 		{
 			log.warn("Parse exception while processing " + numberString + " as a double", ex);
 			return 0d;
+		}
+	}
+
+	/**
+	 * Parses a string into a Number. Returns a Double if the number string can be
+	 * represented by a double without loss of precision and within the double's finite range.
+	 * Otherwise, returns a BigDecimal.
+	 *
+	 * @param numberStr The string representation of the number.
+	 * @return A Double or BigDecimal or null if the input string is null or empty.
+	 */
+	public static Number parseToDoubleOrBigDecimal(String numberStr)
+	{
+		if (numberStr == null || numberStr.trim().isEmpty())
+		{
+			return null;
+		}
+
+		BigDecimal bd;
+		try
+		{
+			// Use a constructor that doesn't lose precision from the string
+			bd = new BigDecimal(numberStr);
+		}
+		catch (NumberFormatException e)
+		{
+			return getAsDouble(numberStr);
+		}
+
+		// Attempt to convert the BigDecimal to a double
+		double dValue = bd.doubleValue();
+
+		// Check if the conversion to double resulted in an infinite value.
+		// If bd was a finite number but dValue is infinite, it means bd was
+		// outside the representable range of a finite double.
+		if (Double.isInfinite(dValue))
+		{
+			// The number is too large or too small for a finite double.
+			// Keep it as BigDecimal to preserve its original magnitude.
+			return bd;
+		}
+
+		// Check for NaN. This should ideally not happen if BigDecimal parsing from a valid
+		// number string was successful, as BigDecimal itself doesn't represent NaN.
+		// If dValue is NaN here, it might indicate an extremely unusual case or an issue
+		// with how an underlying double (if the string was from a double initially)
+		// was handled. Safest to return BigDecimal.
+		if (Double.isNaN(dValue))
+		{
+			return bd;
+		}
+
+		// Now, the crucial check: convert the double back to BigDecimal and compare.
+		// If BigDecimal.valueOf(dValue) is numerically equal to the original bd,
+		// then the double representation dValue is accurate for bd.
+		// BigDecimal.valueOf(double) is preferred over new BigDecimal(double)
+		// as it uses the canonical string representation of the double.
+		if (bd.compareTo(BigDecimal.valueOf(dValue)) == 0)
+		{
+			// The value fits perfectly into a double without loss of precision
+			// or being clamped to infinity (already checked).
+			return Double.valueOf(dValue);
+		}
+		else
+		{
+			// Precision would be lost, or the value is a tiny number that
+			// becomes 0.0 as a double but wasn't BigDecimal.ZERO.
+			// Keep it as BigDecimal to preserve full precision/value.
+			return bd;
 		}
 	}
 

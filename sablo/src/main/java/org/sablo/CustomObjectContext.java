@@ -102,7 +102,8 @@ public class CustomObjectContext<SabloT, SabloWT> implements IWebObjectContext
 	@Override
 	public BaseWebObject getUnderlyingWebObject()
 	{
-		return parentWebObjectContext instanceof BaseWebObject ? (BaseWebObject)parentWebObjectContext : parentWebObjectContext.getUnderlyingWebObject();
+		return parentWebObjectContext instanceof BaseWebObject ? (BaseWebObject)parentWebObjectContext
+			: parentWebObjectContext != null ? parentWebObjectContext.getUnderlyingWebObject() : null;
 	}
 
 	@Override

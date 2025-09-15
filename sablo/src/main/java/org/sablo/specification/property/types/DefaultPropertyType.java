@@ -25,17 +25,6 @@ import org.sablo.specification.property.IPropertyType;
  */
 public abstract class DefaultPropertyType<T> implements IPropertyType<T>
 {
-	private final boolean primitive;
-
-	public DefaultPropertyType()
-	{
-		this(false);
-	}
-
-	public DefaultPropertyType(boolean primitive)
-	{
-		this.primitive = primitive;
-	}
 
 	@Override
 	public Object parseConfig(JSONObject config)
@@ -55,10 +44,9 @@ public abstract class DefaultPropertyType<T> implements IPropertyType<T>
 		return false;
 	}
 
-
 	@Override
-	public boolean isPrimitive()
+	public boolean isBuiltinType()
 	{
-		return primitive;
+		return true;
 	}
 }

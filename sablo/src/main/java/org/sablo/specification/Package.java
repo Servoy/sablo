@@ -38,12 +38,12 @@ import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import javax.servlet.ServletContext;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.ServletContext;
 
 /**
  * An abstraction of package that contains Servoy NG web-components / web-services.
@@ -136,6 +136,7 @@ public class Package
 	}
 
 
+	@SuppressWarnings("nls")
 	public PackageSpecification<WebObjectSpecification> getWebObjectDescriptions(String attributeName,
 		IDefaultComponentPropertiesProvider defaultComponentPropertiesProvider) throws IOException
 	{
@@ -187,7 +188,7 @@ public class Package
 				}
 				catch (Exception e)
 				{
-					reader.reportError("META-INF/MANIFEST.MF", e);
+					reader.reportError(specpath, e);
 				}
 			}
 		}

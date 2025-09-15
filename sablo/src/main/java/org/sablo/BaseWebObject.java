@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -456,7 +455,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 	public boolean isVisibilityProperty(String propertyName)
 	{
 		PropertyDescription description = specification.getProperty(propertyName);
-		return description != null && description.getType() == VisiblePropertyType.INSTANCE;
+		return description != null && description.getType() instanceof VisiblePropertyType;
 	}
 
 	/**
@@ -494,12 +493,25 @@ public abstract class BaseWebObject implements IWebObjectContext
 					}
 					// general protected property or specific for this property
 					throw new IllegalChangeFromClientException(prop.getName(), "Changes from client for property '" + property +
-						"' are not allowed when the value of property '" + prop.getName() + "' is " + blockingOn, getName(), property);
+						"' are not allowed when the value of property '" + prop.getName() + "' is " + blockingOn, getName(), property,
+						shouldPrintWarningMessageOnIllegalChangeFromClient(prop.getName()));
 				}
 			}
 		}
 
 		// ok
+	}
+
+	/**
+	 * In case some generated IllegalChangeFromClientException needs to be thrown in order to ignore
+	 * a something sent from client (handler, prop. update), but it shouldn't print a warning message in the
+	 * log file (it is a scenario that we just want to ignore, not complain about), then this method makes that possible.
+	 *
+	 * @return
+	 */
+	protected boolean shouldPrintWarningMessageOnIllegalChangeFromClient(String nameOfPropertyThatBlocksTheClientSentChange)
+	{
+		return true;
 	}
 
 	/**
@@ -525,7 +537,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 				throw new IllegalChangeFromClientException(null,
 					"Property '" + propertyPath.stream().limit(i + 1).map(pd -> pd.getName()).reduce(specification.getName(), (a, b) -> a + '.' + b) +
 						"' is a 'protecting' property itself so it can never be changed from client.",
-					getName(), propName);
+					getName(), propName, true);
 			}
 
 			if (PushToServerEnum.allow.compareTo(computedPushToServer) > 0 && (!(property.getType() instanceof IPushToServerSpecialType) ||
@@ -535,7 +547,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 				throw new IllegalChangeFromClientException(null,
 					"Property '" + propertyPath.stream().limit(i + 1).map(pd -> pd.getName()).reduce(specification.getName(), (a, b) -> a + '.' + b) +
 						"' has computed 'pushToServer' set to 'reject' so it cannot be changed from client.",
-					getName(), propName);
+					getName(), propName, true);
 			}
 		}
 		// if propertyPath.size() == 0, so properties that are sent from browser but are not in spec will be converted to null later anyway in BaseWebObject.convertValueFromJSON() because PD is null
@@ -683,7 +695,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 	}
 
 	/**
-	 * Gets the current value from the properties, if not set then it could fall-back to default properties value from spec - if possible.
+	 * Gets the current value from the properties; if not set then it could fall-back to default properties value from spec - if possible.
 	 * DO NOT USE THIS METHOD; when possible please use {@link #getProperty(String)}, {@link #getProperties()} or {@link #getAllPropertyNames(boolean)} instead.
 	 */
 	@SuppressWarnings("nls")
@@ -754,8 +766,10 @@ public abstract class BaseWebObject implements IWebObjectContext
 						if (oldValue instanceof List) oldValue = ((List)oldValue).get(arrayIndex);
 						else if (oldValue != null)
 						{
-							log.error("Trying to get a nested array element while the nested value is not an array: property=" + propertyName + ", component=" +
-								getName() + ", spec=" + getSpecification() + ", part=" + parts[i], new RuntimeException());
+							log.error(
+								"Trying to get a nested array element while the nested value is not an array: property=" + propertyName + ", component=" +
+									getName() + ", spec=" + getSpecification() + ", part=" + parts[i],
+								new RuntimeException());
 							return null;
 						}
 					}
@@ -1101,7 +1115,10 @@ public abstract class BaseWebObject implements IWebObjectContext
 	{
 		propertyChangeSupport = null;
 		dirtyPropertyListener = null;
-		for (String pN : getAllPropertyNames(true))
+		TreeSet<String> availableProps = new TreeSet<String>(specification.getAttachComparator().reversed());
+		availableProps.addAll(getAllPropertyNames(true));
+
+		for (String pN : availableProps)
 		{
 			Object pUnwrapped = getProperty(pN);
 			if (pUnwrapped instanceof ISmartPropertyValue) ((ISmartPropertyValue)pUnwrapped).detach(); // clear any listeners/held resources
@@ -1233,7 +1250,8 @@ public abstract class BaseWebObject implements IWebObjectContext
 		// this could help initialize smart properties that depend on each other faster then if we would convert and then attach right away each value)
 		propertiesInitialized = true;
 
-		SortedSet<String> availableInitialKeys = new TreeSet<>();
+		TreeSet<String> availableInitialKeys = new TreeSet<String>(specification.getAttachComparator());
+
 		availableInitialKeys.addAll(defaultAndTemplatePropertiesUnwrapped.keySet());
 		availableInitialKeys.addAll(properties.keySet());
 

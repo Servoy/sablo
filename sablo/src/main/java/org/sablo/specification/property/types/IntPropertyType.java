@@ -35,11 +35,19 @@ public class IntPropertyType extends DefaultPropertyType<Integer> implements IPr
 {
 	protected static final Logger log = LoggerFactory.getLogger(IntPropertyType.class.getCanonicalName());
 	public static final IntPropertyType INSTANCE = new IntPropertyType();
-	public static final String TYPE_NAME = "int";
-
-	private IntPropertyType()
+	public static final IntPropertyType INSTANCE_NULL_DEFAULT = new IntPropertyType()
 	{
-		super(true);
+		@Override
+		public Integer defaultValue(PropertyDescription pd)
+		{
+			return null;
+		}
+	};
+
+	public static final String TYPE_NAME = "int"; //$NON-NLS-1$
+
+	protected IntPropertyType()
+	{
 	}
 
 	@Override

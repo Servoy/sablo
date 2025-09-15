@@ -15,6 +15,8 @@
  */
 package org.sablo.specification.property.types;
 
+import java.math.BigDecimal;
+
 import org.json.JSONException;
 import org.json.JSONWriter;
 import org.sablo.specification.PropertyDescription;
@@ -39,7 +41,6 @@ public class DoublePropertyType extends DefaultPropertyType<Double> implements I
 
 	private DoublePropertyType()
 	{
-		super(true);
 	}
 
 	@Override
@@ -64,7 +65,11 @@ public class DoublePropertyType extends DefaultPropertyType<Double> implements I
 		{
 			if (((String)newJSONValue).trim().length() == 0) return null;
 
-			return PropertyUtils.getAsDouble((String)newJSONValue);
+			if (previousSabloValue instanceof BigDecimal)
+			{
+				return new BigDecimal((String)newJSONValue);
+			}
+			return PropertyUtils.parseToDoubleOrBigDecimal((String)newJSONValue);
 		}
 		return null;
 	}
@@ -74,7 +79,12 @@ public class DoublePropertyType extends DefaultPropertyType<Double> implements I
 		throws JSONException
 	{
 		JSONUtils.addKeyIfPresent(writer, key);
-		if (sabloValue != null && (Double.isNaN(sabloValue.doubleValue()) || Double.isInfinite(sabloValue.doubleValue()))) writer.value(null);
+		if (sabloValue instanceof BigDecimal bd && !bd.equals(new BigDecimal(bd.doubleValue())))
+		{
+			// output it as a pure string, because javascript/json can't hold this value without loosing precission
+			writer.value(bd.toString());
+		}
+		else if (sabloValue != null && (Double.isNaN(sabloValue.doubleValue()) || Double.isInfinite(sabloValue.doubleValue()))) writer.value(null);
 		else writer.value(sabloValue);
 		return writer;
 	}

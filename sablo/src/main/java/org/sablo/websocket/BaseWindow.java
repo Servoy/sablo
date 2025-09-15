@@ -30,8 +30,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.websocket.CloseReason;
-
 import org.json.JSONException;
 import org.json.JSONString;
 import org.json.JSONStringer;
@@ -56,6 +54,8 @@ import org.sablo.websocket.utils.JSONUtils.IToJSONConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.websocket.CloseReason;
+
 /** A window is created for a websocket endpoint to communicate with the websocket session.
  * When the websocket connection is dropped and recreated (browser refresh), the window will be reused.
  *
@@ -73,6 +73,8 @@ public class BaseWindow implements IWindow
 	private static final String API_KEY_COMPONENT_NAME = "bean"; //$NON-NLS-1$
 	private static final String API_KEY_FORM_NAME = "form"; //$NON-NLS-1$
 	private static final String API_PRE_DATA_SERVICE_CALL = "pre_data_service_call"; //$NON-NLS-1$
+	private static final String API_KEY_ASYNC = "async"; //$NON-NLS-1$
+	private static final String API_KEY_ASYNC_NOW = "asyncNow"; //$NON-NLS-1$
 
 	private static final String COMPONENT_CALLS = "componentApis";
 	private static final String SERVICE_CALLS = "serviceApis";
@@ -760,11 +762,17 @@ public class BaseWindow implements IWindow
 	}
 
 	@Override
-	public void executeAsyncNowServiceCall(IClientService clientService, String functionName, Object[] arguments, IFunctionParameters argumentTypes)
+	public void executeAsyncNowServiceCall(IClientService clientService, String functionName, Object[] arguments,
+		IFunctionParameters argumentTypes, boolean sendOtherPendingAsyncCallsAsWell)
 	{
 		try
 		{
-			sendOnlyThisMessageInternal(new SimpleToJSONWriter<IBrowserConverterContext>()
+			if (sendOtherPendingAsyncCallsAsWell)
+			{
+				serviceCalls.add(createServiceCall(clientService, functionName, arguments, argumentTypes));
+				sendMessageInternal(null, FullValueToJSONConverter.INSTANCE, null);
+			}
+			else sendOnlyThisMessageInternal(new SimpleToJSONWriter<IBrowserConverterContext>()
 			{
 				@Override
 				public boolean writeJSONContent(JSONWriter w, String keyInParent, IToJSONConverter<IBrowserConverterContext> converter) throws JSONException
@@ -848,17 +856,17 @@ public class BaseWindow implements IWindow
 	}
 
 	public ComponentCall createComponentCall(WebComponent component, WebObjectFunctionDefinition apiFunction, Object[] arguments,
-		Map<String, JSONString> callContributions)
+		Map<String, JSONString> callContributions, boolean asyncNow)
 	{
-		return createComponentCall(component, apiFunction, arguments, callContributions, false, null, false);
+		return createComponentCall(component, apiFunction, arguments, callContributions, false, null, false, asyncNow);
 	}
 
 	private ComponentCall createComponentCall(WebComponent component, WebObjectFunctionDefinition apiFunction, Object[] arguments,
 		Map<String, JSONString> callContributions,
-		boolean delayUntilFormLoads, Container formContainer, boolean async)
+		boolean delayUntilFormLoads, Container formContainer, boolean async, boolean asyncNow)
 	{
 		return new ComponentCall(component, apiFunction, processVarArgsIfNeeded(arguments, apiFunction.getParameters()), callContributions, delayUntilFormLoads,
-			formContainer, async);
+			formContainer, async, asyncNow);
 	}
 
 	private Object[] processVarArgsIfNeeded(Object[] arguments, IFunctionParameters parameters)
@@ -969,7 +977,7 @@ public class BaseWindow implements IWindow
 		if (delayedCall || isAsyncApiCall(apiFunction))
 		{
 			ComponentCall call = createComponentCall(receiver, apiFunction, arguments, callContributions, delayedCall,
-				delayedCall ? getFormContainer(receiver) : null, isAsyncApiCall(apiFunction));
+				delayedCall ? getFormContainer(receiver) : null, isAsyncApiCall(apiFunction), isAsyncNowApiCall(apiFunction));
 			addDelayedOrAsyncComponentCall(apiFunction, call);
 		}
 		else if (isAsyncNowApiCall(apiFunction))
@@ -982,7 +990,7 @@ public class BaseWindow implements IWindow
 					public boolean writeJSONContent(JSONWriter w, String keyInParent, IToJSONConverter<IBrowserConverterContext> converter) throws JSONException
 					{
 						w.key(COMPONENT_CALLS).array().object();
-						createComponentCall(receiver, apiFunction, arguments, callContributions).writeToJSON(w);
+						createComponentCall(receiver, apiFunction, arguments, callContributions, true).writeToJSON(w);
 						w.endObject().endArray();
 
 						return true;
@@ -999,11 +1007,12 @@ public class BaseWindow implements IWindow
 		else
 		{
 			// sync call; add it to the list to keep call order with any previous delayed/async api calls and then trigger the call
-			componentApiCalls.add(createComponentCall(receiver, apiFunction, arguments, callContributions));
+			componentApiCalls.add(createComponentCall(receiver, apiFunction, arguments, callContributions, false));
 			try
 			{
 				Object ret = executeCall(receiver, apiFunction.getName(), arguments, new IToJSONWriter<IBrowserConverterContext>()
 				{
+
 					@Override
 					public boolean writeJSONContent(JSONWriter w, String keyInParent, IToJSONConverter<IBrowserConverterContext> converter) throws JSONException
 					{
@@ -1087,6 +1096,17 @@ public class BaseWindow implements IWindow
 		return hasPendingDelayedCalls;
 	}
 
+	protected void clearAllDelayedCallsToForm(String formName)
+	{
+		Iterator<ComponentCall> it = componentApiCalls.iterator();
+		while (it.hasNext())
+		{
+			ComponentCall delayedCall = it.next();
+			if (delayedCall.delayUntilFormLoads && formName.equals(delayedCall.formContainer.getName()))
+				it.remove();
+		}
+	}
+
 	protected boolean isFormResolved(Container formContainer)
 	{
 		return true;
@@ -1161,10 +1181,11 @@ public class BaseWindow implements IWindow
 		private final Map<String, JSONString> callContributions;
 		private final boolean delayUntilFormLoads;
 		private final boolean async;
+		private final boolean asyncNow;
 		private final Container formContainer;
 
 		public ComponentCall(WebComponent component, WebObjectFunctionDefinition apiFunction, Object[] arguments, Map<String, JSONString> callContributions,
-			boolean delayUntilFormLoads, Container formContainer, boolean async)
+			boolean delayUntilFormLoads, Container formContainer, boolean async, boolean asyncNow)
 		{
 			this.component = component;
 			this.apiFunction = apiFunction;
@@ -1173,6 +1194,7 @@ public class BaseWindow implements IWindow
 			this.delayUntilFormLoads = delayUntilFormLoads;
 			this.formContainer = formContainer; // this is only relevant if delayUntilFormLoads == true
 			this.async = async;
+			this.asyncNow = asyncNow;
 		}
 
 		/**
@@ -1218,6 +1240,9 @@ public class BaseWindow implements IWindow
 			if (callContributions != null) callContributions.forEach((String key, JSONString value) -> {
 				w.key(key).value(value);
 			});
+
+			if (async) w.key(API_KEY_ASYNC).value(true);
+			if (asyncNow) w.key(API_KEY_ASYNC_NOW).value(true);
 		}
 
 	}

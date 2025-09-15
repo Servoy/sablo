@@ -15,23 +15,26 @@
  */
 package org.sablo.specification.property.types;
 
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONWriter;
 import org.sablo.specification.PropertyDescription;
+import org.sablo.specification.property.IBrowserConverterContext;
+import org.sablo.specification.property.IWrapperType;
+import org.sablo.specification.property.IWrappingContext;
+import org.sablo.util.ValueReference;
+import org.sablo.websocket.utils.JSONUtils;
 
 
 /**
  * @author rgansevles
  *
  */
-public class VisiblePropertyType extends DefaultPropertyType<Boolean>
+public class VisiblePropertyType extends DefaultPropertyType<Object> implements IWrapperType<Object, VisibleSabloValue>
 {
 
 	public static final VisiblePropertyType INSTANCE = new VisiblePropertyType();
 	public static final String TYPE_NAME = "visible";
-
-	private VisiblePropertyType()
-	{
-	}
 
 	@Override
 	public String getName()
@@ -42,7 +45,7 @@ public class VisiblePropertyType extends DefaultPropertyType<Boolean>
 	@Override
 	public Boolean defaultValue(PropertyDescription pd)
 	{
-		return Boolean.TRUE;
+		return null;
 	}
 
 	@Override
@@ -52,7 +55,6 @@ public class VisiblePropertyType extends DefaultPropertyType<Boolean>
 		{
 			return ProtectedConfig.DEFAULTBLOCKING_FALSE;
 		}
-
 		return new ProtectedConfig(ForentriesConfig.parse(json), false);
 	}
 
@@ -61,4 +63,57 @@ public class VisiblePropertyType extends DefaultPropertyType<Boolean>
 	{
 		return true;
 	}
+
+	@Override
+	public VisibleSabloValue fromJSON(Object newJSONValue, VisibleSabloValue previousSabloValue, PropertyDescription propertyDescription,
+		IBrowserConverterContext context, ValueReference<Boolean> returnValueAdjustedIncommingValue)
+	{
+		return previousSabloValue;
+	}
+
+	@Override
+	public JSONWriter toJSON(JSONWriter writer, String key, VisibleSabloValue sabloValue, PropertyDescription propertyDescription,
+		IBrowserConverterContext dataConverterContext) throws JSONException
+	{
+		JSONUtils.addKeyIfPresent(writer, key);
+		return sabloValue.toJSON(writer);
+	}
+
+	@Override
+	public VisibleSabloValue wrap(Object newValue, VisibleSabloValue oldValue, PropertyDescription propertyDescription, IWrappingContext dataConverterContext)
+	{
+		boolean newVal = convertToBoolean(newValue);
+		if (oldValue != null)
+		{
+			oldValue.setValue(newVal);
+		}
+		else
+		{
+			return new VisibleSabloValue(newVal, dataConverterContext);
+		}
+		return oldValue;
+	}
+
+	/**
+	 * @param newValue
+	 * @return
+	 */
+	protected boolean convertToBoolean(Object newValue)
+	{
+		return switch (newValue)
+		{
+			case null -> false;
+			case Boolean b -> b.booleanValue();
+			case String s -> s.equalsIgnoreCase("true"); //$NON-NLS-1$
+			case Number n -> n.intValue() != 0;
+			default -> false;
+		};
+	}
+
+	@Override
+	public Object unwrap(VisibleSabloValue value)
+	{
+		return Boolean.valueOf(value.getValue());
+	}
+
 }

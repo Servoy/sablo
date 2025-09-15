@@ -13,19 +13,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpSessionActivationListener;
-import javax.servlet.http.HttpSessionContext;
-import javax.servlet.http.HttpSessionEvent;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSessionActivationListener;
+import jakarta.servlet.http.HttpSessionEvent;
 
 /**
  * Separate out the default session with another session based on a list of paths.
@@ -370,29 +369,14 @@ public class SeparateSessionFilter implements Filter
 			return originalSession.getMaxInactiveInterval();
 		}
 
-		public HttpSessionContext getSessionContext()
-		{
-			return originalSession.getSessionContext();
-		}
-
 		public Object getAttribute(String name)
 		{
 			return originalSession.getAttribute(name);
 		}
 
-		public Object getValue(String name)
-		{
-			return originalSession.getValue(name);
-		}
-
 		public Enumeration<String> getAttributeNames()
 		{
 			return originalSession.getAttributeNames();
-		}
-
-		public String[] getValueNames()
-		{
-			return originalSession.getValueNames();
 		}
 
 		public void setAttribute(String name, Object value)
@@ -401,20 +385,9 @@ public class SeparateSessionFilter implements Filter
 			originalSession.setAttribute(name, value);
 		}
 
-		public void putValue(String name, Object value)
-		{
-			separateSessionRequestWrapper.registerAttributeName(this, name);
-			originalSession.putValue(name, value);
-		}
-
 		public void removeAttribute(String name)
 		{
 			originalSession.removeAttribute(name);
-		}
-
-		public void removeValue(String name)
-		{
-			originalSession.removeValue(name);
 		}
 
 		public void invalidate()

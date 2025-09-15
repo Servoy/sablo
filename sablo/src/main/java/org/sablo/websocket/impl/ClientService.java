@@ -32,6 +32,7 @@ import org.sablo.specification.property.IBrowserConverterContext;
 import org.sablo.websocket.CurrentWindow;
 import org.sablo.websocket.IClientService;
 import org.sablo.websocket.IToJSONWriter;
+import org.sablo.websocket.IWebsocketSession;
 import org.sablo.websocket.TypedDataWithChangeInfo;
 import org.sablo.websocket.utils.JSONUtils;
 import org.sablo.websocket.utils.JSONUtils.FullValueToJSONConverter;
@@ -48,15 +49,18 @@ public class ClientService extends BaseWebObject implements IClientService
 {
 
 	private static final Logger log = LoggerFactory.getLogger(ClientService.class.getCanonicalName());
+	protected final IWebsocketSession session;
 
-	public ClientService(String serviceName, WebObjectSpecification spec)
+	public ClientService(String serviceName, WebObjectSpecification spec, IWebsocketSession session)
 	{
 		super(serviceName, spec);
+		this.session = session;
 	}
 
-	public ClientService(String serviceName, WebObjectSpecification spec, boolean waitForPropertyInitBeforeAttach)
+	public ClientService(String serviceName, WebObjectSpecification spec, IWebsocketSession session, boolean waitForPropertyInitBeforeAttach)
 	{
 		super(serviceName, spec, waitForPropertyInitBeforeAttach);
+		this.session = session;
 	}
 
 	@Override
@@ -126,12 +130,24 @@ public class ClientService extends BaseWebObject implements IClientService
 
 	public void executeAsyncServiceCall(String functionName, Object[] arguments)
 	{
+		executeAsyncServiceCall(functionName, arguments, true);
+	}
+
+	public void executeAsyncServiceCall(String functionName, Object[] arguments,
+		boolean sendToClientRightAwayIfPossibleAndNotCurrentlyProcessingMessageFromClient)
+	{
 		CurrentWindow.get().executeAsyncServiceCall(this, functionName, arguments, getParameterTypes(functionName));
+		if (sendToClientRightAwayIfPossibleAndNotCurrentlyProcessingMessageFromClient) session.valueChanged();
 	}
 
 	public void executeAsyncNowServiceCall(String functionName, Object[] arguments)
 	{
-		CurrentWindow.get().executeAsyncNowServiceCall(this, functionName, arguments, getParameterTypes(functionName));
+		executeAsyncNowServiceCall(functionName, arguments, false);
+	}
+
+	public void executeAsyncNowServiceCall(String functionName, Object[] arguments, boolean sendOtherPendingAsyncCallsAsWell)
+	{
+		CurrentWindow.get().executeAsyncNowServiceCall(this, functionName, arguments, getParameterTypes(functionName), sendOtherPendingAsyncCallsAsWell);
 	}
 
 	protected IFunctionParameters getParameterTypes(String functionName)

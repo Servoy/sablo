@@ -29,8 +29,6 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.commons.io.IOUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -44,6 +42,8 @@ import org.sablo.specification.WebServiceSpecProvider;
 import org.sablo.util.TextUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Take an index page, enhance it with required libs/csses and replace variables

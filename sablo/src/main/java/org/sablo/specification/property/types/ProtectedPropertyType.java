@@ -56,4 +56,5 @@ public class ProtectedPropertyType extends DefaultPropertyType<Boolean>
 	{
 		return true;
 	}
+
 }

@@ -18,11 +18,28 @@ package org.sablo.util;
 
 /**
  * Some basic utility methods.
- * 
+ *
  * @author acostescu
  */
 public class SabloUtils
 {
+
+	/**
+	 * Helpful for referencing an AnnonymusClass instance from itself.<br/>
+	 * For example:
+	 * <code>
+	 *     RecursiveAnnonymusClass<Consumer<Boolean>> rac = new RecursiveAnnonymusClass();
+	 *     rac.me = (generateStackOverFlow) -> { if (generateStackOverFlow) rac.me(generateStackOverFlow); };
+	 * </code>
+	 *
+	 * If you would not use "rac" above but try it directly via consumer = ... consumer you would get a compilation error as that needs to be final (can't be assigned like that and used in itself).
+	 *
+	 * @param <AnnonymusClass>
+	 */
+	public static class RecursiveAnnonymusClass<AnnonymusClass>
+	{
+		public AnnonymusClass me;
+	}
 
 	/**
 	 * Compares two objects via .equals() no matter if they are null or not.

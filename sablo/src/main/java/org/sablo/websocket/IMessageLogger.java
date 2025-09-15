@@ -16,7 +16,7 @@
 
 package org.sablo.websocket;
 
-import javax.websocket.Session;
+import jakarta.websocket.Session;
 
 /**
  * @author jcompagner

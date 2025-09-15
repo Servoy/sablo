@@ -510,7 +510,7 @@ public class JSONUtils
 					{
 						clientSideConversionType = JSONUtils.getClientSideTypeJSONString((IPropertyWithClientSideConversions)type,
 							valueType != null && valueType.getType() == type ? valueType : null);
-					}
+					} // IPropertyWithDynamicClientSideConversions was already handled in code above so it won't be that here!
 					else clientSideConversionType = null;
 
 					return ejw.isEmpty() ? null : new JSONStringWithClientSideType(ejw.toJSONString(), clientSideConversionType);

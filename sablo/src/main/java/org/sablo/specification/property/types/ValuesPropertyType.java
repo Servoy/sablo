@@ -93,7 +93,7 @@ public class ValuesPropertyType extends DefaultPropertyType<Object[]>
 			config.setEditable(json.optBoolean("editable"));
 			config.setMultiple(json.optBoolean("multiple"));
 		}
-
 		return config;
 	}
+
 }

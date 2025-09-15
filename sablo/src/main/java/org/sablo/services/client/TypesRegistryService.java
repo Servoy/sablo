@@ -16,6 +16,12 @@
 
 package org.sablo.services.client;
 
+import org.sablo.specification.Package.IPackageReader;
+import org.sablo.specification.PropertyDescriptionBuilder;
+import org.sablo.specification.WebObjectApiFunctionDefinition;
+import org.sablo.specification.WebObjectSpecification;
+import org.sablo.specification.property.types.ObjectPropertyType;
+import org.sablo.specification.property.types.TypesRegistry;
 import org.sablo.websocket.IClientService;
 import org.sablo.websocket.utils.JSONUtils.EmbeddableJSONWriter;
 
@@ -28,6 +34,30 @@ public class TypesRegistryService
 {
 	public static final String TYPES_REGISTRY_SERVICE = "$typesRegistry";
 
+	private static final class TypesRegistryServiceSpecification extends WebObjectSpecification
+	{
+		@SuppressWarnings("nls")
+		private TypesRegistryServiceSpecification()
+		{
+			super(TypesRegistryService.TYPES_REGISTRY_SERVICE, "", IPackageReader.WEB_SERVICE, "", null, null, null, null, "", null, null, null);
+			WebObjectApiFunctionDefinition apiCallDef = new WebObjectApiFunctionDefinition("addComponentClientSideSpecs");
+			apiCallDef
+				.addParameter(new PropertyDescriptionBuilder().withName("toBeSent").withType(TypesRegistry.getType(ObjectPropertyType.TYPE_NAME)).build());
+			apiCallDef.setAsync(true);
+			apiCallDef.setPreDataServiceCall(true);
+			addApiFunction(apiCallDef);
+
+			apiCallDef = new WebObjectApiFunctionDefinition("setServiceClientSideSpecs");
+			apiCallDef
+				.addParameter(new PropertyDescriptionBuilder().withName("toBeSent").withType(TypesRegistry.getType(ObjectPropertyType.TYPE_NAME)).build());
+			apiCallDef.setAsync(true);
+			apiCallDef.setPreDataServiceCall(true);
+			addApiFunction(apiCallDef);
+		}
+	}
+
+	public static final TypesRegistryServiceSpecification TYPES_REGISTRY_SERVICE_SPEC = new TypesRegistryServiceSpecification();
+
 	private final IClientService clientService;
 
 	public TypesRegistryService(IClientService clientService)
@@ -37,7 +67,7 @@ public class TypesRegistryService
 
 	public void addComponentClientSideSpecs(EmbeddableJSONWriter toBeSent)
 	{
-		clientService.executeAsyncServiceCall("addComponentClientSideSpecs", new Object[] { toBeSent });
+		clientService.executeAsyncServiceCall("addComponentClientSideSpecs", new Object[] { toBeSent }, false);
 	}
 
 	public void setServiceClientSideSpecs(EmbeddableJSONWriter toBeSent)

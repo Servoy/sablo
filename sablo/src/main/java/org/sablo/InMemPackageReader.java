@@ -103,8 +103,10 @@ public class InMemPackageReader implements IPackageReader
 	}
 
 	@Override
-	public void reportError(String specpath, Exception e)
+	public void reportError(String specPath, Exception e)
 	{
+		System.err.println("Exception happened while parsing: " + specPath);
+		if (e != null) e.printStackTrace();
 	}
 
 	@Override

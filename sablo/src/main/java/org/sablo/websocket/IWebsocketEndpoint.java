@@ -20,10 +20,10 @@ import java.io.IOException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 
-import javax.websocket.CloseReason;
-import javax.websocket.Session;
-
 import org.sablo.eventthread.IEventDispatcher;
+
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.Session;
 
 /**
  * The websocket endpoint interface.

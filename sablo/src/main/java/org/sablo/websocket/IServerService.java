@@ -31,9 +31,14 @@ public interface IServerService
 	/**
 	 * Execute a method requested from the browser client.
 	 *
-	 * @return IMPORTANT: the return value should be a ready-to-send-to-client (JSON) value or a value that only needs to go through {@link JSONUtils#defaultToJSONValue(org.sablo.websocket.utils.JSONUtils.IToJSONConverter, org.json.JSONWriter, String, Object, org.sablo.specification.PropertyDescription, org.sablo.websocket.utils.DataConversion, Object)}
-	 * via the {@link FullValueToJSONConverter}. So it has to be some primitive, or something that only needs to undergo default conversion to client,  or, if a
-	 * specific conversion to client is needed, then this method needs to apply that conversion to the returned value and return a {@link JSONString} / {@link EmbeddableJSONWriter} (with true given to it's constructor) of the result of the conversion instead.
+	 * @return It can return two things:
+	 *         <ul>
+	 *             <li>an actual value to be sent back to client. IMPORTANT: the return value should be a ready-to-send-to-client (JSON) value or a value that only needs to go through {@link JSONUtils#defaultToJSONValue(org.sablo.websocket.utils.JSONUtils.IToJSONConverter, org.json.JSONWriter, String, Object, org.sablo.specification.PropertyDescription, org.sablo.websocket.utils.DataConversion, Object)}
+	 *                 via the {@link FullValueToJSONConverter}. So it has to be some primitive, or something that only needs to undergo default conversion to client,  or, if a
+	 *                 specific conversion to client is needed, then this method needs to apply that conversion to the returned value and return a {@link JSONString} / {@link EmbeddableJSONWriter} (with true given to it's constructor) of the result of the conversion instead.</li>
+	 *             <li>a {@link IDelayedReturnValue} that will result in the response to the client getting postponed. That means that the system will post another event to the event thread with
+	 *                 an eventLevel given by {@link IDelayedReturnValue#getEventLevelForPostponedReturn()}; when that executes, the system will send the return value {@link IDelayedReturnValue#getValueToReturn()} and resolve the call on client (see description above for what the return value should be!)</li>
+	 *         </ul>
 	 */
 	public Object executeMethod(String methodName, JSONObject args) throws Exception;
 

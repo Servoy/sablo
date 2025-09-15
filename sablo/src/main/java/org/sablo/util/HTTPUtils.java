@@ -18,14 +18,14 @@ package org.sablo.util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Class that provides static utility methods related to HTTP.
@@ -38,7 +38,7 @@ public class HTTPUtils
 	public static final String IF_MODIFIED_SINCE = "If-Modified-Since"; //$NON-NLS-1$
 	public static final String LAST_MODIFIED = "Last-Modified"; //$NON-NLS-1$
 
-	private static final Random RANDOM = new Random(System.currentTimeMillis());
+	private static final SecureRandom RANDOM = new SecureRandom();
 	private static final String ATTRIBUTE_NONCE = "SABLO-NONCE"; //$NON-NLS-1$
 
 	/**
@@ -152,7 +152,7 @@ public class HTTPUtils
 
 	private static String generateNonce()
 	{
-		byte[] bytes = new byte[8];
+		byte[] bytes = new byte[16]; // 128 bits;
 		RANDOM.nextBytes(bytes);
 		return new String(Base64.getEncoder().encode(bytes));
 	}

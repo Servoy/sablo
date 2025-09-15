@@ -75,7 +75,7 @@ public class WrapperTypeTest
 		}
 
 		@Override
-		public boolean isPrimitive()
+		public boolean isBuiltinType()
 		{
 			return false;
 		}

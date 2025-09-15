@@ -36,14 +36,37 @@ public interface IClientService
 
 	/**
 	 * Execute a service call asynchronously. It will be called on the current window.
+	 * It is equivalent to executeAsyncServiceCall(functionName, arguments, true)
 	 */
 	public void executeAsyncServiceCall(String functionName, Object[] arguments);
 
 	/**
+	 * Execute a service call asynchronously. It will be called on the current window.
+	 *
+	 * @param sendToClientRightAwayIfPossibleAndNotCurrentlyProcessingMessageFromClient if true then:<ul>
+	 *            <li>if we are not currently handling a message from client, it will try to send the message now.</li>
+	 *            <li>if we are currently handling a message from client, it will register the call to be send as part of the response when the message from client is done (or a sync call kicks in).</li>
+	 *            If false, it will just register the call to be sent to client later; use false if you know for sure that code that follows will trigger a send to client later. This is useful for example
+	 * to avoid sending unexpected pending changes together with this async call that the caller wants to handle in a different way.
+	 */
+	public void executeAsyncServiceCall(String functionName, Object[] arguments,
+		boolean sendToClientRightAwayIfPossibleAndNotCurrentlyProcessingMessageFromClient);
+
+	/**
 	 * Execute a (client/browser) async-now method; such methods are to be executed right away but do not wait for a return value.
 	 * The async-now call does not send any component/service pending changes - or call other pending async/delayed api to client; it just calls the method.
+	 *
+	 * Equivalent to calling {@link #executeAsyncNowServiceCall(String, Object[], boolean)} with last param. false.
 	 */
 	public void executeAsyncNowServiceCall(String functionName, Object[] arguments);
+
+	/**
+	 * Execute a (client/browser) async-now method; such methods are to be executed right away but do not wait for a return value.
+	 * The async-now call does not send any component/service pending changes; it call other pending async/delayed api to client or not depending on the value of 'sendOtherPendingAsyncCallsAsWell'.
+	 *
+	 * @param sendOtherPendingAsyncCallsAsWell if this is true, it will send other pending async calls before this async call; if false, it will just send this async now call.
+	 */
+	public void executeAsyncNowServiceCall(String functionName, Object[] arguments, boolean sendOtherPendingAsyncCallsAsWell);
 
 	/**
 	 * Execute a service call synchronously.. It will be called on the current window.

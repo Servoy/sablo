@@ -3,7 +3,7 @@
 /// <reference path="../../../../typings/jquery/jquery.d.ts" />
 /// <reference path="websocket.ts" />
 
-namespace sablo_app { export class Model{}}
+namespace sablo_app { export class Model{ visible=true }}
 
 angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabloConstants", {
 	modelChangeNotifier: "$modelChangeNotifier"
@@ -838,15 +838,20 @@ angular.module('sabloApp', ['webSocketModule', 'webStorageModule']).value("$sabl
 					if (hasFormStateWithData(formName)) {
 						return onFunction(formStates[formName], undefined);
 					} else {
-                        const requestInfoKeeper: { requestInfo?: any } = {};
-                        return $webSocket.wrapPromiseToPropagateCustomRequestInfoInternal(requestInfoKeeper,
-                            getFormStateWithData(formName).then(function(formState) {
-                                    return onFunction(formState, requestInfoKeeper.requestInfo);
-                                },
-                                function(err) {
-                                    $log.error("Error getting form state: " + err);
-                                })
-                        );
+						$log.warn("Cannot executeEvent '" + eventName + "' for '" + beanName + "' because the form '" + formName + "' has not been resolved yet.");
+						// we need to return a promise
+						var deferred = $q.defer();
+						deferred.resolve();
+						return deferred.promise;
+                        // const requestInfoKeeper: { requestInfo?: any } = {};
+                        // return $webSocket.wrapPromiseToPropagateCustomRequestInfoInternal(requestInfoKeeper,
+                        //     getFormStateWithData(formName).then(function(formState) {
+                        //             return onFunction(formState, requestInfoKeeper.requestInfo);
+                        //         },
+                        //         function(err) {
+                        //             $log.error("Error getting form state: " + err);
+                        //         })
+                        // );
 					}
 				}
 			}

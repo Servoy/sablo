@@ -118,7 +118,14 @@ public class ObjectPropertyType extends DefaultPropertyType<Object> implements
 				return dateType.fromJSON(newObjectValue.opt(JSONUtils.VALUE_KEY), previousSabloValue instanceof Date ? (Date)previousSabloValue : null,
 					null, context, returnValueAdjustedIncommingValue); // registered date type must be ok with pd == null
 			}
-			// else TODO in the future we could add more conversions for nested arrays/objects if needed; currently those don't get converted into other sablo values in case of 'object' type
+			else
+			{
+				for (String key : newObjectValue.keySet())
+				{
+					newObjectValue.put(key,
+						fromJSON(newObjectValue.get(key), previousSabloValue, propertyDescription, context, returnValueAdjustedIncommingValue));
+				}
+			}
 		}
 		return newJSONValue;
 	}
@@ -297,7 +304,7 @@ public class ObjectPropertyType extends DefaultPropertyType<Object> implements
 		if (valueAndType != null)
 		{
 			writer.value(valueAndType);
-			return valueAndType.getClientSideType(); // should we always return here OBJECT_TYPE_JSON_STRING instead? maybe foundset or other types that 
+			return valueAndType.getClientSideType(); // should we always return here OBJECT_TYPE_JSON_STRING instead? maybe foundset or other types that
 			// work with IPropertyConverterForBrowserWithDynamicClientType would compress better the types then, but that would also mean that all such
 			// object client-side values would be iterated on at least one level, even if they don't actually need a client-side conversion; it's just
 			// an optimization q., both approaches should work correctly

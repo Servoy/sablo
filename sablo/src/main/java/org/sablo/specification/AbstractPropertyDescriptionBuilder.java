@@ -148,6 +148,23 @@ abstract class AbstractPropertyDescriptionBuilder<B extends AbstractPropertyDesc
 		return getThis();
 	}
 
+	public B copyFrom(PropertyDescription pd)
+	{
+		this.name = pd.getName();
+		this.type = pd.getType();
+		this.config = pd.getConfig();
+		this.optional = pd.isOptional();
+		this.defaultValue = pd.getDefaultValue();
+		this.initialValue = pd.getInitialValue();
+		this.values = pd.getValues();
+		this.pushToServer = pd.getPushToServer();
+		this.tags = pd.copyOfTags();
+		this.properties = new HashMap<>(pd.getProperties());
+		this.hasDefault = pd.hasDefault();
+		this.deprecated = pd.getDeprecated();
+		return getThis();
+	}
+
 	protected final B getThis()
 	{
 		return (B)this;

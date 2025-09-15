@@ -30,7 +30,6 @@ public class BytePropertyType extends DefaultPropertyType<Byte>
 
 	protected BytePropertyType()
 	{
-		super(true);
 	}
 
 	@Override

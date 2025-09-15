@@ -28,8 +28,14 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Point;
 import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,6 +53,8 @@ import org.sablo.specification.WebObjectSpecification.PushToServerEnum;
 import org.sablo.specification.WebObjectSpecificationBuilder;
 import org.sablo.specification.property.BrowserConverterContext;
 import org.sablo.specification.property.ChangeAwareList;
+import org.sablo.specification.property.IPropertyType;
+import org.sablo.specification.property.IPropertyWithAttachDependencies;
 import org.sablo.specification.property.types.DimensionPropertyType;
 import org.sablo.specification.property.types.VisiblePropertyType;
 import org.sablo.util.TestBaseWebsocketSession;
@@ -55,6 +63,8 @@ import org.sablo.websocket.CurrentWindow;
 import org.sablo.websocket.TypedData;
 import org.sablo.websocket.WebsocketSessionKey;
 import org.sablo.websocket.utils.JSONUtils;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 
 /**
  * @author jcompagner
@@ -151,7 +161,10 @@ public class WebComponentTest
 		assertEquals(Color.black, component.getProperty("background"));
 
 		String msg = JSONUtils.writeChanges(properties, null, null);
-		assertEquals("{\"background\":\"#000000\",\"name\":\"test\"}", msg);
+
+		JSONObject actual = new JSONObject(msg);
+		JSONObject expected = new JSONObject("{\"background\":\"#000000\",\"name\":\"test\"}");
+		JSONAssert.assertEquals(expected, actual, JSONCompareMode.NON_EXTENSIBLE);
 
 		component.putBrowserProperty("background", "#ff0000");
 		properties = component.getRawPropertiesWithoutDefaults();
@@ -246,11 +259,16 @@ public class WebComponentTest
 
 		// the following uses just a default conversion not customObjectType; but test that anyway to see that Color type works based on class type conversions
 		String msg = JSONUtils.writeDataAsFullToJSON(properties, null, null);
-		assertEquals("{\"atype\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"},\"name\":\"test\"}", msg);
+		JSONObject actual1 = new JSONObject(msg);
+		JSONObject expected1 = new JSONObject(
+			"{\"atype\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"},\"name\":\"test\"}");
+		JSONAssert.assertEquals(expected1, actual1, JSONCompareMode.NON_EXTENSIBLE);
 
-		// now do it as it's supposed to be done
 		msg = JSONUtils.writeDataAsFullToJSON(properties, component.getSpecification(), null);
-		assertEquals("{\"atype\":{\"vEr\":2,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},\"name\":\"test\"}", msg);
+		JSONObject actual2 = new JSONObject(msg);
+		JSONObject expected2 = new JSONObject(
+			"{\"atype\":{\"vEr\":2,\"v\":{\"name\":\"myname\",\"active\":true,\"foreground\":\"#000000\"}},\"name\":\"test\"}");
+		JSONAssert.assertEquals(expected2, actual2, JSONCompareMode.NON_EXTENSIBLE);
 
 		component.putBrowserProperty("atype",
 			new JSONObject(
@@ -535,4 +553,347 @@ public class WebComponentTest
 		assertEquals(Integer.valueOf(42), webComponent.getProperty("changeintdeep"));
 	}
 
+	/**
+	 * Test for PropertyDescription dependency sorting algorithm.
+	 * This test uses a clear input/output format to verify that property dependencies
+	 * are correctly sorted and circular dependencies are handled gracefully.
+	 * This is a standalone implementation that doesn't rely on PropertyDescription's test methods.
+	 */
+	@Test
+	public void testPropertyDependencySorting()
+	{
+		// Test Case 1: Simple dependencies with multiple levels
+		Map<String, String[]> simpleDepsMap = new HashMap<>();
+		simpleDepsMap.put("a", null); // Independent property
+		simpleDepsMap.put("z", null); // Another independent property
+		simpleDepsMap.put("b", new String[] { "a" }); // b depends on a
+		simpleDepsMap.put("c", new String[] { "a" }); // c depends on a
+		simpleDepsMap.put("d", new String[] { "b" }); // d depends on b (which depends on a)
+		simpleDepsMap.put("e", new String[] { "c" }); // e depends on c (which depends on a)
+
+		String[] expectedSimpleOrder = new String[] { "a", "z", "b", "c", "d", "e" };
+		boolean test1Passed = testDependencySortingWithMap(simpleDepsMap, expectedSimpleOrder, true, 0);
+		assertTrue("Simple dependencies should be sorted correctly", test1Passed);
+
+		// Test Case 2: Multiple dependencies
+		Map<String, String[]> multipleDepsMap = new HashMap<>();
+		multipleDepsMap.put("a", null); // Independent property
+		multipleDepsMap.put("z", null); // Another independent property
+		multipleDepsMap.put("b", new String[] { "a" }); // b depends on a
+		multipleDepsMap.put("multi", new String[] { "a", "b" }); // multi depends on both a and b
+
+		String[] expectedMultiOrder = new String[] { "a", "z", "b", "multi" };
+		boolean test2Passed = testDependencySortingWithMap(multipleDepsMap, expectedMultiOrder, true, 0);
+		assertTrue("Multiple dependencies should be sorted correctly", test2Passed);
+
+		// Test Case 3: Simple circular dependencies
+		Map<String, String[]> circularDepsMap = new HashMap<>();
+		circularDepsMap.put("x", null); // Independent property
+		circularDepsMap.put("circular1", new String[] { "circular2" }); // circular1 depends on circular2
+		circularDepsMap.put("circular2", new String[] { "circular1" }); // circular2 depends on circular1 (circular dependency)
+
+		// In circular dependencies, the algorithm assigns level 0 to properties in a cycle
+		// Properties at the same level are sorted alphabetically
+		// We use a timeout to ensure the test doesn't hang
+		String[] expectedCircularOrder = new String[] { "x", "circular1", "circular2" };
+		boolean test3Passed = testDependencySortingWithMap(circularDepsMap, expectedCircularOrder, true, 2000);
+		assertTrue("Simple circular dependencies should be handled gracefully", test3Passed);
+
+		// Test Case 4: Complex circular dependencies with multilevel dependencies
+		Map<String, String[]> complexDepsMap = new HashMap<>();
+		// Independent properties
+		complexDepsMap.put("independent1", null);
+		complexDepsMap.put("independent2", null);
+
+		// Normal multilevel dependencies
+		complexDepsMap.put("level1", new String[] { "independent1" });
+		complexDepsMap.put("level2a", new String[] { "level1" });
+		complexDepsMap.put("level2b", new String[] { "level1" });
+		complexDepsMap.put("level3", new String[] { "level2a", "level2b" });
+
+		// Complex circular dependency chain
+		complexDepsMap.put("circular_a", new String[] { "circular_b" });
+		complexDepsMap.put("circular_b", new String[] { "circular_c" });
+		complexDepsMap.put("circular_c", new String[] { "circular_a" });
+
+		// Property that depends on both normal and circular chains
+		complexDepsMap.put("mixed", new String[] { "level3", "circular_a" });
+
+		// Another property that depends on the mixed property
+		complexDepsMap.put("final", new String[] { "mixed", "independent2" });
+
+		// The actual order from the algorithm based on how it handles circular dependencies:
+		// 1. Properties in a cycle get level 0 (for the first one detected)
+		// 2. Properties at the same level are sorted alphabetically
+		// 3. Remaining properties in the cycle get assigned levels based on their dependencies
+		String[] expectedComplexOrder = new String[] { "independent1", "independent2", "circular_c", "level1", "circular_b", "level2a", "level2b", "circular_a", "level3", "mixed", "final" };
+
+
+		boolean test4Passed = testDependencySortingWithMap(complexDepsMap, expectedComplexOrder, true, 3000);
+		assertTrue("Complex circular dependencies with multilevel dependencies should be handled correctly", test4Passed);
+	}
+
+	/**
+	 * Helper method to test dependency sorting with a map of dependencies.
+	 * This is a standalone implementation that doesn't rely on PropertyDescription's test methods.
+	 *
+	 * @param dependencyMap Map where keys are property names and values are arrays of property names they depend on
+	 * @param expectedOrder Expected order of properties after sorting
+	 * @param verbose If true, print detailed output
+	 * @param timeout Timeout in milliseconds for circular dependency tests (0 for no timeout)
+	 * @return true if the test passed, false otherwise
+	 */
+	private boolean testDependencySortingWithMap(Map<String, String[]> dependencyMap, String[] expectedOrder, boolean verbose, long timeout)
+	{
+		try
+		{
+			// Create mock PropertyDescription instances with dependencies
+			Map<String, PropertyDescription> unsortedProps = new HashMap<>();
+
+			// Display input dependencies if verbose is true
+			if (verbose)
+			{
+				System.out.println("\nTest Input Dependencies:");
+				for (Map.Entry<String, String[]> entry : dependencyMap.entrySet())
+				{
+					String propName = entry.getKey();
+					String[] deps = entry.getValue();
+
+					if (deps == null || deps.length == 0)
+					{
+						System.out.println(propName + " -> [independent]");
+					}
+					else
+					{
+						System.out.println(propName + " -> depends on: " + String.join(", ", deps));
+					}
+				}
+			}
+
+			// Create property descriptions from the dependency map
+			for (Map.Entry<String, String[]> entry : dependencyMap.entrySet())
+			{
+				String propName = entry.getKey();
+				String[] deps = entry.getValue();
+
+				// Create property with appropriate type
+				PropertyDescription propDesc;
+				if (deps == null || deps.length == 0)
+				{
+					// Simple property with no dependencies
+					propDesc = new PropertyDescriptionBuilder()
+						.withName(propName)
+						.withType(new MockPropertyType())
+						.build();
+				}
+				else
+				{
+					// Property with dependencies
+					propDesc = new PropertyDescriptionBuilder()
+						.withName(propName)
+						.withType(new MockPropertyTypeWithDependencies(deps))
+						.build();
+				}
+
+				unsortedProps.put(propName, propDesc);
+			}
+
+			// Create a dummy PropertyDescription to call the dependencySort method
+			PropertyDescription dummyPd = new PropertyDescriptionBuilder()
+				.withName("dummy")
+				.withType(new MockPropertyType())
+				.build();
+
+			// Sort the properties with timeout handling if specified
+			LinkedHashMap<String, PropertyDescription> sortedProps;
+
+			if (timeout > 0)
+			{
+				// Use a FutureTask to run the sort with a timeout
+				FutureTask<LinkedHashMap<String, PropertyDescription>> task = new FutureTask<>(() -> {
+					try
+					{
+						return callDependencySort(dummyPd, unsortedProps);
+					}
+					catch (Exception e)
+					{
+						if (verbose)
+						{
+							System.err.println("Exception during dependency sorting: " + e.getMessage());
+							e.printStackTrace();
+						}
+						throw new RuntimeException("Error in dependency sorting", e);
+					}
+				});
+
+				// Start the task in a new thread
+				Thread thread = new Thread(task);
+				thread.setName("DependencySortTestThread");
+				thread.start();
+
+				try
+				{
+					if (verbose)
+					{
+						System.out.println("Waiting for test thread to complete (timeout: " + timeout + "ms)...");
+					}
+
+					// Wait for the task to complete with the specified timeout
+					sortedProps = task.get(timeout, TimeUnit.MILLISECONDS);
+
+					if (verbose)
+					{
+						System.out.println("Test completed successfully within timeout.");
+					}
+				}
+				catch (TimeoutException e)
+				{
+					// If the task times out, interrupt the thread and throw an exception
+					thread.interrupt();
+					if (verbose)
+					{
+						System.err.println("Test timed out after " + timeout + "ms");
+					}
+					throw new RuntimeException("Dependency sorting timed out after " + timeout + "ms");
+				}
+			}
+			else
+			{
+				// No timeout, call directly
+				sortedProps = callDependencySort(dummyPd, unsortedProps);
+			}
+
+			// Get the actual order of properties after sorting
+			String[] actualOrder = sortedProps.keySet().toArray(new String[0]);
+
+			// Compare expected and actual order
+			boolean testPassed = Arrays.equals(expectedOrder, actualOrder);
+
+			// Print detailed output if verbose is true
+			if (verbose)
+			{
+				System.out.println("Expected Order: " + Arrays.toString(expectedOrder));
+				System.out.println("Actual Order: " + Arrays.toString(actualOrder));
+				System.out.println("Test Passed: " + testPassed);
+			}
+
+			return testPassed;
+		}
+		catch (Exception e)
+		{
+			if (verbose)
+			{
+				System.err.println("Exception during dependency sorting test: " + e.getMessage());
+				e.printStackTrace();
+			}
+			return false;
+		}
+	}
+
+	/**
+	 * Calls the private dependencySort method using reflection.
+	 *
+	 * @param pd The PropertyDescription instance to call the method on
+	 * @param unsortedProps The unsorted properties map
+	 * @return The sorted properties map
+	 */
+	private LinkedHashMap<String, PropertyDescription> callDependencySort(PropertyDescription pd, Map<String, PropertyDescription> unsortedProps)
+		throws Exception
+	{
+		// Get the dependencySort method using reflection
+		Method dependencySortMethod = PropertyDescription.class.getDeclaredMethod("dependencySort", Map.class);
+		dependencySortMethod.setAccessible(true);
+
+		// Call the method
+		@SuppressWarnings("unchecked")
+		LinkedHashMap<String, PropertyDescription> result = (LinkedHashMap<String, PropertyDescription>)dependencySortMethod.invoke(pd, unsortedProps);
+		return result;
+	}
+
+	/**
+	 * Mock implementation of IPropertyType for testing.
+	 */
+	private static class MockPropertyType implements IPropertyType<Object>
+	{
+
+		@Override
+		public String getName()
+		{
+			return "mock";
+		}
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see org.sablo.specification.property.IPropertyType#parseConfig(org.json.JSONObject)
+		 */
+		@Override
+		public Object parseConfig(JSONObject config)
+		{
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see org.sablo.specification.property.IPropertyType#defaultValue(org.sablo.specification.PropertyDescription)
+		 */
+		@Override
+		public Object defaultValue(PropertyDescription pd)
+		{
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see org.sablo.specification.property.IPropertyType#isProtecting()
+		 */
+		@Override
+		public boolean isProtecting()
+		{
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see org.sablo.specification.property.IPropertyType#isBuiltinType()
+		 */
+		@Override
+		public boolean isBuiltinType()
+		{
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+	}
+
+	/**
+	 * Mock implementation of IPropertyType with dependencies for testing.
+	 */
+	private static class MockPropertyTypeWithDependencies extends MockPropertyType implements IPropertyWithAttachDependencies<Object>
+	{
+		private final String[] dependencies;
+
+		public MockPropertyTypeWithDependencies(String[] dependencies)
+		{
+			this.dependencies = dependencies;
+		}
+
+		/**
+		 * Get the dependencies for this property type.
+		 *
+		 * @param pd the property description
+		 * @return the names of properties that this property depends on
+		 */
+		@Override
+		public String[] getDependencies(PropertyDescription pd)
+		{
+			return dependencies;
+		}
+	}
 }

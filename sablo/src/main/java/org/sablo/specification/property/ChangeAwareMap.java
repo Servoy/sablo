@@ -1,29 +1,29 @@
 /*
- * Copyright (C) 2014 Servoy BV
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+  * Copyright (C) 2014 Servoy BV
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 package org.sablo.specification.property;
 
 import java.util.AbstractMap;
 import java.util.AbstractSet;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.sablo.CustomObjectContext;
@@ -304,30 +304,10 @@ public class ChangeAwareMap<ET, WT> extends AbstractMap<String, ET> implements I
 		this.webObjectContext = webObjectCntxt;
 
 		Map<String, WT> wrappedBaseList = getWrappedBaseMap();
-		TreeSet<String> sortedKeys = new TreeSet<String>(new Comparator<String>()
-		{
-			public int compare(String o1, String o2)
-			{
-				int compare = o1.compareTo(o2);
-				if (compare == 0) return 0;
-				WT value1 = wrappedBaseList.get(o1);
-				WT value2 = wrappedBaseList.get(o2);
-				if (value1 instanceof ISmartSortOrderPrevalence && value2 instanceof ISmartSortOrderPrevalence)
-				{
-					return ((ISmartSortOrderPrevalence)value1).getPrevalence() - ((ISmartSortOrderPrevalence)value2).getPrevalence();
-				}
-				if (value1 instanceof ISmartSortOrderPrevalence)
-				{
-					return -1;
-				}
-				if (value2 instanceof ISmartSortOrderPrevalence)
-				{
-					return 1;
-				}
-				return compare;
-			};
-		}); // just make sure it always attaches them in the same order to avoid random bugs
+		// just make sure it always attaches them according to dependencies between subProperties & in a stable order which is always the same for that component in order to avoid random bugs
+		TreeSet<String> sortedKeys = new TreeSet<String>(customObjectPD.getAttachComparator());
 		sortedKeys.addAll(wrappedBaseList.keySet());
+
 		for (String key : sortedKeys)
 		{
 			attachToBaseObject(key, wrappedBaseList.get(key));
@@ -370,10 +350,14 @@ public class ChangeAwareMap<ET, WT> extends AbstractMap<String, ET> implements I
 	@Override
 	public void detach()
 	{
+		if (webObjectContext == null) return; // it is already detached
+
 		changeMonitor = null;
 
-		Map<String, WT> wrappedBaseList = getWrappedBaseMap();
-		for (java.util.Map.Entry<String, WT> e : wrappedBaseList.entrySet())
+		TreeMap<String, WT> wrappedBaseListSorted = new TreeMap<>(customObjectPD.getAttachComparator().reversed());
+		wrappedBaseListSorted.putAll(getWrappedBaseMap());
+
+		for (java.util.Map.Entry<String, WT> e : wrappedBaseListSorted.entrySet())
 		{
 			detach(e.getKey(), e.getValue());
 		}

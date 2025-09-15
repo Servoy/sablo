@@ -22,13 +22,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.jar.Manifest;
 
-import javax.servlet.ServletContext;
-
 import org.sablo.specification.Package.IPackageReader;
 import org.sablo.specification.Package.JarServletContextReader;
 import org.sablo.websocket.utils.JSONUtils.EmbeddableJSONWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.ServletContext;
 
 /**
  * Class responsible for loading the service spec files.
@@ -169,11 +169,11 @@ public class WebServiceSpecProvider extends BaseSpecProvider
 				toBeSent.object(); // keys are spec names, values are objects so: { serviceNameFromSpec: { /* see comment from ClientSideTypeCache.getClientSideTypesFor() */ } , ... }
 				for (WebObjectSpecification serviceSpec : allServices)
 				{
-					EmbeddableJSONWriter clSideTypesForThisComponent = ClientSideTypeCache.buildClientSideTypesFor(serviceSpec);
-					if (clSideTypesForThisComponent != null)
+					EmbeddableJSONWriter clSideTypesForThisService = ClientSideTypeCache.buildClientSideTypesFor(serviceSpec);
+					if (clSideTypesForThisService != null)
 					{
 						// normally scriptingName (camel-case instead of dashes) does include package name (to make it unique) and it is also what is used to find service and service specs. client-side...
-						toBeSent.key(serviceSpec.getScriptingName()).value(clSideTypesForThisComponent);
+						toBeSent.key(serviceSpec.getScriptingName()).value(clSideTypesForThisService);
 						hasClientSideTypes = true;
 					}
 				}

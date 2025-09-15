@@ -160,7 +160,7 @@ public class WebComponentSecurityPropertiesTest
 
 		// default visible
 		assertTrue(testcomponent.isVisible());
-		assertEquals(Boolean.TRUE, testcomponent.getProperty("vis"));
+		assertEquals(null, testcomponent.getProperty("vis"));
 
 		// call function
 		assertEquals(0, called.intValue());
@@ -200,7 +200,7 @@ public class WebComponentSecurityPropertiesTest
 		}
 
 		assertTrue(testcomponent.isVisible());
-		assertEquals(Boolean.TRUE, testcomponent.getProperty("vis"));
+		assertEquals(null, testcomponent.getProperty("vis"));
 
 		// check protection of properties when component is invisible
 		testcomponent = new WebComponent("testcomponent", "test");
@@ -282,19 +282,19 @@ public class WebComponentSecurityPropertiesTest
 
 		// default visible
 		assertTrue(testcomponent.isVisible());
-		assertEquals(Boolean.TRUE, testcomponent.getProperty("vis"));
-		assertEquals(Boolean.TRUE, testcomponent.getProperty("visforastr2"));
+		assertEquals(null, testcomponent.getProperty("vis"));
+		assertEquals(null, testcomponent.getProperty("visforastr2"));
 
 		// set via setVisible
 		testcomponent.setVisible(false);
 		assertFalse(testcomponent.isVisible());
 		assertEquals(Boolean.FALSE, testcomponent.getProperty("vis"));
-		assertEquals(Boolean.TRUE, testcomponent.getProperty("visforastr2")); // not set because it is not a component-global prop (for is defined)
+		assertEquals(null, testcomponent.getProperty("visforastr2")); // not set because it is not a component-global prop (for is defined)
 
 		testcomponent.setVisible(true);
 		assertTrue(testcomponent.isVisible());
 		assertEquals(Boolean.TRUE, testcomponent.getProperty("vis"));
-		assertEquals(Boolean.TRUE, testcomponent.getProperty("visforastr2"));
+		assertEquals(null, testcomponent.getProperty("visforastr2"));
 
 		// set via property
 		testcomponent = new WebComponent("testcomponent", "test");

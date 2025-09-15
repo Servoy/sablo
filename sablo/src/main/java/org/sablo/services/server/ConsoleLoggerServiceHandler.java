@@ -55,10 +55,7 @@ public class ConsoleLoggerServiceHandler implements IServerService
 			{
 				if (msg == null || !msg.equals(message))
 				{
-					if (message.contains("WARNING: sanitizing HTML stripped some content, see https://g.co/ng/security#xss")) //$NON-NLS-1$
-					{
-						msg = message;
-					}
+					msg = message;
 					log.warn(message);
 				}
 				break;

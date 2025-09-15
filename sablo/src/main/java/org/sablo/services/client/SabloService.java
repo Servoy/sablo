@@ -70,4 +70,23 @@ public class SabloService
 			new Object[] { Integer.valueOf(defid), argument, Boolean.valueOf(success) }, paramTypes);
 	}
 
+	/**
+	 * Useful for sync calls to client when done from onShow of the form. It helps client-side code quickly decide if it
+	 * should wait for the needed form + component to get shown or there is no point in waiting and slowing down execution.<br/><br/>
+	 *
+	 * As we try to show the client form only after everything is ready from server (even form's onShow handler - if any - got executed),
+	 * that means that sync calls from the onShow can be sent before the command from server to show a form on client (that can execute to to
+	 * higher event prio even if a sync call suspends the event thread). So in this situation we want the client sync call to wait for the
+	 * form to show client-side and the execute the sync call; but if we are not expecting the form to show and the form is not shown on client
+	 * already, then client-side code can decide right away to error out (TiNG) or load the needed form in a hidden div (NG1) directly.<br/><br/>
+	 *
+	 * Make sure to ALWAYS call it first with true (when a show/switch form is confirmed to go ahead to client after the onShow will execute) and
+	 * afterwards, when the form show command is sent to the client, call it with with false; no exception!
+	 */
+	@SuppressWarnings("nls")
+	public void setExpectFormToShowOnClient(boolean expectAFormToShow)
+	{
+		clientService.executeAsyncServiceCall("expectFormToShowOnClient", new Object[] { Boolean.valueOf(expectAFormToShow) });
+	}
+
 }

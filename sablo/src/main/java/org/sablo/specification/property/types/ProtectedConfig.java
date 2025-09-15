@@ -41,26 +41,16 @@ public class ProtectedConfig
 		this.blockingOn = blockingOn;
 	}
 
-	/**
-	 * @return the forEntries
-	 */
 	public ForentriesConfig getForEntries()
 	{
 		return forEntries;
 	}
 
-	/**
-	 * @return the blockingOn
-	 */
 	public boolean getBlockingOn()
 	{
 		return blockingOn;
 	}
 
-	/**
-	 * @param json
-	 * @return
-	 */
 	public static ProtectedConfig parse(JSONObject json, boolean defaultBlockingOn)
 	{
 		if (json == null)
