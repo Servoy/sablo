@@ -81,18 +81,18 @@ public class DoublePropertyType extends DefaultPropertyType<Double> implements I
 		JSONUtils.addKeyIfPresent(writer, key);
 		if (sabloValue instanceof BigDecimal bd)
 		{
-			boolean isGreaterThanDouble = bd.compareTo(BigDecimal.valueOf(Double.MAX_VALUE)) > 0;
-			boolean isLessThanDouble = bd.compareTo(BigDecimal.valueOf(-Double.MAX_VALUE)) < 0;
-
-			if (isGreaterThanDouble || isLessThanDouble)
+			if (!bd.equals(new BigDecimal(bd.doubleValue())))
 			{
-				// bd is outside the range of double
-				// output it as a pure string, because javascript/json can't hold this value without loosing precission
+				// output it as a pure string, because javascript/json can't hold this value without loosing precision
 				writer.value(bd.stripTrailingZeros().toPlainString());
-				return writer;
 			}
+			else
+			{
+				writer.value(bd.doubleValue());
+			}
+
 		}
-		if (sabloValue != null && (Double.isNaN(sabloValue.doubleValue()) || Double.isInfinite(sabloValue.doubleValue()))) writer.value(null);
+		else if (sabloValue != null && (Double.isNaN(sabloValue.doubleValue()) || Double.isInfinite(sabloValue.doubleValue()))) writer.value(null);
 		else writer.value(sabloValue);
 		return writer;
 	}
