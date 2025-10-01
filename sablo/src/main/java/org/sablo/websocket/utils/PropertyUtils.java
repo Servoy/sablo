@@ -127,7 +127,8 @@ public class PropertyUtils
 		}
 		catch (NumberFormatException ex)
 		{
-			log.warn("Parse exception while processing " + numberString + " as a double", ex);
+			log.warn("Cannot parse '" + numberString +
+				"' as a double. This usually means the expected dataprovider type is not correct and should be modified to match the value.", ex);
 			return 0d;
 		}
 	}
@@ -256,7 +257,8 @@ public class PropertyUtils
 		}
 		catch (NumberFormatException ex)
 		{
-			log.warn("Parse exception while processing " + numberString + " as a long", ex);
+			log.warn("Cannot parse '" + numberString +
+				"' as a long. This usually means the expected dataprovider type is not correct and should be modified to match the value.", ex);
 			return 0l;
 		}
 	}

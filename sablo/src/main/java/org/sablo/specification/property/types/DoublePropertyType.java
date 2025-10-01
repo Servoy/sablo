@@ -79,10 +79,18 @@ public class DoublePropertyType extends DefaultPropertyType<Double> implements I
 		throws JSONException
 	{
 		JSONUtils.addKeyIfPresent(writer, key);
-		if (sabloValue instanceof BigDecimal bd && !bd.equals(new BigDecimal(bd.doubleValue())))
+		if (sabloValue instanceof BigDecimal bd)
 		{
-			// output it as a pure string, because javascript/json can't hold this value without loosing precission
-			writer.value(bd.toString());
+			if (!bd.equals(new BigDecimal(bd.doubleValue())))
+			{
+				// output it as a pure string, because javascript/json can't hold this value without loosing precision
+				writer.value(bd.stripTrailingZeros().toPlainString());
+			}
+			else
+			{
+				writer.value(bd.doubleValue());
+			}
+
 		}
 		else if (sabloValue != null && (Double.isNaN(sabloValue.doubleValue()) || Double.isInfinite(sabloValue.doubleValue()))) writer.value(null);
 		else writer.value(sabloValue);
