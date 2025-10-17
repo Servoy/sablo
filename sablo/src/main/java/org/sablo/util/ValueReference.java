@@ -20,6 +20,7 @@ package org.sablo.util;
  * Just a wrapper around a modifiable value. Useful for passing modifiable arguments in methods.
  * @author acostescu
  */
+@SuppressWarnings("nls")
 public class ValueReference<T>
 {
 	public T value;
@@ -32,4 +33,11 @@ public class ValueReference<T>
 	{
 		this.value = value;
 	}
+
+	@Override
+	public String toString()
+	{
+		return "VR[" + value + "]";
+	}
+
 }
