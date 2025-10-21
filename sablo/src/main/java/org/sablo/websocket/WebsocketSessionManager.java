@@ -216,6 +216,11 @@ public class WebsocketSessionManager
 								AtomicInteger counter = getCounter(httpSession, HTTP_SESSION_COUNTER);
 								if (counter.decrementAndGet() == 0)
 								{
+									HttpSessionDisposeListener listener = (HttpSessionDisposeListener)httpSession
+										.getAttribute(HttpSessionDisposeListener.DISPOSE_LISTENER_KEY);
+									if (listener != null) listener.goingToBeDisposed();
+									else log.warn("No HttpSessionDisposeListener found on http session " + httpSession.getId() +
+										" when last websocket session disposed");
 									httpSession.invalidate();
 								}
 							}
