@@ -83,7 +83,8 @@ public class GetHttpSessionConfigurator extends Configurator
 		{
 			httpSession.setAttribute(WEBSOCKET_STARTED, Boolean.TRUE);
 			httpSession.setMaxInactiveInterval(0); // make sure it never expires.
-			httpSession.setAttribute(HttpSessionDisposeListener.DISPOSE_LISTENER_KEY, new HttpSessionDisposeListener());
+			if (httpSession.getAttribute(HttpSessionDisposeListener.DISPOSE_LISTENER_KEY) == null)
+				httpSession.setAttribute(HttpSessionDisposeListener.DISPOSE_LISTENER_KEY, new HttpSessionDisposeListener());
 		}
 
 		return httpSession;
