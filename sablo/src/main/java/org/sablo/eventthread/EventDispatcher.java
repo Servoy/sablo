@@ -68,6 +68,7 @@ public class EventDispatcher implements Runnable, IEventDispatcher
 
 	private final List<Event> events = new ArrayList<Event>();
 	private final LinkedList<Event> stack = new LinkedList<Event>();
+	private final List<Runnable> immediateRunnables = new ArrayList<Runnable>();
 
 	private volatile boolean exit = false;
 
@@ -356,6 +357,19 @@ public class EventDispatcher implements Runnable, IEventDispatcher
 			return sb.toString();
 		}
 		return "";
+	}
+
+	@Override
+	public void addImmediateEvent(Runnable event)
+	{
+		immediateRunnables.add(event);
+	}
+
+	public List<Runnable> getExecuteImmediateRunnablesAndClearList()
+	{
+		List<Runnable> retValue = new ArrayList<Runnable>(immediateRunnables);
+		immediateRunnables.clear();
+		return retValue;
 	}
 
 }

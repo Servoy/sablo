@@ -41,7 +41,7 @@ public class Event
 
 	private final Runnable runnable;
 	private volatile boolean executed;
-	private volatile Exception exception;
+	protected volatile Exception exception;
 
 	private final IWindow currentWindow;
 	private final IWebsocketSession session;

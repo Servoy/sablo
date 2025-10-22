@@ -16,6 +16,7 @@
 
 package org.sablo.eventthread;
 
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 
@@ -148,4 +149,10 @@ public interface IEventDispatcher extends Runnable
 	 */
 	public String interruptEventThread();
 
+	/**
+	 * @return
+	 */
+	List<Runnable> getExecuteImmediateRunnablesAndClearList();
+
+	void addImmediateEvent(Runnable event);
 }
