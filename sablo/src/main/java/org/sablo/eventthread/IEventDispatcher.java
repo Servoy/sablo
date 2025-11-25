@@ -32,6 +32,74 @@ import org.sablo.websocket.IWebsocketSession;
  */
 public interface IEventDispatcher extends Runnable
 {
+	/**
+	 * An empty implementation that does nothing.
+	 */
+	public static final IEventDispatcher EMPTY = new IEventDispatcher()
+	{
+
+		@Override
+		public void run()
+		{
+		}
+
+		@Override
+		public void suspend(Object suspendID) throws CancellationException, TimeoutException
+		{
+		}
+
+		@Override
+		public void suspend(Object suspendID, int minEventLevelToDispatch, long timeout) throws CancellationException, TimeoutException
+		{
+		}
+
+		@Override
+		public void resume(Object suspendID)
+		{
+		}
+
+		@Override
+		public void postEvent(Runnable event, int eventLevel)
+		{
+		}
+
+		@Override
+		public void postEvent(Runnable event)
+		{
+		}
+
+		@Override
+		public boolean isEventDispatchThread()
+		{
+			return true;
+		}
+
+		@Override
+		public String interruptEventThread()
+		{
+			return null;
+		}
+
+		@Override
+		public void destroy()
+		{
+		}
+
+		@Override
+		public void cancelSuspend(Integer suspendID, String cancelReason)
+		{
+		}
+
+		@Override
+		public void addEvent(Runnable event, int eventLevel)
+		{
+		}
+
+		@Override
+		public void addEvent(Runnable event)
+		{
+		}
+	};
 
 	public final static int EVENT_LEVEL_DEFAULT = 0;
 
