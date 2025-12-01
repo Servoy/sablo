@@ -100,6 +100,20 @@ public interface IEventDispatcher extends Runnable
 		public void addEvent(Runnable event)
 		{
 		}
+
+		@Override
+		public void addImmediateEvent(Runnable event)
+		{
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public List<Runnable> getExecuteImmediateRunnablesAndClearList()
+		{
+			// TODO Auto-generated method stub
+			return null;
+		}
 	};
 
 	public final static int EVENT_LEVEL_DEFAULT = 0;
