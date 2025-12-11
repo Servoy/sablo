@@ -47,11 +47,19 @@ public class Event
 	private final IWebsocketSession session;
 	private final int eventLevel;
 
-	public Event(IWebsocketSession session, Runnable runnable, int eventLevel)
+	private final Event wasAddedByEvent;
+
+	/**
+	 * @param wasAddedByEvent if the event was created & added by code running in the event thread when,
+	 *                        then this is the event that was running at that time on the event thread; it can be null,
+	 *                        if this event was created & added by another thread.
+	 */
+	public Event(IWebsocketSession session, Runnable runnable, int eventLevel, Event wasAddedByEvent)
 	{
 		this.session = session;
 		this.runnable = runnable;
 		this.eventLevel = eventLevel;
+		this.wasAddedByEvent = wasAddedByEvent;
 
 		if (CurrentWindow.exists())
 		{
@@ -221,5 +229,15 @@ public class Event
 		{
 			((Future< ? >)runnable).cancel(true);
 		}
+	}
+
+	/**
+	 * If the event was created & added by code running in the event thread when,
+	 * then this is the event that was running at that time on the event thread; it can be null,
+	 * if this event was created & added by another thread.
+	 */
+	public Event getTriggeringEvent()
+	{
+		return wasAddedByEvent;
 	}
 }
