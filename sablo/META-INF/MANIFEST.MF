@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Sablo core library
 Bundle-SymbolicName: sablo;singleton:=true
-Bundle-Version: 2025.3.3.4045_LTS
+Bundle-Version: 2025.3.4.4046_LTS
 Export-Package: org.sablo,
  org.sablo.eventthread,
  org.sablo.filter,
