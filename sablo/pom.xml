@@ -6,7 +6,7 @@
         <maven>3.9.3</maven>
     </prerequisites>
     <groupId>org.sablo</groupId>
-    <version>2024.3.9-SNAPSHOT</version>
+    <version>2024.3.10-SNAPSHOT</version>
     <artifactId>sablo</artifactId>
     <packaging>eclipse-plugin</packaging>
     <name>Sablo Core</name>
