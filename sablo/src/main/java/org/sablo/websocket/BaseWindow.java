@@ -783,6 +783,21 @@ public class BaseWindow implements IWindow
 					createServiceCall(clientService, functionName, arguments, argumentTypes).writeToJSON(w);
 					w.endArray();
 
+					TypedData<Map<String, Object>> changes = clientService.getAndClearChanges();
+					if (changes.content.size() > 0)
+					{
+						w.key("msg");
+						w.object();
+						w.key(SERVICE_DATA);
+						w.object();
+						String childName = clientService.getScriptingName();
+						w.key(childName).object();
+						clientService.writeProperties(ChangesToJSONConverter.INSTANCE, FullValueToJSONConverter.INSTANCE, w, changes);
+						w.endObject();
+						w.endObject();
+						w.endObject();
+					}
+
 					return true;
 				}
 			}, FullValueToJSONConverter.INSTANCE);
