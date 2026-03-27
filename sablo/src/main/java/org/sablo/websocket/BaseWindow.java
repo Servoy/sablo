@@ -1008,6 +1008,18 @@ public class BaseWindow implements IWindow
 						createComponentCall(receiver, apiFunction, arguments, callContributions, true).writeToJSON(w);
 						w.endObject().endArray();
 
+						if (receiver.hasChanges())
+						{
+							w.key("msg");
+							w.object();
+							w.key("forms");
+							w.object();
+							boolean contentHasBeenWritten = receiver.writeOwnChanges(w, receiver.getParent().getName(), receiver.getName(),
+								ChangesToJSONConverter.INSTANCE);
+							if (contentHasBeenWritten) w.endObject();
+							w.endObject();
+							w.endObject();
+						}
 						return true;
 					}
 				}, FullValueToJSONConverter.INSTANCE);
