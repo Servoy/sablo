@@ -25,7 +25,7 @@
     
     <!-- IF updating dependecies, version or new jar, also update the pom_only_dep,xml -->
     <properties>
-        <tycho.version>4.0.12</tycho.version>
+        <tycho.version>5.0.3</tycho.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <log4j-version>2.24.0</log4j-version>
@@ -38,6 +38,12 @@
             <id>developer_repo</id>
             <name>developer_repo</name>
             <url>https://developer.servoy.com/mvn_repository/</url>
+        </repository>
+        <repository>
+            <id>eclipse-release</id>
+            <layout>p2</layout>
+            <!-- Vervang 'latest' eventueel door een specifieke versie zoals '2024-03' indien nodig -->
+            <url>https://download.eclipse.org/releases/latest/</url>
         </repository>
     </repositories>
 
@@ -195,14 +201,11 @@
                         <artifactId>target-platform-configuration</artifactId>
                         <version>${tycho.version}</version>
                         <configuration>
-                            <target>
-                                <artifact>
-                                    <groupId>com.servoy</groupId>
-                                    <artifactId>com.servoy.eclipse.target</artifactId>
-                                    <version>${project.version}</version>
-                                </artifact>
-                            </target>
+                            <executionEnvironment>JavaSE-21</executionEnvironment>
                             <pomDependencies>consider</pomDependencies>
+                            <dependency-resolution>
+                                <optionalDependencies>ignore</optionalDependencies>
+                            </dependency-resolution>
                             <environments>
                                 <environment>
                                     <os>win32</os>
@@ -268,10 +271,19 @@
 <!-- IF updating dependecies, version or new jar, also update the pom_only_dep,xml -->
     <dependencies>
         <dependency>
+            <groupId>jakarta.websocket</groupId>
+            <artifactId>jakarta.websocket-api</artifactId>
+            <version>2.2.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- provided scope: participates in Tycho pomDependencies OSGi resolution AND is on the
+             test classpath. Jabsorb exports org.json (with java.io.Writer writer) so it becomes
+             the org.json provider during compilation, matching the full Servoy target behaviour. -->
+        <dependency>
             <groupId>com.servoy</groupId>
             <artifactId>jabsorb</artifactId>
             <version>1.3.3.s1</version>
-            <scope>test</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
