@@ -289,6 +289,13 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 						thread.start();
 						if (SHUTDOWNLOGGER.isDebugEnabled()) SHUTDOWNLOGGER.debug("Executor created for client: " + getSessionKey()); //$NON-NLS-1$
 					}
+					else
+					{
+						SHUTDOWNLOGGER.warn(
+							"Could not create a executor because the client was already shutdown? " + getSessionKey() + " returning an empty imp", //$NON-NLS-1$//$NON-NLS-2$
+							new RuntimeException());
+						return IEventDispatcher.EMPTY;
+					}
 				}
 			}
 		}
@@ -363,7 +370,8 @@ public abstract class BaseWebsocketSession implements IWebsocketSession, IChange
 				{
 					if (SHUTDOWNLOGGER.isDebugEnabled()) SHUTDOWNLOGGER.debug("Executor destroyed in dispose for client: " + getSessionKey()); //$NON-NLS-1$
 					executor.destroy();
-					executor = null;
+					// set it to empty so that no new executor is suddenly created when the current one is still executing something.
+					executor = IEventDispatcher.EMPTY;
 				}
 			}
 		}
