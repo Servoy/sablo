@@ -6,16 +6,16 @@ pipeline {
         buildDiscarder(logRotator(daysToKeepStr: '40', numToKeepStr: '70'))
     }
     
-    properties([
-        pipelineTriggers([
-            [$class: 'GenericTrigger',
-                genericVariables: [[key: 'ref', value: '$.ref']],
-                token: 'sablo', // Same token used everywhere for this repo!
-                regexpFilterText: '$ref',
-                regexpFilterExpression: "^refs/heads/${targetBranch}\$"
-            ]
-        ])
-    ])
+   triggers {
+        GenericTrigger(
+            genericVariables: [
+                [key: 'ref', value: '$.ref']
+            ],
+            token: 'sablo',
+            regexpFilterText: '$ref',
+            regexpFilterExpression: "^refs/heads/${env.BRANCH}\$"
+        )
+    }
     
     
     parameters {
