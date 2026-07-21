@@ -25,6 +25,7 @@ pipeline {
     }
     
     stages {
+
         stage('Build with Tycho 5') {
             steps {
                 configFileProvider([
