@@ -6,9 +6,17 @@ pipeline {
         buildDiscarder(logRotator(daysToKeepStr: '40', numToKeepStr: '70'))
     }
     
-    triggers {
-        githubPush()
-    }
+    properties([
+        pipelineTriggers([
+            [$class: 'GenericTrigger',
+                genericVariables: [[key: 'ref', value: '$.ref']],
+                token: 'sablo', // Same token used everywhere for this repo!
+                regexpFilterText: '$ref',
+                regexpFilterExpression: "^refs/heads/${targetBranch}\$"
+            ]
+        ])
+    ])
+    
     
     parameters {
         string(name: 'goals', defaultValue: 'clean install', trim: false)
