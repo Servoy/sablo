@@ -6,9 +6,17 @@ pipeline {
         buildDiscarder(logRotator(daysToKeepStr: '40', numToKeepStr: '70'))
     }
     
-    triggers {
-        githubPush()
+   triggers {
+        GenericTrigger(
+            genericVariables: [
+                [key: 'ref', value: '$.ref']
+            ],
+            token: 'sablo',
+            regexpFilterText: '$ref',
+            regexpFilterExpression: "^refs/heads/${env.BRANCH}\$"
+        )
     }
+    
     
     parameters {
         string(name: 'goals', defaultValue: 'clean install', trim: false)
@@ -25,11 +33,7 @@ pipeline {
     }
     
     stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+
         stage('Build with Tycho 5') {
             steps {
                 configFileProvider([
