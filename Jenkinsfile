@@ -6,7 +6,7 @@ pipeline {
         buildDiscarder(logRotator(daysToKeepStr: '40', numToKeepStr: '70'))
     }
     
-   triggers {
+    triggers {
         GenericTrigger(
             genericVariables: [
                 [key: 'ref', value: '$.ref']
@@ -16,7 +16,6 @@ pipeline {
             regexpFilterExpression: "^refs/heads/${env.BRANCH}\$"
         )
     }
-    
     
     parameters {
         // New boolean toggle for manual workspace wiping
@@ -39,12 +38,11 @@ pipeline {
         stage('Clear Queued Builds') {
             steps {
                 script {
-                    // Annuleer builds die in de queue wachten op de quietPeriod timer voor EXPANCT dit specifieke pad (bijv. "lts_2026/servoy-eclipse")
+                    // Annuleer builds die in de queue wachten op de quietPeriod timer voor dit specifieke pad
                     def currentJob = env.JOB_NAME
                     def queue = jenkins.model.Jenkins.get().queue
                     
                     queue.items.each { item ->
-                        // ownerTask.fullName works for boht WorkflowJob or  PlaceholderTask objects
                         def queuedJobName = item.task.ownerTask?.fullName
                         if (queuedJobName == currentJob) {
                             echo "Removing pending queued build for ${currentJob} (Queue ID #${item.id})..."
@@ -55,24 +53,33 @@ pipeline {
             }
         }
 
-         // This stage executes first, but only if you checked the box in the UI
+        // Clean workspace if requested, then automatically re-trigger without wipe
         stage('Manual UI Workspace Wipe') {
             when {
                 expression { params.WIPE_WORKSPACE }
             }
             steps {
-                echo "âš ï¸� Manual workspace wipe requested via UI toggle. Cleaning up..."
+                echo "Manual workspace wipe requested via UI toggle. Cleaning up..."
                 cleanWs()
+                
+                echo "Re-triggering ${env.JOB_NAME} with WIPE_WORKSPACE = false..."
+                build job: env.JOB_NAME, wait: false, parameters: [
+                    booleanParam(name: 'WIPE_WORKSPACE', value: false),
+                    string(name: 'goals', value: params.goals)
+                ]
             }
         }
 
-        stage('Build with Tycho 5') {
+        // Only runs if WIPE_WORKSPACE is FALSE
+        stage('Build with Tycho') {
+            when {
+                expression { !params.WIPE_WORKSPACE }
+            }
             steps {
                 configFileProvider([
                     configFile(fileId: 'master_mvn_repo', variable: 'MAVEN_SETTINGS'),
                     configFile(fileId: 'maven_toolchain', variable: 'TOOLCHAIN')
                 ]) {
-                    // Bouwstap met de juiste submap 'sablo/pom.xml' en de dynamische $goals
                     sh 'mvn -B -f sablo/pom.xml -s "$MAVEN_SETTINGS" -t "$TOOLCHAIN" $goals'
                 }
             }
@@ -81,25 +88,36 @@ pipeline {
     
     post {
         always {
-            // Testrapportage voor Sablo
-            junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+            script {
+                if (!params.WIPE_WORKSPACE) {
+                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                }
+            }
         }
         
         failure {
-           office365ConnectorSend webhookUrl: TEAMS_WEBHOOK, status: 'Failed'
+            office365ConnectorSend webhookUrl: TEAMS_WEBHOOK, status: 'Failed'
         }
         
         unstable {
-           office365ConnectorSend webhookUrl: TEAMS_WEBHOOK, status: 'Unstable'
-            build job: 'build', wait: false
+            office365ConnectorSend webhookUrl: TEAMS_WEBHOOK, status: 'Unstable'
+            script {
+                if (!params.WIPE_WORKSPACE) {
+                    build job: 'build', wait: false
+                }
+            }
         }
         
         fixed {
-           office365ConnectorSend webhookUrl: TEAMS_WEBHOOK, status: 'Back to Normal'
+            office365ConnectorSend webhookUrl: TEAMS_WEBHOOK, status: 'Back to Normal'
         }
         
         success {
-            build job: 'build', wait: false
+            script {
+                if (!params.WIPE_WORKSPACE) {
+                    build job: 'build', wait: false
+                }
+            }
         }
     }
 }
