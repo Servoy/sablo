@@ -143,7 +143,7 @@
                                     <goal>install-node-and-npm</goal>
                                 </goals>
                                 <configuration>
-                                    <nodeVersion>v24.11.1</nodeVersion>
+                                    <nodeVersion>v24.18.0</nodeVersion>
                                 </configuration>
                             </execution>
 
