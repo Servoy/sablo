@@ -892,12 +892,13 @@ public class BaseWindow implements IWindow
 	}
 
 	@Override
-	public synchronized boolean hasEndpoint()
+	public boolean hasEndpoint()
 	{
-		return endpoint != null && endpoint.hasSession();
+		IWebsocketEndpoint ep = endpoint;
+		return ep != null && ep.hasSession();
 	}
 
-	public synchronized IWebsocketEndpoint getEndpoint()
+	public IWebsocketEndpoint getEndpoint()
 	{
 		return endpoint;
 	}
