@@ -283,6 +283,11 @@ public class PropertyDescription
 		return tags != null && tags.has(tag);
 	}
 
+	public boolean isInternal()
+	{
+		return hasTag("internal");
+	}
+
 	@Override
 	public int hashCode()
 	{

@@ -36,6 +36,7 @@ public class PackageSpecification<T extends WebObjectSpecification>
 	private static final String NG2_CSS_CLIENT_LIBS = "NG2-CSS-ClientLibs";
 	private static final String NG2_CSS_DESIGN_LIBS = "NG2-CSS-DesignLibs";
 	private static final String NG2_MODULE = "NG2-Module";
+	private static final String NG2_COMPONENTS = "NG2-Components";
 	private static final String ENTRY_POINT = "Entry-Point";
 	private static final String NPM_PACKAGE_NANE = "NPM-PackageName";
 	private static final String JS_DESIGN_LIBS = "JS-DesignLibs";
@@ -44,6 +45,7 @@ public class PackageSpecification<T extends WebObjectSpecification>
 	private final String packageName;
 	private final String packageDisplayname;
 	private final String ng2Module;
+	private final String ng2Components;
 	private final String npmName;
 	private final String entryPoint;
 	private final List<String> cssClientLibrary;
@@ -66,6 +68,7 @@ public class PackageSpecification<T extends WebObjectSpecification>
 		if (attributes != null)
 		{
 			this.ng2Module = attributes.getValue(NG2_MODULE);
+			this.ng2Components = attributes.getValue(NG2_COMPONENTS);
 			this.npmName = attributes.getValue(NPM_PACKAGE_NANE);
 			this.entryPoint = attributes.getValue(ENTRY_POINT);
 			this.cssClientLibrary = getAttributeValue(attributes, CSS_CLIENT_LIBS);
@@ -78,6 +81,7 @@ public class PackageSpecification<T extends WebObjectSpecification>
 		else
 		{
 			this.ng2Module = null;
+			this.ng2Components = null;
 			this.cssClientLibrary = null;
 			this.cssDesignLibrary = null;
 			this.ng2CssClientLibrary = null;
@@ -137,6 +141,22 @@ public class PackageSpecification<T extends WebObjectSpecification>
 	public String getNg2Module()
 	{
 		return ng2Module;
+	}
+
+	/**
+	 * @return the comma-separated list of standalone component class names, or null if not specified
+	 */
+	public String getNg2Components()
+	{
+		return ng2Components;
+	}
+
+	/**
+	 * @return true if this package exports standalone components (NG2-Components attribute is set)
+	 */
+	public boolean hasStandaloneComponents()
+	{
+		return ng2Components != null && !ng2Components.isEmpty();
 	}
 
 	/**
