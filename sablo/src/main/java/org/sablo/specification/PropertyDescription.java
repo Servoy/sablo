@@ -283,9 +283,9 @@ public class PropertyDescription
 		return tags != null && tags.has(tag);
 	}
 
-	public boolean isInternal()
+	public boolean isServerOnly()
 	{
-		return hasTag("internal");
+		return hasTag("serveronly");
 	}
 
 	@Override

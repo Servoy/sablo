@@ -1160,6 +1160,7 @@ public abstract class BaseWebObject implements IWebObjectContext
 		for (Entry<String, Object> entry : propertiesToWrite.content.entrySet())
 		{
 			PropertyDescription pd = propertiesToWrite.contentType != null ? propertiesToWrite.contentType.getProperty(entry.getKey()) : null;
+			if (pd != null && pd.isServerOnly()) continue;
 
 			BrowserConverterContext context;
 			if (pd != null) context = new BrowserConverterContext(this, pd.getPushToServer());
