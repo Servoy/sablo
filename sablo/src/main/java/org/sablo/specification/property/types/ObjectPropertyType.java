@@ -15,6 +15,8 @@
  */
 package org.sablo.specification.property.types;
 
+import java.awt.Dimension;
+import java.awt.Point;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -270,6 +272,24 @@ public class ObjectPropertyType extends DefaultPropertyType<Object> implements
 					dateType.toJSON(w, null, (Date)converted, null, null); // we rely here on the fact that the currently registered date type knows how to handle null PD or context
 					return null;
 				});
+		}
+		else if (converted instanceof Dimension)
+		{
+			w.object();
+			w.key("width");
+			w.value(((Dimension)converted).getWidth());
+			w.key("height");
+			w.value(((Dimension)converted).getHeight());
+			w.endObject();
+		}
+		else if (converted instanceof Point)
+		{
+			w.object();
+			w.key("x");
+			w.value(((Point)converted).getX());
+			w.key("y");
+			w.value(((Point)converted).getY());
+			w.endObject();
 		}
 		else
 		{
