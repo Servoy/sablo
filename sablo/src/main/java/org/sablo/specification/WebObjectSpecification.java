@@ -248,18 +248,19 @@ public class WebObjectSpecification extends PropertyDescription
 		String icon, String preview,
 		String definition, JSONArray libs, JSONArray keywords, JSONObject ng2Config)
 	{
-		this(name, packageName, packageType, displayName, categoryName, styleVariantCategory, icon, preview, definition, libs, null, null, null, keywords,
-			ng2Config);
+		this(name, packageName, packageType, displayName, categoryName, styleVariantCategory, icon, preview, definition, libs, null, null, null, null,
+			keywords, ng2Config);
 	}
 
 
 	WebObjectSpecification(String name, String packageName, String packageType, String displayName, String categoryName, String styleVariantCategory,
 		String icon,
 		String preview,
-		String definition, JSONArray libs, Object configObject, Map<String, PropertyDescription> properties, String deprecated, JSONArray keywords,
+		String definition, JSONArray libs, Object configObject, Map<String, PropertyDescription> properties, String deprecated, JSONObject tags,
+		JSONArray keywords,
 		JSONObject ng2Config)
 	{
-		super(name, null, configObject, properties, null, null, false, null, null, null, false, deprecated);
+		super(name, null, configObject, properties, null, null, false, null, null, tags, false, deprecated);
 		this.scriptingName = scriptifyNameIfNeeded(name, packageType);
 		this.packageName = packageName;
 		this.displayName = displayName;
@@ -480,7 +481,8 @@ public class WebObjectSpecification extends PropertyDescription
 				json.optString("definition", null))
 			.withLibraries(json.optJSONArray("libraries")).withProperties(properties).withName(
 				json.getString("name"))
-			.withDeprecated(json.optString("deprecated", null)).withKeywords(json.optJSONArray("keywords")).withNG2Config(json.optJSONObject("ng2Config"))
+			.withDeprecated(json.optString("deprecated", null)).withTags(json.optJSONObject("tags")).withKeywords(json.optJSONArray("keywords"))
+			.withNG2Config(json.optJSONObject("ng2Config"))
 			.build();
 		spec.foundTypes = types;
 		if (json.has("serverscript"))

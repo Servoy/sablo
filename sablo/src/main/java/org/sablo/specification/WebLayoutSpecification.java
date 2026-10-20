@@ -163,7 +163,7 @@ public class WebLayoutSpecification extends WebObjectSpecification
 		Map<String, PropertyDescription> properties, String deprecated, List<String> directives)
 	{
 		super(name, packageName, IPackageReader.WEB_LAYOUT, displayName, categoryName, null, icon, preview, definition, null, configObject, properties, deprecated,
-			null, null);
+			null, null, null);
 		this.topContainer = topContainer;
 		this.allowedChildren = allowedChildren;
 		this.excludedChildren = excludedChildren;
